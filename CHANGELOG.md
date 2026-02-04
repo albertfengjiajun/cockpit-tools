@@ -7,6 +7,29 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.5.0] - 2026-02-04
+
+### Added
+- **Antigravity Latest Version Compatibility**: Enhanced account switching support for Antigravity 1.16.5+.
+  - Support for new unified state sync format (`antigravityUnifiedStateSync.oauthToken`).
+  - Backward compatible with legacy format for older versions.
+- **Antigravity Multi-Instance Support**: Run multiple Antigravity IDE instances simultaneously.
+  - Each instance runs with an isolated user profile and data directory.
+  - Support for different accounts logged in to different instances concurrently.
+  - Create, launch, restart, and delete instances with a dedicated management interface.
+  - Auto-detect running instances and display their status in real-time.
+- **Codex Desktop Multi-Instance Support**: Run multiple Codex desktop instances simultaneously on macOS.
+  - Each instance runs with an isolated user profile and app data directory.
+  - Support for different accounts logged in to different instances concurrently.
+  - Create, launch, restart, and delete instances with a dedicated management interface.
+  - Auto-detect running instances and display their status in real-time.
+  - Smart restart strategy: choose between "Always Restart", "Never Restart", or "Ask Me" when switching accounts.
+
+### Changed
+- **Instance Management UI**: New dedicated instance management page with modern list-based interface.
+- **Navigation**: Added "Instances" menu item to sidebar for quick access to instance management.
+
+---
 ## [0.4.10] - 2026-01-31
 
 ### Changed
