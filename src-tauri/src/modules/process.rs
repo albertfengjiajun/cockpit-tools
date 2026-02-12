@@ -66,6 +66,42 @@ fn powershell_output(args: &[&str]) -> std::io::Result<std::process::Output> {
 }
 
 #[cfg(target_os = "windows")]
+fn powershell_output_file(script: &str) -> std::io::Result<std::process::Output> {
+    use std::os::windows::process::CommandExt;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let mut path = std::env::temp_dir();
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    path.push(format!("cockpit_ps_{}_{}.ps1", std::process::id(), unique));
+
+    let file_script = format!(
+        "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $OutputEncoding=[System.Text.Encoding]::UTF8; {}\n",
+        script
+    );
+    std::fs::write(&path, file_script)?;
+
+    let output = Command::new("powershell")
+        .creation_flags(CREATE_NO_WINDOW)
+        .args([
+            "-WindowStyle",
+            "Hidden",
+            "-NonInteractive",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            &path.to_string_lossy(),
+        ])
+        .output();
+
+    let _ = std::fs::remove_file(&path);
+    output
+}
+
+#[cfg(target_os = "windows")]
 fn powershell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
 }
@@ -153,154 +189,12 @@ fn score_windows_candidate(
 }
 
 #[cfg(target_os = "windows")]
-pub fn detect_windows_exec_path_by_signatures(
+fn parse_windows_exec_candidates(
     app_label: &str,
     exe_names: &[&str],
-    command_names: &[&str],
-    protocol_names: &[&str],
     display_keywords: &[&str],
+    output: std::process::Output,
 ) -> Option<std::path::PathBuf> {
-    if exe_names.is_empty() {
-        return None;
-    }
-
-    let exe_array = powershell_array_literal(exe_names);
-    let command_array = powershell_array_literal(command_names);
-    let protocol_array = powershell_array_literal(protocol_names);
-    let keyword_array = powershell_array_literal(display_keywords);
-
-    let script = format!(
-        r#"$ErrorActionPreference='SilentlyContinue'
-$exeNames=@({exe_array})
-$commandNames=@({command_array})
-$protocolNames=@({protocol_array})
-$keywords=@({keyword_array})
-
-function Normalize-Candidate([string]$raw) {{
-  if ([string]::IsNullOrWhiteSpace($raw)) {{ return $null }}
-  $text = $raw.Trim()
-  if ($text -match '(?i)(?<p>[A-Za-z]:\\.+?\.exe)') {{
-    $text = $matches['p']
-  }}
-  $text = $text.Trim().Trim('"').Trim("'")
-  if ([string]::IsNullOrWhiteSpace($text)) {{ return $null }}
-  return $text
-}}
-
-function Emit-Candidate([string]$raw) {{
-  $candidate = Normalize-Candidate $raw
-  if ([string]::IsNullOrWhiteSpace($candidate)) {{ return }}
-  if (Test-Path -LiteralPath $candidate) {{ Write-Output $candidate }}
-}}
-
-$appPathRoots=@(
-  'HKCU:\Software\Microsoft\Windows\CurrentVersion\App Paths',
-  'HKLM:\Software\Microsoft\Windows\CurrentVersion\App Paths',
-  'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths'
-)
-foreach ($root in $appPathRoots) {{
-  foreach ($exe in $exeNames) {{
-    $keyPath = Join-Path $root $exe
-    $entry = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
-    if ($entry) {{
-      Emit-Candidate $entry.'(default)'
-      if ($entry.Path) {{
-        Emit-Candidate (Join-Path $entry.Path $exe)
-      }}
-    }}
-  }}
-}}
-
-$uninstallRoots=@(
-  'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
-  'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
-  'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
-)
-foreach ($root in $uninstallRoots) {{
-  Get-ItemProperty -Path $root -ErrorAction SilentlyContinue | ForEach-Object {{
-    $display = [string]$_.DisplayName
-    $displayLower = $display.ToLowerInvariant()
-    $hit = $false
-    foreach ($kw in $keywords) {{
-      if ([string]::IsNullOrWhiteSpace($kw)) {{ continue }}
-      if ($displayLower.Contains($kw.ToLowerInvariant())) {{
-        $hit = $true
-        break
-      }}
-    }}
-    if (-not $hit) {{ return }}
-    Emit-Candidate $_.DisplayIcon
-    Emit-Candidate $_.UninstallString
-    $install = [string]$_.InstallLocation
-    if (-not [string]::IsNullOrWhiteSpace($install)) {{
-      foreach ($exe in $exeNames) {{
-        Emit-Candidate (Join-Path $install $exe)
-      }}
-    }}
-  }}
-}}
-
-$classRoots=@('HKCU:\Software\Classes','HKLM:\Software\Classes')
-foreach ($protocol in $protocolNames) {{
-  if ([string]::IsNullOrWhiteSpace($protocol)) {{ continue }}
-  foreach ($classRoot in $classRoots) {{
-    $commandPath = Join-Path (Join-Path $classRoot $protocol) 'shell\open\command'
-    Emit-Candidate ((Get-ItemProperty -Path $commandPath -ErrorAction SilentlyContinue).'(default)')
-  }}
-}}
-
-$shortcutRoots=@(
-  "$env:ProgramData\Microsoft\Windows\Start Menu\Programs",
-  "$env:APPDATA\Microsoft\Windows\Start Menu\Programs",
-  "$env:USERPROFILE\Desktop",
-  "$env:PUBLIC\Desktop"
-)
-$shell = $null
-try {{ $shell = New-Object -ComObject WScript.Shell }} catch {{}}
-if ($shell) {{
-  foreach ($root in $shortcutRoots) {{
-    if (-not (Test-Path -LiteralPath $root)) {{ continue }}
-    Get-ChildItem -Path $root -Filter *.lnk -Recurse -ErrorAction SilentlyContinue | ForEach-Object {{
-      try {{
-        $shortcut = $shell.CreateShortcut($_.FullName)
-        Emit-Candidate $shortcut.TargetPath
-      }} catch {{}}
-    }}
-  }}
-}}
-
-foreach ($commandName in $commandNames) {{
-  if ([string]::IsNullOrWhiteSpace($commandName)) {{ continue }}
-  $command = Get-Command $commandName -ErrorAction SilentlyContinue | Select-Object -First 1
-  if ($command) {{
-    Emit-Candidate $command.Source
-    Emit-Candidate $command.Definition
-  }}
-}}
-"#
-    );
-
-    let output = match powershell_output(&["-Command", &script]) {
-        Ok(value) => value,
-        Err(err) => {
-            crate::modules::logger::log_warn(&format!(
-                "[Path Detect] {} PowerShell 探测失败: {}",
-                app_label, err
-            ));
-            return None;
-        }
-    };
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        crate::modules::logger::log_warn(&format!(
-            "[Path Detect] {} PowerShell 探测命令执行失败: status={}, stderr={}",
-            app_label,
-            output.status,
-            stderr.trim()
-        ));
-        return None;
-    }
-
     let exe_names_lower: HashSet<String> =
         exe_names.iter().map(|value| value.to_lowercase()).collect();
     let keywords_lower: Vec<String> = display_keywords
@@ -337,7 +231,7 @@ foreach ($commandName in $commandNames) {{
 
     if let Some((path, score)) = best {
         crate::modules::logger::log_info(&format!(
-            "[Path Detect] {} 自动探测命中: {}, score={}",
+            "[Path Detect] {} auto detect hit: {}, score={}",
             app_label,
             path.to_string_lossy(),
             score
@@ -350,7 +244,7 @@ foreach ($commandName in $commandNames) {{
     let program_files_x86 =
         std::env::var("PROGRAMFILES(X86)").unwrap_or_else(|_| "<unset>".to_string());
     crate::modules::logger::log_warn(&format!(
-        "[Path Detect] {} Windows 多源探测未命中: raw_lines={}, unique_candidates={}, scored_candidates={}, local_appdata={}, program_files={}, program_files_x86={}",
+        "[Path Detect] {} Windows multi-source detect miss: raw_lines={}, unique_candidates={}, scored_candidates={}, local_appdata={}, program_files={}, program_files_x86={}",
         app_label,
         raw_lines,
         seen.len(),
@@ -360,6 +254,350 @@ foreach ($commandName in $commandNames) {{
         program_files_x86
     ));
     None
+}
+
+#[cfg(target_os = "windows")]
+fn decode_utf16le(bytes: &[u8]) -> String {
+    let mut words = Vec::with_capacity(bytes.len() / 2);
+    let mut iter = bytes.iter().copied();
+    while let Some(lo) = iter.next() {
+        let hi = iter.next().unwrap_or(0);
+        words.push(u16::from_le_bytes([lo, hi]));
+    }
+    String::from_utf16_lossy(&words)
+}
+
+#[cfg(target_os = "windows")]
+fn reg_query_value(key: &str, value_name: &str) -> Option<String> {
+    let cmd = if value_name == "(Default)" {
+        format!("reg query \"{}\" /ve", key)
+    } else {
+        format!("reg query \"{}\" /v {}", key, value_name)
+    };
+    let output = Command::new("cmd")
+        .args(["/u", "/c", &cmd])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = decode_utf16le(&output.stdout);
+    let value_name_lower = value_name.to_lowercase();
+    for line in stdout.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let matches_name = if value_name == "(Default)" {
+            trimmed.starts_with("(Default)")
+        } else {
+            trimmed.to_lowercase().starts_with(&value_name_lower)
+        };
+        if !matches_name {
+            continue;
+        }
+        if let Some(pos) = trimmed.find("REG_") {
+            let after = &trimmed[pos..];
+            if let Some(ws_idx) = after.find(char::is_whitespace) {
+                let value = after[ws_idx..].trim();
+                if !value.is_empty() {
+                    return Some(value.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn detect_vscode_exec_path_by_registry() -> Option<std::path::PathBuf> {
+    let exe_names = ["Code.exe", "Code - Insiders.exe"];
+    let app_path_roots = [
+        "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths",
+        "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths",
+        "HKLM\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths",
+    ];
+    for root in app_path_roots {
+        for exe in exe_names {
+            let key = format!("{}\\{}", root, exe);
+            if let Some(value) = reg_query_value(&key, "(Default)") {
+                if let Some(path) = normalize_windows_candidate_path(&value) {
+                    crate::modules::logger::log_info(&format!(
+                        "[Path Detect] vscode registry hit: {}",
+                        path.to_string_lossy()
+                    ));
+                    return Some(path);
+                }
+            }
+            if let Some(path_root) = reg_query_value(&key, "Path") {
+                let candidate = std::path::PathBuf::from(path_root).join(exe);
+                if candidate.exists() {
+                    crate::modules::logger::log_info(&format!(
+                        "[Path Detect] vscode registry hit: {}",
+                        candidate.to_string_lossy()
+                    ));
+                    return Some(candidate);
+                }
+            }
+        }
+    }
+
+    let uninstall_roots = [
+        "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
+        "HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
+        "HKLM\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
+    ];
+    let keywords = ["visual studio code", "vs code", "vscode"];
+    for root in uninstall_roots {
+        let cmd = format!("reg query \"{}\" /s /v DisplayName", root);
+        let output = Command::new("cmd")
+            .args(["/u", "/c", &cmd])
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            continue;
+        }
+        let stdout = decode_utf16le(&output.stdout);
+        let mut current_key: Option<String> = None;
+        let mut matched_keys: Vec<String> = Vec::new();
+        for line in stdout.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("HKEY_") {
+                current_key = Some(trimmed.to_string());
+                continue;
+            }
+            if !trimmed.to_lowercase().starts_with("displayname") {
+                continue;
+            }
+            if let Some(pos) = trimmed.find("REG_") {
+                let after = &trimmed[pos..];
+                if let Some(ws_idx) = after.find(char::is_whitespace) {
+                    let value = after[ws_idx..].trim().to_lowercase();
+                    if keywords.iter().any(|kw| value.contains(kw)) {
+                        if let Some(key) = current_key.as_ref() {
+                            matched_keys.push(key.clone());
+                        }
+                    }
+                }
+            }
+        }
+        for key in matched_keys {
+            for value_name in ["DisplayIcon", "UninstallString"] {
+                if let Some(value) = reg_query_value(&key, value_name) {
+                    if let Some(path) = normalize_windows_candidate_path(&value) {
+                        crate::modules::logger::log_info(&format!(
+                            "[Path Detect] vscode registry hit: {}",
+                            path.to_string_lossy()
+                        ));
+                        return Some(path);
+                    }
+                }
+            }
+            if let Some(install_root) = reg_query_value(&key, "InstallLocation") {
+                for exe in exe_names {
+                    let candidate = std::path::PathBuf::from(&install_root).join(exe);
+                    if candidate.exists() {
+                        crate::modules::logger::log_info(&format!(
+                            "[Path Detect] vscode registry hit: {}",
+                            candidate.to_string_lossy()
+                        ));
+                        return Some(candidate);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+#[cfg(target_os = "windows")]
+pub fn detect_windows_exec_path_by_signatures(
+    app_label: &str,
+    exe_names: &[&str],
+    command_names: &[&str],
+    protocol_names: &[&str],
+    display_keywords: &[&str],
+) -> Option<std::path::PathBuf> {
+    if exe_names.is_empty() {
+        return None;
+    }
+
+    let exe_array = powershell_array_literal(exe_names);
+    let command_array = powershell_array_literal(command_names);
+    let protocol_array = powershell_array_literal(protocol_names);
+    let keyword_array = powershell_array_literal(display_keywords);
+
+    let script = format!(
+        r#"$ErrorActionPreference='SilentlyContinue'
+Write-Output 'STAGE:BEGIN'
+$exeNames=@({exe_array})
+$commandNames=@({command_array})
+$protocolNames=@({protocol_array})
+$keywords=@({keyword_array})
+
+function Normalize-Candidate([string]$raw) {{
+  if ([string]::IsNullOrWhiteSpace($raw)) {{ return $null }}
+  $text = $raw.Trim()
+  if ($text -match '(?i)(?<p>[A-Za-z]:\\.+?\.exe)') {{
+    $text = $matches['p']
+  }}
+  $text = $text.Trim().Trim('"').Trim("'")
+  if ([string]::IsNullOrWhiteSpace($text)) {{ return $null }}
+  return $text
+}}
+
+function Emit-Candidate([string]$raw) {{
+  $candidate = Normalize-Candidate $raw
+  if ([string]::IsNullOrWhiteSpace($candidate)) {{ return }}
+  if (Test-Path -LiteralPath $candidate) {{ Write-Output $candidate }}
+}}
+
+Write-Output 'STAGE:APP_PATHS'
+$appPathRoots=@(
+  'HKCU:\Software\Microsoft\Windows\CurrentVersion\App Paths',
+  'HKLM:\Software\Microsoft\Windows\CurrentVersion\App Paths',
+  'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths'
+)
+foreach ($root in $appPathRoots) {{
+  foreach ($exe in $exeNames) {{
+    $keyPath = Join-Path $root $exe
+    $entry = Get-ItemProperty -Path $keyPath -ErrorAction SilentlyContinue
+    if ($entry) {{
+      Emit-Candidate $entry.'(default)'
+      if ($entry.Path) {{
+        Emit-Candidate (Join-Path $entry.Path $exe)
+      }}
+    }}
+  }}
+}}
+
+Write-Output 'STAGE:UNINSTALL'
+$uninstallRoots=@(
+  'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+  'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+  'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+)
+foreach ($root in $uninstallRoots) {{
+  Get-ItemProperty -Path $root -ErrorAction SilentlyContinue | ForEach-Object {{
+    $display = [string]$_.DisplayName
+    $displayLower = $display.ToLowerInvariant()
+    $hit = $false
+    foreach ($kw in $keywords) {{
+      if ([string]::IsNullOrWhiteSpace($kw)) {{ continue }}
+      if ($displayLower.Contains($kw.ToLowerInvariant())) {{
+        $hit = $true
+        break
+      }}
+    }}
+    if (-not $hit) {{ return }}
+    Emit-Candidate $_.DisplayIcon
+    Emit-Candidate $_.UninstallString
+    $install = [string]$_.InstallLocation
+    if (-not [string]::IsNullOrWhiteSpace($install)) {{
+      foreach ($exe in $exeNames) {{
+        Emit-Candidate (Join-Path $install $exe)
+      }}
+    }}
+  }}
+}}
+
+Write-Output 'STAGE:CLASSES'
+$classRoots=@('HKCU:\Software\Classes','HKLM:\Software\Classes')
+foreach ($protocol in $protocolNames) {{
+  if ([string]::IsNullOrWhiteSpace($protocol)) {{ continue }}
+  foreach ($classRoot in $classRoots) {{
+    $commandPath = Join-Path (Join-Path $classRoot $protocol) 'shell\open\command'
+    Emit-Candidate ((Get-ItemProperty -Path $commandPath -ErrorAction SilentlyContinue).'(default)')
+  }}
+}}
+
+Write-Output 'STAGE:SHORTCUTS'
+$shortcutRoots=@(
+  "$env:ProgramData\Microsoft\Windows\Start Menu\Programs",
+  "$env:APPDATA\Microsoft\Windows\Start Menu\Programs",
+  "$env:USERPROFILE\Desktop",
+  "$env:PUBLIC\Desktop"
+)
+$shell = $null
+try {{ $shell = New-Object -ComObject WScript.Shell }} catch {{}}
+if ($shell) {{
+  foreach ($root in $shortcutRoots) {{
+    if (-not (Test-Path -LiteralPath $root)) {{ continue }}
+    Get-ChildItem -Path $root -Filter *.lnk -Recurse -ErrorAction SilentlyContinue | ForEach-Object {{
+      try {{
+        $shortcut = $shell.CreateShortcut($_.FullName)
+        Emit-Candidate $shortcut.TargetPath
+      }} catch {{}}
+    }}
+  }}
+}}
+
+Write-Output 'STAGE:COMMANDS'
+foreach ($commandName in $commandNames) {{
+  if ([string]::IsNullOrWhiteSpace($commandName)) {{ continue }}
+  $command = Get-Command $commandName -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($command) {{
+    Emit-Candidate $command.Source
+    Emit-Candidate $command.Definition
+  }}
+}}
+Write-Output 'STAGE:END'
+exit 0
+"#
+    );
+
+    let output = match powershell_output(&["-Command", &script]) {
+        Ok(value) => value,
+        Err(err) => {
+            crate::modules::logger::log_warn(&format!(
+                "[Path Detect] {} PowerShell detect failed: {}",
+                app_label, err
+            ));
+            return None;
+        }
+    };
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        crate::modules::logger::log_warn(&format!(
+            "[Path Detect] {} PowerShell command failed(-Command): status={}, stdout_head={}, stderr_head={}",
+            app_label,
+            output.status,
+            stdout.chars().take(400).collect::<String>(),
+            stderr.chars().take(400).collect::<String>()
+        ));
+        let retry = match powershell_output_file(&script) {
+            Ok(value) => value,
+            Err(err) => {
+                crate::modules::logger::log_warn(&format!(
+                    "[Path Detect] {} PowerShell -File detect failed: {}",
+                    app_label, err
+                ));
+                return None;
+            }
+        };
+        if !retry.status.success() {
+            let retry_stderr = String::from_utf8_lossy(&retry.stderr);
+            let retry_stdout = String::from_utf8_lossy(&retry.stdout);
+            crate::modules::logger::log_warn(&format!(
+                "[Path Detect] {} PowerShell command failed(-File): status={}, stdout_head={}, stderr_head={}",
+                app_label,
+                retry.status,
+                retry_stdout.chars().take(400).collect::<String>(),
+                retry_stderr.chars().take(400).collect::<String>()
+            ));
+            return None;
+        }
+        crate::modules::logger::log_info(&format!(
+            "[Path Detect] {} PowerShell -File fallback succeeded after -Command failure",
+            app_label
+        ));
+        return parse_windows_exec_candidates(app_label, exe_names, display_keywords, retry);
+    }
+
+    parse_windows_exec_candidates(app_label, exe_names, display_keywords, output)
+
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -836,6 +1074,9 @@ fn detect_vscode_exec_path() -> Option<std::path::PathBuf> {
             &["vscode", "vscode-insiders"],
             &["visual studio code", "vs code", "vscode"],
         ) {
+            return Some(path);
+        }
+        if let Some(path) = detect_vscode_exec_path_by_registry() {
             return Some(path);
         }
     }
