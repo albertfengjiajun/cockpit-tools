@@ -159,7 +159,8 @@
     "manual": "사용자 매뉴얼",
     "quickUpdate": {
       "update": "업데이트",
-      "restart": "재시작"
+      "restart": "재시작",
+      "installing": "설치 중"
     },
     "gemini": "Gemini 계정",
     "codebuddy": "CodeBuddy 계정"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}}개 실패: {{failList}}",
       "refreshingQuota": "할당량 갱신 중 {{done}}/{{total}} (이 창은 닫아도 됩니다)",
       "quotaRefreshDone": "할당량 갱신 완료"
+    },
+    "groups": {
+      "manageTitle": "그룹 관리",
+      "title": "계정 그룹",
+      "create": "만들기",
+      "newPlaceholder": "그룹 이름 입력...",
+      "empty": "그룹이 없습니다. 하나 만들어 시작하세요",
+      "accountCount": "{{count}}개 계정",
+      "rename": "이름 바꾸기",
+      "addToGroup": "그룹에 추가",
+      "createAndAdd": "새 그룹 만들고 추가...",
+      "removeFromGroup": "그룹에서 제거",
+      "allGroups": "모든 그룹",
+      "noGroups": "그룹 없음",
+      "noGroupsDesc": "그룹을 만들어 계정을 일괄 관리하세요",
+      "manage": "관리",
+      "error": {
+        "duplicate": "그룹 이름이 이미 존재합니다",
+        "createFailed": "그룹 생성 실패: {{error}}",
+        "renameFailed": "그룹 이름 변경 실패: {{error}}",
+        "deleteFailed": "그룹 삭제 실패: {{error}}",
+        "addFailed": "그룹 추가 실패: {{error}}",
+        "createAndAddFailed": "그룹 생성 및 추가 실패: {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "작업 이름",
       "taskStatus": "작업 상태",
       "triggerMode": "트리거 방식",
-      "triggerModeHint": "1. 예약: 설정된 시간에 트리거됩니다.\\n2. Crontab: 표현식으로 정의합니다.\\n3. 할당량 재설정: 할당량이 가득 찼을 때 한 번 실행됩니다.",
+      "triggerModeHint": "1. 예약: 설정된 시간에 트리거됩니다.\n2. Crontab: 표현식으로 정의합니다.\n3. 할당량 재설정: 할당량이 가득 찼을 때 한 번 실행됩니다.",
       "modeScheduled": "📅 예약",
       "modeCrontab": "🧩 크론탭",
       "modeQuotaReset": "🔄 할당량 재설정",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "상세 보기",
     "hideErrorDetails": "상세 숨기기",
     "autoUpdateFailedAfterRetries": "{{count}}회 시도 후에도 자동 업데이트에 실패했습니다. 잠시 후 다시 시도하거나 수동으로 다운로드하세요.",
-    "updateCancelled": "업데이트가 취소되었습니다."
+    "updateCancelled": "업데이트가 취소되었습니다.",
+    "installing": "설치 중...",
+    "authorizing": "시스템 권한 승인을 기다리는 중...",
+    "installFailed": "시스템 설치에 실패했습니다. 나중에 다시 시도하거나 수동으로 다운로드하세요.",
+    "restartRequiredAfterInstall": "업데이트는 설치되었습니다. 전환을 완료하려면 앱을 수동으로 다시 시작하세요."
   },
   "closeDialog": {
     "title": "창 닫기",
@@ -1302,7 +1331,8 @@
       "errorInfo": "오류 상세",
       "filePath": "파일 위치",
       "helpText": "폴더를 열어 수동으로 복구하거나 파일을 삭제한 후 애플리케이션을 다시 시작하십시오.",
-      "openFolder": "폴더 열기"
+      "openFolder": "폴더 열기",
+      "openFolderFailed": "폴더 열기 실패: {{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "CodeBuddy 설정",
       "appPath": "CodeBuddy 경로"
+    },
+    "error": {
+      "loadFailed": "설정 불러오기 실패: {{error}}",
+      "saveFailed": "설정 저장 실패: {{error}}",
+      "pickPathFailed": "경로 선택 실패: {{error}}",
+      "resetPathFailed": "경로 초기화 실패: {{error}}"
     }
   },
   "quotaAlert": {

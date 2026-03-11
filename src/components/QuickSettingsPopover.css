@@ -390,3 +390,39 @@
   border-color: var(--primary);
   color: var(--primary);
 }
+
+/* Error message */
+.qs-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 24px 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--danger, #ef4444);
+  font-size: 12px;
+  line-height: 1.4;
+  animation: qsFadeUp 0.2s ease both;
+}
+
+.qs-error-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--danger, #ef4444);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: auto;
+  transition: background 0.15s;
+}
+
+.qs-error-close:hover {
+  background: rgba(239, 68, 68, 0.15);
+}

@@ -159,7 +159,8 @@
     "manual": "Manual de uso",
     "quickUpdate": {
       "update": "Actualizar",
-      "restart": "Reiniciar"
+      "restart": "Reiniciar",
+      "installing": "Instalando"
     },
     "gemini": "Cuentas Gemini",
     "codebuddy": "Cuentas de CodeBuddy"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} fallaron: {{failList}}",
       "refreshingQuota": "Actualizando cuota {{done}}/{{total}} (puedes cerrar este cuadro)",
       "quotaRefreshDone": "Actualización de cuota completada"
+    },
+    "groups": {
+      "manageTitle": "Gestión de grupos",
+      "title": "Grupos de cuentas",
+      "create": "Crear",
+      "newPlaceholder": "Ingrese el nombre del grupo...",
+      "empty": "No hay grupos. Crea uno para comenzar",
+      "accountCount": "{{count}} cuenta(s)",
+      "rename": "Renombrar",
+      "addToGroup": "Añadir al grupo",
+      "createAndAdd": "Crear grupo y añadir...",
+      "removeFromGroup": "Eliminar del grupo",
+      "allGroups": "Todos los grupos",
+      "noGroups": "Sin grupos",
+      "noGroupsDesc": "Crea grupos para gestionar tus cuentas",
+      "manage": "Gestionar",
+      "error": {
+        "duplicate": "El nombre del grupo ya existe",
+        "createFailed": "Error al crear el grupo: {{error}}",
+        "renameFailed": "Error al renombrar el grupo: {{error}}",
+        "deleteFailed": "Error al eliminar el grupo: {{error}}",
+        "addFailed": "Error al añadir al grupo: {{error}}",
+        "createAndAddFailed": "Error al crear y añadir: {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "Nombre de la tarea",
       "taskStatus": "Estado de la tarea",
       "triggerMode": "Modo de activación",
-      "triggerModeHint": "1. Programado: se activa en horas definidas.\\n2. Crontab: definir con expresión.\\n3. Reinicio de cuota: se activa una vez cuando la cuota está llena.",
+      "triggerModeHint": "1. Programado: se activa en horas definidas.\n2. Crontab: definir con expresión.\n3. Reinicio de cuota: se activa una vez cuando la cuota está llena.",
       "modeScheduled": "📅 Programado",
       "modeCrontab": "🧩 Tabulación cronológica",
       "modeQuotaReset": "🔄 Reinicio de cuota",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "Ver detalles",
     "hideErrorDetails": "Ocultar detalles",
     "autoUpdateFailedAfterRetries": "La actualización automática falló tras {{count}} intentos. Inténtalo más tarde o descarga manualmente.",
-    "updateCancelled": "Actualización cancelada."
+    "updateCancelled": "Actualización cancelada.",
+    "installing": "Instalando...",
+    "authorizing": "Esperando autorización del sistema...",
+    "installFailed": "La instalación del sistema falló. Inténtalo más tarde o descarga el paquete manualmente.",
+    "restartRequiredAfterInstall": "La actualización ya está instalada. Reinicia la aplicación manualmente para completar el cambio."
   },
   "closeDialog": {
     "title": "Cerrar ventana",
@@ -1302,7 +1331,8 @@
       "errorInfo": "Detalles del error",
       "filePath": "Ubicación del archivo",
       "helpText": "Abra la carpeta para reparar o eliminar el archivo manualmente y, a continuación, reinicie la aplicación.",
-      "openFolder": "Abrir carpeta"
+      "openFolder": "Abrir carpeta",
+      "openFolderFailed": "Error al abrir la carpeta: {{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "Configuración de CodeBuddy",
       "appPath": "Ruta de CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Error al cargar la configuración: {{error}}",
+      "saveFailed": "Error al guardar la configuración: {{error}}",
+      "pickPathFailed": "Error al seleccionar la ruta: {{error}}",
+      "resetPathFailed": "Error al restablecer la ruta: {{error}}"
     }
   },
   "quotaAlert": {

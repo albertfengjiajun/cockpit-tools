@@ -159,7 +159,8 @@
     "manual": "Hướng dẫn sử dụng",
     "quickUpdate": {
       "update": "Cập nhật",
-      "restart": "Khởi động lại"
+      "restart": "Khởi động lại",
+      "installing": "Đang cài đặt"
     },
     "gemini": "Song Tử",
     "codebuddy": "Tài khoản CodeBuddy"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} thất bại: {{failList}}",
       "refreshingQuota": "Đang làm mới hạn ngạch {{done}}/{{total}} (bạn có thể đóng hộp thoại này)",
       "quotaRefreshDone": "Làm mới hạn ngạch hoàn tất"
+    },
+    "groups": {
+      "manageTitle": "Quản lý nhóm",
+      "title": "Nhóm tài khoản",
+      "create": "Tạo",
+      "newPlaceholder": "Nhập tên nhóm...",
+      "empty": "Chưa có nhóm nào. Tạo một nhóm để bắt đầu",
+      "accountCount": "{{count}} tài khoản",
+      "rename": "Đổi tên",
+      "addToGroup": "Thêm vào nhóm",
+      "createAndAdd": "Tạo nhóm và thêm...",
+      "removeFromGroup": "Xóa khỏi nhóm",
+      "allGroups": "Tất cả nhóm",
+      "noGroups": "Chưa có nhóm",
+      "noGroupsDesc": "Tạo nhóm để quản lý tài khoản hàng loạt",
+      "manage": "Quản lý",
+      "error": {
+        "duplicate": "Tên nhóm đã tồn tại",
+        "createFailed": "Tạo nhóm thất bại: {{error}}",
+        "renameFailed": "Đổi tên nhóm thất bại: {{error}}",
+        "deleteFailed": "Xóa nhóm thất bại: {{error}}",
+        "addFailed": "Thêm vào nhóm thất bại: {{error}}",
+        "createAndAddFailed": "Tạo nhóm và thêm thất bại: {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "Tên nhiệm vụ",
       "taskStatus": "Trạng thái",
       "triggerMode": "Chế độ kích hoạt",
-      "triggerModeHint": "1. Lịch trình: kích hoạt vào các thời điểm đã thiết lập.\\n2. Crontab: định nghĩa bằng biểu thức.\\n3. Đặt lại hạn mức: kích hoạt một lần khi hạn mức đầy.",
+      "triggerModeHint": "1. Lịch trình: kích hoạt vào các thời điểm đã thiết lập.\n2. Crontab: định nghĩa bằng biểu thức.\n3. Đặt lại hạn mức: kích hoạt một lần khi hạn mức đầy.",
       "modeScheduled": "📅 Lịch trình",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Đặt lại hạn mức",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "Xem chi tiết",
     "hideErrorDetails": "Ẩn chi tiết",
     "autoUpdateFailedAfterRetries": "Tự động cập nhật thất bại sau {{count}} lần thử. Hãy thử lại sau hoặc tải thủ công.",
-    "updateCancelled": "Đã hủy cập nhật."
+    "updateCancelled": "Đã hủy cập nhật.",
+    "installing": "Đang cài đặt...",
+    "authorizing": "Đang chờ cấp quyền hệ thống...",
+    "installFailed": "Cài đặt hệ thống thất bại. Hãy thử lại sau hoặc tải gói về thủ công.",
+    "restartRequiredAfterInstall": "Bản cập nhật đã được cài. Hãy khởi động lại ứng dụng thủ công để hoàn tất chuyển đổi."
   },
   "closeDialog": {
     "title": "Đóng cửa sổ",
@@ -1302,7 +1331,8 @@
       "errorInfo": "Chi tiết lỗi",
       "filePath": "Vị trí tệp",
       "helpText": "Vui lòng mở thư mục để sửa thủ công hoặc xóa tệp, sau đó khởi động lại ứng dụng.",
-      "openFolder": "Mở thư mục"
+      "openFolder": "Mở thư mục",
+      "openFolderFailed": "Mở thư mục thất bại: {{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "Cài đặt CodeBuddy",
       "appPath": "Đường dẫn CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Tải cấu hình thất bại: {{error}}",
+      "saveFailed": "Lưu cấu hình thất bại: {{error}}",
+      "pickPathFailed": "Chọn đường dẫn thất bại: {{error}}",
+      "resetPathFailed": "Đặt lại đường dẫn thất bại: {{error}}"
     }
   },
   "quotaAlert": {

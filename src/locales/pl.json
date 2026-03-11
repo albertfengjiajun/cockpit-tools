@@ -159,7 +159,8 @@
     "manual": "Instrukcja obsługi",
     "quickUpdate": {
       "update": "Aktualizuj",
-      "restart": "Uruchom ponownie"
+      "restart": "Uruchom ponownie",
+      "installing": "Instalowanie"
     },
     "gemini": "Konta Gemini",
     "codebuddy": "Konta CodeBuddy"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} nieudanych: {{failList}}",
       "refreshingQuota": "Odświeżanie limitu {{done}}/{{total}} (możesz zamknąć to okno)",
       "quotaRefreshDone": "Odświeżanie limitu zakończone"
+    },
+    "groups": {
+      "manageTitle": "Zarządzanie grupami",
+      "title": "Grupy kont",
+      "create": "Utwórz",
+      "newPlaceholder": "Wprowadź nazwę grupy...",
+      "empty": "Brak grup. Utwórz jedną, aby rozpocząć",
+      "accountCount": "{{count}} kont(o/a)",
+      "rename": "Zmień nazwę",
+      "addToGroup": "Dodaj do grupy",
+      "createAndAdd": "Utwórz grupę i dodaj...",
+      "removeFromGroup": "Usuń z grupy",
+      "allGroups": "Wszystkie grupy",
+      "noGroups": "Brak grup",
+      "noGroupsDesc": "Utwórz grupy, aby zarządzać kontami",
+      "manage": "Zarządzaj",
+      "error": {
+        "duplicate": "Nazwa grupy już istnieje",
+        "createFailed": "Nie udało się utworzyć grupy: {{error}}",
+        "renameFailed": "Nie udało się zmienić nazwy grupy: {{error}}",
+        "deleteFailed": "Nie udało się usunąć grupy: {{error}}",
+        "addFailed": "Nie udało się dodać do grupy: {{error}}",
+        "createAndAddFailed": "Nie udało się utworzyć grupy i dodać: {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "Nazwa zadania",
       "taskStatus": "Status zadania",
       "triggerMode": "Tryb wyzwalania",
-      "triggerModeHint": "1. Harmonogram: uruchamiane o ustawionych godzinach.\\n2. Crontab: definiowane wyrażeniem.\\n3. Reset limitu: uruchamiane raz po zapełnieniu limitu.",
+      "triggerModeHint": "1. Harmonogram: uruchamiane o ustawionych godzinach.\n2. Crontab: definiowane wyrażeniem.\n3. Reset limitu: uruchamiane raz po zapełnieniu limitu.",
       "modeScheduled": "📅 Harmonogram",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Reset limitu",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "Pokaż szczegóły",
     "hideErrorDetails": "Ukryj szczegóły",
     "autoUpdateFailedAfterRetries": "Automatyczna aktualizacja nie powiodła się po {{count}} próbach. Spróbuj ponownie później lub pobierz ręcznie.",
-    "updateCancelled": "Aktualizacja została anulowana."
+    "updateCancelled": "Aktualizacja została anulowana.",
+    "installing": "Instalowanie...",
+    "authorizing": "Oczekiwanie na autoryzację systemu...",
+    "installFailed": "Instalacja systemowa nie powiodła się. Spróbuj ponownie później lub pobierz pakiet ręcznie.",
+    "restartRequiredAfterInstall": "Aktualizacja jest zainstalowana. Uruchom aplikację ponownie ręcznie, aby dokończyć przełączenie."
   },
   "closeDialog": {
     "title": "Zamknij okno",
@@ -1302,7 +1331,8 @@
       "errorInfo": "Szczegóły błędu",
       "filePath": "Lokalizacja pliku",
       "helpText": "Otwórz folder, aby naprawić plik ręcznie lub go usunąć, a następnie uruchom ponownie aplikację.",
-      "openFolder": "Otwórz folder"
+      "openFolder": "Otwórz folder",
+      "openFolderFailed": "Nie udało się otworzyć folderu: {{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "Ustawienia CodeBuddy",
       "appPath": "Ścieżka CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Nie udało się załadować konfiguracji: {{error}}",
+      "saveFailed": "Nie udało się zapisać konfiguracji: {{error}}",
+      "pickPathFailed": "Nie udało się wybrać ścieżki: {{error}}",
+      "resetPathFailed": "Nie udało się zresetować ścieżki: {{error}}"
     }
   },
   "quotaAlert": {

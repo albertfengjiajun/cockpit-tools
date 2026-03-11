@@ -159,7 +159,8 @@
     "manual": "دليل الاستخدام",
     "quickUpdate": {
       "update": "تحديث",
-      "restart": "إعادة التشغيل"
+      "restart": "إعادة التشغيل",
+      "installing": "جارٍ التثبيت"
     },
     "gemini": "حسابات Gemini",
     "codebuddy": "حسابات CodeBuddy"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} فشل: {{failList}}",
       "refreshingQuota": "جارٍ تحديث الحصة {{done}}/{{total}} (يمكنك إغلاق هذا الحوار)",
       "quotaRefreshDone": "اكتمل تحديث الحصة"
+    },
+    "groups": {
+      "manageTitle": "إدارة المجموعات",
+      "title": "مجموعات الحسابات",
+      "create": "إنشاء",
+      "newPlaceholder": "أدخل اسم المجموعة...",
+      "empty": "لا توجد مجموعات. أنشئ واحدة للبدء",
+      "accountCount": "{{count}} حساب",
+      "rename": "إعادة تسمية",
+      "addToGroup": "إضافة إلى المجموعة",
+      "createAndAdd": "إنشاء مجموعة وإضافة...",
+      "removeFromGroup": "إزالة من المجموعة",
+      "allGroups": "جميع المجموعات",
+      "noGroups": "لا توجد مجموعات",
+      "noGroupsDesc": "أنشئ مجموعات لإدارة حساباتك",
+      "manage": "إدارة",
+      "error": {
+        "duplicate": "اسم المجموعة موجود بالفعل",
+        "createFailed": "فشل إنشاء المجموعة: {{error}}",
+        "renameFailed": "فشل إعادة تسمية المجموعة: {{error}}",
+        "deleteFailed": "فشل حذف المجموعة: {{error}}",
+        "addFailed": "فشل الإضافة إلى المجموعة: {{error}}",
+        "createAndAddFailed": "فشل الإنشاء والإضافة: {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "اسم المهمة",
       "taskStatus": "حالة المهمة",
       "triggerMode": "وضع التشغيل",
-      "triggerModeHint": "1. مجدول: يتم التشغيل في الأوقات المحددة.\\n2. Crontab: تحديد بواسطة تعبير.\\n3. إعادة تعيين الحصة: تشغيل مرة واحدة عند امتلاء الحصة.",
+      "triggerModeHint": "1. مجدول: يتم التشغيل في الأوقات المحددة.\n2. Crontab: تحديد بواسطة تعبير.\n3. إعادة تعيين الحصة: تشغيل مرة واحدة عند امتلاء الحصة.",
       "modeScheduled": "📅 مجدول",
       "modeCrontab": "🧩 كرونتاب",
       "modeQuotaReset": "🔄 إعادة تعيين الحصة",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "عرض التفاصيل",
     "hideErrorDetails": "إخفاء التفاصيل",
     "autoUpdateFailedAfterRetries": "فشل التحديث التلقائي بعد {{count}} محاولات. يمكنك المحاولة لاحقًا أو التنزيل يدويًا.",
-    "updateCancelled": "تم إلغاء التحديث."
+    "updateCancelled": "تم إلغاء التحديث.",
+    "installing": "جارٍ التثبيت...",
+    "authorizing": "بانتظار تفويض النظام...",
+    "installFailed": "فشل التثبيت على النظام. حاول لاحقًا أو نزّل الحزمة يدويًا.",
+    "restartRequiredAfterInstall": "تم تثبيت التحديث. أعد تشغيل التطبيق يدويًا لإكمال التبديل."
   },
   "closeDialog": {
     "title": "إغلاق النافذة",
@@ -1302,7 +1331,8 @@
       "errorInfo": "تفاصيل الخطأ",
       "filePath": "موقع الملف",
       "helpText": "يرجى فتح المجلد للإصلاح يدويًا أو حذف الملف، ثم إعادة تشغيل التطبيق.",
-      "openFolder": "فتح المجلد"
+      "openFolder": "فتح المجلد",
+      "openFolderFailed": "فشل فتح المجلد: {{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "إعدادات CodeBuddy",
       "appPath": "مسار CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "فشل تحميل الإعدادات: {{error}}",
+      "saveFailed": "فشل حفظ الإعدادات: {{error}}",
+      "pickPathFailed": "فشل اختيار المسار: {{error}}",
+      "resetPathFailed": "فشل إعادة تعيين المسار: {{error}}"
     }
   },
   "quotaAlert": {

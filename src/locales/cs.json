@@ -159,7 +159,8 @@
     "manual": "Uživatelská příručka",
     "quickUpdate": {
       "update": "Aktualizovat",
-      "restart": "Restartovat"
+      "restart": "Restartovat",
+      "installing": "Instalace"
     },
     "gemini": "Účty Gemini",
     "codebuddy": "Účty CodeBuddy"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} selhalo: {{failList}}",
       "refreshingQuota": "Obnovuji kvótu {{done}}/{{total}} (toto okno můžete zavřít)",
       "quotaRefreshDone": "Obnovení kvóty dokončeno"
+    },
+    "groups": {
+      "manageTitle": "Správa skupin",
+      "title": "Skupiny účtů",
+      "create": "Vytvořit",
+      "newPlaceholder": "Zadejte název skupiny...",
+      "empty": "Zatím žádné skupiny. Vytvořte jednu",
+      "accountCount": "{{count}} účet(ů)",
+      "rename": "Přejmenovat",
+      "addToGroup": "Přidat do skupiny",
+      "createAndAdd": "Vytvořit skupinu a přidat...",
+      "removeFromGroup": "Odebrat ze skupiny",
+      "allGroups": "Všechny skupiny",
+      "noGroups": "Žádné skupiny",
+      "noGroupsDesc": "Vytvořte skupiny pro správu účtů",
+      "manage": "Spravovat",
+      "error": {
+        "duplicate": "Název skupiny již existuje",
+        "createFailed": "Nepodařilo se vytvořit skupinu: {{error}}",
+        "renameFailed": "Nepodařilo se přejmenovat skupinu: {{error}}",
+        "deleteFailed": "Nepodařilo se smazat skupinu: {{error}}",
+        "addFailed": "Nepodařilo se přidat do skupiny: {{error}}",
+        "createAndAddFailed": "Nepodařilo se vytvořit a přidat: {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "Název úlohy",
       "taskStatus": "Stav úlohy",
       "triggerMode": "Režim spouštění",
-      "triggerModeHint": "1. Plánováno: spouští se v nastavených časech.\\n2. Crontab: definujte výrazem.\\n3. Reset kvóty: spustí se jednou při plné kvótě.",
+      "triggerModeHint": "1. Plánováno: spouští se v nastavených časech.\n2. Crontab: definujte výrazem.\n3. Reset kvóty: spustí se jednou při plné kvótě.",
       "modeScheduled": "📅 Plánováno",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Reset kvóty",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "Zobrazit podrobnosti",
     "hideErrorDetails": "Skrýt podrobnosti",
     "autoUpdateFailedAfterRetries": "Automatická aktualizace selhala i po {{count}} pokusech. Zkuste to později nebo stáhněte ručně.",
-    "updateCancelled": "Aktualizace byla zrušena."
+    "updateCancelled": "Aktualizace byla zrušena.",
+    "installing": "Instaluje se...",
+    "authorizing": "Čeká se na autorizaci systému...",
+    "installFailed": "Instalace do systému selhala. Zkuste to později nebo stáhněte balíček ručně.",
+    "restartRequiredAfterInstall": "Aktualizace je nainstalována. Dokončete přepnutí ručním restartem aplikace."
   },
   "closeDialog": {
     "title": "Zavřít okno",
@@ -1302,7 +1331,8 @@
       "errorInfo": "Podrobnosti chyby",
       "filePath": "Umístění souboru",
       "helpText": "Otevřete složku a opravte nebo odstraňte soubor ručně, poté restartujte aplikaci.",
-      "openFolder": "Otevřít složku"
+      "openFolder": "Otevřít složku",
+      "openFolderFailed": "Nepodařilo se otevřít složku: {{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "Nastavení CodeBuddy",
       "appPath": "Cesta CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Nepodařilo se načíst konfiguraci: {{error}}",
+      "saveFailed": "Nepodařilo se uložit konfiguraci: {{error}}",
+      "pickPathFailed": "Nepodařilo se vybrat cestu: {{error}}",
+      "resetPathFailed": "Nepodařilo se resetovat cestu: {{error}}"
     }
   },
   "quotaAlert": {

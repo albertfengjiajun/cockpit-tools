@@ -85,16 +85,19 @@ fn parse_account_profile_from_check_response(
     let mut selected_record: Option<serde_json::Value> = None;
 
     if let Some(expected_id) = expected_account_id.as_deref() {
-        selected_record = records.iter().find(|item| {
-            let Some(record) = item.as_object() else {
-                return false;
-            };
-            let candidate_id = extract_account_record_field(
-                record,
-                &["id", "account_id", "chatgpt_account_id", "workspace_id"],
-            );
-            normalize_optional_ref(candidate_id.as_deref()) == Some(expected_id.to_string())
-        }).cloned();
+        selected_record = records
+            .iter()
+            .find(|item| {
+                let Some(record) = item.as_object() else {
+                    return false;
+                };
+                let candidate_id = extract_account_record_field(
+                    record,
+                    &["id", "account_id", "chatgpt_account_id", "workspace_id"],
+                );
+                normalize_optional_ref(candidate_id.as_deref()) == Some(expected_id.to_string())
+            })
+            .cloned();
     }
 
     if selected_record.is_none() {
@@ -151,7 +154,13 @@ fn parse_account_profile_from_check_response(
     );
     let account_structure = extract_account_record_field(
         record,
-        &["structure", "account_structure", "kind", "type", "account_type"],
+        &[
+            "structure",
+            "account_structure",
+            "kind",
+            "type",
+            "account_type",
+        ],
     );
     let account_id = extract_account_record_field(
         record,
@@ -173,9 +182,9 @@ async fn fetch_remote_account_profile(
     );
     headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
 
-    if let Some(account_id) = normalize_optional_ref(account.account_id.as_deref()).or_else(|| {
-        extract_chatgpt_account_id_from_access_token(&account.tokens.access_token)
-    }) {
+    if let Some(account_id) = normalize_optional_ref(account.account_id.as_deref())
+        .or_else(|| extract_chatgpt_account_id_from_access_token(&account.tokens.access_token))
+    {
         headers.insert(
             "ChatGPT-Account-Id",
             HeaderValue::from_str(&account_id)
@@ -495,7 +504,8 @@ pub async fn refresh_account_profile(account_id: &str) -> Result<CodexAccount, S
     let mut changed = false;
 
     if let Some(remote_account_id) = normalize_optional_value(account_id_from_remote) {
-        if normalize_optional_ref(account.account_id.as_deref()) != Some(remote_account_id.clone()) {
+        if normalize_optional_ref(account.account_id.as_deref()) != Some(remote_account_id.clone())
+        {
             account.account_id = Some(remote_account_id);
             changed = true;
         }
@@ -743,15 +753,25 @@ pub fn write_auth_file_to_dir(base_dir: &Path, account: &CodexAccount) -> Result
     ));
 
     if let Some(parent) = auth_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("创建 auth.json 目录失败: path={}, error={}", parent.display(), e))?;
+        fs::create_dir_all(parent).map_err(|e| {
+            format!(
+                "创建 auth.json 目录失败: path={}, error={}",
+                parent.display(),
+                e
+            )
+        })?;
     }
 
     let auth_file = build_auth_file(account);
     let content =
         serde_json::to_string_pretty(&auth_file).map_err(|e| format!("序列化失败: {}", e))?;
-    fs::write(&auth_path, content)
-        .map_err(|e| format!("写入 auth.json 失败: path={}, error={}", auth_path.display(), e))?;
+    fs::write(&auth_path, content).map_err(|e| {
+        format!(
+            "写入 auth.json 失败: path={}, error={}",
+            auth_path.display(),
+            e
+        )
+    })?;
 
     logger::log_info(&format!(
         "[Codex切号] 已写入登录信息: account_id={}, target_file={}",

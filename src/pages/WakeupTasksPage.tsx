@@ -1017,7 +1017,11 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
     return formatRunTime(nextRuns[0], locale, t);
   };
 
-  const openCreateModal = () => {
+  const openCreateModal = async () => {
+    // 先检查路径是否已配置
+    const runtimeReady = await ensureWakeupRuntimeReady();
+    if (!runtimeReady) return;
+
     setEditingTaskId(null);
     setFormName(t('wakeup.newTaskName'));
     setFormEnabled(true);
@@ -1345,7 +1349,11 @@ export function WakeupTasksPage({ onNavigate }: WakeupPageProps) {
     setNotice({ text: t('wakeup.notice.taskSaved', { name }), tone: 'success' });
   };
 
-  const openTestModal = () => {
+  const openTestModal = async () => {
+    // 先检查路径是否已配置
+    const runtimeReady = await ensureWakeupRuntimeReady();
+    if (!runtimeReady) return;
+
     setShowTestModal(true);
   };
 

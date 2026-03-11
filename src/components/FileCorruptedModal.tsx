@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import { FolderOpen, X } from 'lucide-react';
@@ -48,14 +49,22 @@ export function parseFileCorruptedError(error: unknown): FileCorruptedError | nu
 
 export function FileCorruptedModal({ error, onClose }: FileCorruptedModalProps) {
   const { t } = useTranslation();
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const handleOpenFolder = async () => {
     try {
+      setActionError(null);
       // 获取文件所在目录
       const folderPath = error.file_path.substring(0, error.file_path.lastIndexOf('/'));
       await invoke('open_folder', { path: folderPath });
     } catch (e) {
       console.error('Failed to open folder:', e);
+      setActionError(
+        t('error.fileCorrupted.openFolderFailed', {
+          error: String(e),
+          defaultValue: '打开文件夹失败：{{error}}',
+        })
+      );
     }
   };
 
@@ -96,6 +105,20 @@ export function FileCorruptedModal({ error, onClose }: FileCorruptedModalProps) 
               '请打开文件夹手动修复或删除该文件，然后重新启动应用。'
             )}
           </p>
+
+          {actionError && (
+            <div style={{
+              marginTop: 12,
+              padding: '8px 12px',
+              borderRadius: 8,
+              background: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              color: 'var(--danger, #ef4444)',
+              fontSize: 13,
+            }}>
+              {actionError}
+            </div>
+          )}
         </div>
 
         <div className="modal-footer">

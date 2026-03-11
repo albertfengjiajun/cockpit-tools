@@ -159,7 +159,8 @@
     "manual": "Manual do usuário",
     "quickUpdate": {
       "update": "Atualizar",
-      "restart": "Reiniciar"
+      "restart": "Reiniciar",
+      "installing": "Instalando"
     },
     "gemini": "Gêmeos",
     "codebuddy": "Contas CodeBuddy"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} falhou: {{failList}}",
       "refreshingQuota": "Atualizando cota {{done}}/{{total}} (você pode fechar esta caixa de diálogo)",
       "quotaRefreshDone": "Atualização de cota concluída"
+    },
+    "groups": {
+      "manageTitle": "Gerenciamento de grupos",
+      "title": "Grupos de contas",
+      "create": "Criar",
+      "newPlaceholder": "Digite o nome do grupo...",
+      "empty": "Sem grupos. Crie um para começar",
+      "accountCount": "{{count}} conta(s)",
+      "rename": "Renomear",
+      "addToGroup": "Adicionar ao grupo",
+      "createAndAdd": "Criar grupo e adicionar...",
+      "removeFromGroup": "Remover do grupo",
+      "allGroups": "Todos os grupos",
+      "noGroups": "Sem grupos",
+      "noGroupsDesc": "Crie grupos para gerenciar suas contas",
+      "manage": "Gerenciar",
+      "error": {
+        "duplicate": "Nome do grupo já existe",
+        "createFailed": "Falha ao criar grupo: {{error}}",
+        "renameFailed": "Falha ao renomear grupo: {{error}}",
+        "deleteFailed": "Falha ao excluir grupo: {{error}}",
+        "addFailed": "Falha ao adicionar ao grupo: {{error}}",
+        "createAndAddFailed": "Falha ao criar e adicionar: {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "Nome da tarefa",
       "taskStatus": "Status da tarefa",
       "triggerMode": "Modo de disparo",
-      "triggerModeHint": "1. Agendado: dispara nos horários definidos.\\n2. Crontab: defina por expressão.\\n3. Reset de cota: dispara uma vez quando a cota estiver cheia.",
+      "triggerModeHint": "1. Agendado: dispara nos horários definidos.\n2. Crontab: defina por expressão.\n3. Reset de cota: dispara uma vez quando a cota estiver cheia.",
       "modeScheduled": "📅 Agendado",
       "modeCrontab": "🧩Crontab",
       "modeQuotaReset": "🔄 Reset de cota",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "Ver detalhes",
     "hideErrorDetails": "Ocultar detalhes",
     "autoUpdateFailedAfterRetries": "A atualização automática falhou após {{count}} tentativas. Tente novamente mais tarde ou baixe manualmente.",
-    "updateCancelled": "Atualização cancelada."
+    "updateCancelled": "Atualização cancelada.",
+    "installing": "Instalando...",
+    "authorizing": "Aguardando autorização do sistema...",
+    "installFailed": "A instalação do sistema falhou. Tente novamente mais tarde ou baixe o pacote manualmente.",
+    "restartRequiredAfterInstall": "A atualização foi instalada. Reinicie o app manualmente para concluir a troca."
   },
   "closeDialog": {
     "title": "Fechar janela",
@@ -1302,7 +1331,8 @@
       "errorInfo": "Detalhes do erro",
       "filePath": "Localização do arquivo",
       "helpText": "Por favor, abra a pasta para reparar manualmente ou exclua o arquivo e reinicie o aplicativo.",
-      "openFolder": "Abrir pasta"
+      "openFolder": "Abrir pasta",
+      "openFolderFailed": "Falha ao abrir pasta: {{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "Configuracoes do CodeBuddy",
       "appPath": "Caminho do CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Falha ao carregar configuração: {{error}}",
+      "saveFailed": "Falha ao salvar configuração: {{error}}",
+      "pickPathFailed": "Falha ao selecionar caminho: {{error}}",
+      "resetPathFailed": "Falha ao redefinir caminho: {{error}}"
     }
   },
   "quotaAlert": {

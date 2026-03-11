@@ -48,27 +48,137 @@ export interface WindsurfAccount {
 }
 
 export type WindsurfQuotaClass = 'high' | 'medium' | 'low' | 'critical';
-export type WindsurfPlanBadge = 'FREE' | 'INDIVIDUAL' | 'PRO' | 'BUSINESS' | 'ENTERPRISE' | 'UNKNOWN';
+export type WindsurfPlanBadge =
+  | 'FREE'
+  | 'TRIAL'
+  | 'INDIVIDUAL'
+  | 'PRO'
+  | 'PRO_ULTIMATE'
+  | 'TEAMS'
+  | 'TEAMS_ULTIMATE'
+  | 'BUSINESS'
+  | 'ENTERPRISE'
+  | 'UNKNOWN';
+
+const WINDSURF_TEAMS_TIER_BADGE_MAP: Record<number, WindsurfPlanBadge> = {
+  1: 'TEAMS',
+  2: 'PRO',
+  3: 'ENTERPRISE',
+  4: 'ENTERPRISE',
+  5: 'ENTERPRISE',
+  7: 'TEAMS_ULTIMATE',
+  8: 'PRO_ULTIMATE',
+  9: 'TRIAL',
+  10: 'ENTERPRISE',
+  11: 'ENTERPRISE',
+  12: 'ENTERPRISE',
+  14: 'PRO',
+};
+
+function normalizePlanToken(planType?: string | null): string {
+  return (planType || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+}
 
 export function getWindsurfPlanDisplayName(planType?: string | null): string {
-  if (!planType) return 'UNKNOWN';
-  const upper = planType.toUpperCase();
-  if (upper.includes('FREE')) return 'FREE';
-  if (upper.includes('INDIVIDUAL_PRO')) return 'PRO';
-  if (upper === 'PRO') return 'PRO';
-  if (upper.includes('INDIVIDUAL')) return 'INDIVIDUAL';
-  if (upper.includes('BUSINESS')) return 'BUSINESS';
-  if (upper.includes('ENTERPRISE')) return 'ENTERPRISE';
-  return upper;
+  const normalized = normalizePlanToken(planType);
+  if (!normalized) return 'UNKNOWN';
+  if (normalized.includes('TEAMS_ULTIMATE')) return 'TEAMS_ULTIMATE';
+  if (normalized.includes('PRO_ULTIMATE')) return 'PRO_ULTIMATE';
+  if (
+    normalized === 'TRIAL' ||
+    normalized === 'FREE_TRIAL' ||
+    normalized.includes('_TRIAL')
+  ) {
+    return 'TRIAL';
+  }
+  if (normalized.includes('FREE')) return 'FREE';
+  if (normalized.includes('INDIVIDUAL_PRO')) return 'PRO';
+  if (normalized.endsWith('_PRO')) return 'PRO';
+  if (normalized === 'PRO') return 'PRO';
+  if (normalized.includes('INDIVIDUAL')) return 'INDIVIDUAL';
+  if (normalized.includes('TEAMS')) return 'TEAMS';
+  if (normalized.includes('BUSINESS')) return 'BUSINESS';
+  if (normalized.includes('ENTERPRISE')) return 'ENTERPRISE';
+  return normalized;
+}
+
+export function getWindsurfPlanLabel(planType?: string | null): string {
+  const normalized = getWindsurfPlanDisplayName(planType);
+  switch (normalized) {
+    case 'FREE':
+      return 'Free';
+    case 'TRIAL':
+      return 'Trial';
+    case 'INDIVIDUAL':
+      return 'Individual';
+    case 'PRO':
+      return 'Pro';
+    case 'PRO_ULTIMATE':
+      return 'Pro Ultimate';
+    case 'TEAMS':
+      return 'Teams';
+    case 'TEAMS_ULTIMATE':
+      return 'Teams Ultimate';
+    case 'BUSINESS':
+      return 'Business';
+    case 'ENTERPRISE':
+      return 'Enterprise';
+    default: {
+      const trimmed = planType?.trim();
+      return trimmed || 'UNKNOWN';
+    }
+  }
+}
+
+export function getWindsurfPlanBadgeClass(planType?: string | null): string {
+  const normalized = getWindsurfPlanDisplayName(planType);
+  switch (normalized) {
+    case 'FREE':
+      return 'free';
+    case 'TRIAL':
+      return 'trial';
+    case 'INDIVIDUAL':
+      return 'individual';
+    case 'PRO':
+      return 'pro';
+    case 'PRO_ULTIMATE':
+      return 'pro-ultimate';
+    case 'TEAMS':
+      return 'teams';
+    case 'TEAMS_ULTIMATE':
+      return 'teams-ultimate';
+    case 'BUSINESS':
+      return 'business';
+    case 'ENTERPRISE':
+      return 'enterprise';
+    default:
+      return 'unknown';
+  }
+}
+
+function formatStoredPlanLabel(planType?: string | null): string | null {
+  const trimmed = planType?.trim();
+  if (!trimmed) return null;
+
+  const looksMachineReadable =
+    trimmed.includes('_') ||
+    trimmed === trimmed.toUpperCase() ||
+    (trimmed === trimmed.toLowerCase() && !/[\s-]/.test(trimmed));
+
+  return looksMachineReadable ? getWindsurfPlanLabel(trimmed) : trimmed;
 }
 
 function resolvePlanFromSku(sku: string): WindsurfPlanBadge | null {
   const lower = sku.toLowerCase();
   if (!lower) return null;
+  if (lower.includes('teams_ultimate')) return 'TEAMS_ULTIMATE';
+  if (lower.includes('pro_ultimate')) return 'PRO_ULTIMATE';
+  if (lower.includes('trial')) return 'TRIAL';
   if (lower.includes('free_limited') || lower.includes('no_auth_limited')) return 'FREE';
   if (lower === 'free' || lower === 'windsurf') return 'FREE';
   if (lower.includes('enterprise')) return 'ENTERPRISE';
   if (lower.includes('business')) return 'BUSINESS';
+  if (lower.includes('teams')) return 'TEAMS';
   if (lower.includes('individual_pro') || lower === 'pro' || lower.includes('_pro')) return 'PRO';
   if (lower.includes('individual')) return 'INDIVIDUAL';
   return null;
@@ -79,10 +189,18 @@ function mapPlanNameToBadge(planName?: string | null): WindsurfPlanBadge {
   switch (normalizedPlan) {
     case 'FREE':
       return 'FREE';
+    case 'TRIAL':
+      return 'TRIAL';
     case 'PRO':
       return 'PRO';
+    case 'PRO_ULTIMATE':
+      return 'PRO_ULTIMATE';
     case 'INDIVIDUAL':
       return 'INDIVIDUAL';
+    case 'TEAMS':
+      return 'TEAMS';
+    case 'TEAMS_ULTIMATE':
+      return 'TEAMS_ULTIMATE';
     case 'BUSINESS':
       return 'BUSINESS';
     case 'ENTERPRISE':
@@ -129,11 +247,16 @@ function resolveWindsurfPlanInfo(
 function resolveWindsurfRemotePlanName(account: WindsurfAccount): string | null {
   const planStatus = resolveWindsurfPlanStatus(account);
   const planInfo = resolveWindsurfPlanInfo(account, planStatus);
-  return (
-    getStringFromPaths(planInfo, [['planName'], ['plan_name'], ['teamsTier'], ['teams_tier'], ['name']]) ??
-    getStringFromPaths(planStatus, [['planName'], ['plan_name'], ['teamsTier'], ['teams_tier']]) ??
-    null
-  );
+
+  const directPlanName =
+    getStringFromPaths(planInfo, [['planName'], ['plan_name'], ['name']]) ??
+    getStringFromPaths(planStatus, [['planName'], ['plan_name']]);
+  if (directPlanName) {
+    return directPlanName.trim();
+  }
+
+  const teamsTierLabel = resolvePlanLabelFromTeamsTier(planInfo) ?? resolvePlanLabelFromTeamsTier(planStatus);
+  return teamsTierLabel ?? null;
 }
 
 export function getWindsurfPlanBadge(account: WindsurfAccount): WindsurfPlanBadge {
@@ -141,13 +264,51 @@ export function getWindsurfPlanBadge(account: WindsurfAccount): WindsurfPlanBadg
   const skuBadge = resolvePlanFromSku(tokenMap['sku'] || '');
   if (skuBadge) return skuBadge;
 
-  const directPlanBadge = mapPlanNameToBadge(account.copilot_plan);
+  const resolvedPlanBadge = mapPlanNameToBadge(getWindsurfResolvedPlanLabel(account));
+  if (resolvedPlanBadge !== 'UNKNOWN') return resolvedPlanBadge;
+
+  const directPlanBadge = mapPlanNameToBadge(account.copilot_plan ?? account.plan_type);
   if (directPlanBadge !== 'UNKNOWN') return directPlanBadge;
 
-  const remotePlanBadge = mapPlanNameToBadge(resolveWindsurfRemotePlanName(account));
-  if (remotePlanBadge !== 'UNKNOWN') return remotePlanBadge;
-
   return 'UNKNOWN';
+}
+
+function resolvePlanLabelFromTeamsTier(root: unknown): string | null {
+  const teamsTierString = getStringFromPaths(root, [['teamsTier'], ['teams_tier']]);
+  if (teamsTierString) {
+    return getWindsurfPlanLabel(teamsTierString);
+  }
+
+  const teamsTierNumber = getNumberFromPaths(root, [['teamsTier'], ['teams_tier']]);
+  if (teamsTierNumber == null) {
+    return null;
+  }
+
+  const badge = WINDSURF_TEAMS_TIER_BADGE_MAP[Math.trunc(teamsTierNumber)];
+  return badge ? getWindsurfPlanLabel(badge) : null;
+}
+
+export function getWindsurfResolvedPlanLabel(account: WindsurfAccount): string | null {
+  const protoSummary = parseWindsurfProtoSummary(account);
+  const candidates = [
+    resolveWindsurfRemotePlanName(account),
+    protoSummary?.planName?.trim() ?? null,
+    formatStoredPlanLabel(account.copilot_plan),
+    formatStoredPlanLabel(account.plan_type),
+  ];
+  let unknownCandidate: string | null = null;
+
+  for (const candidate of candidates) {
+    const trimmed = candidate?.trim();
+    if (!trimmed) continue;
+    if (getWindsurfPlanDisplayName(trimmed) === 'UNKNOWN') {
+      unknownCandidate ??= trimmed;
+      continue;
+    }
+    return getWindsurfPlanLabel(trimmed);
+  }
+
+  return unknownCandidate ? getWindsurfPlanLabel(unknownCandidate) : null;
 }
 
 export function getWindsurfQuotaClass(percentage: number): WindsurfQuotaClass {
@@ -813,12 +974,7 @@ export function getWindsurfCreditsSummary(account: WindsurfAccount): WindsurfCre
     parseTimestampSeconds(account.copilot_quota_reset_date);
 
   return {
-    planName:
-      resolveWindsurfRemotePlanName(account) ??
-      protoSummary?.planName ??
-      account.copilot_plan ??
-      account.plan_type ??
-      null,
+    planName: getWindsurfResolvedPlanLabel(account),
     creditsLeft: promptCreditsLeftActual,
     promptCreditsLeft: promptCreditsLeftActual,
     promptCreditsUsed,

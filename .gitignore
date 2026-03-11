@@ -30,3 +30,6 @@ AGENTS.md
 locale-check-report.md
 
 docs/platform-integration-guide.md
+
+# Runtime caches
+src-tauri/arms_cache/

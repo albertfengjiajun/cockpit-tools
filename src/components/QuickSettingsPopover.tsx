@@ -85,6 +85,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
   const [config, setConfig] = useState<GeneralConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [pathDetecting, setPathDetecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [refreshEditing, setRefreshEditing] = useState(false);
   const [thresholdEditing, setThresholdEditing] = useState(false);
   const [quotaAlertThresholdEditing, setQuotaAlertThresholdEditing] = useState(false);
@@ -138,6 +139,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
 
   const loadConfig = async () => {
     try {
+      setError(null);
       const cfg = await invoke<GeneralConfig>('get_general_config');
       setConfig(cfg);
       // 非预设值通过下拉中的动态选项展示，不默认进入输入态
@@ -149,6 +151,10 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       setQuotaAlertCustomThreshold('');
     } catch (err) {
       console.error('Failed to load config:', err);
+      setError(t('quickSettings.error.loadFailed', {
+        error: String(err),
+        defaultValue: '加载配置失败：{{error}}',
+      }));
     }
   };
 
@@ -217,6 +223,10 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
         window.dispatchEvent(new Event('config-updated'));
       } catch (err) {
         console.error('Failed to save config:', err);
+        setError(t('quickSettings.error.saveFailed', {
+          error: String(err),
+          defaultValue: '保存配置失败：{{error}}',
+        }));
       } finally {
         setSaving(false);
       }
@@ -248,6 +258,10 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       saveConfig({ [key]: path });
     } catch (err) {
       console.error('Failed to pick path:', err);
+      setError(t('quickSettings.error.pickPathFailed', {
+        error: String(err),
+        defaultValue: '选择路径失败：{{error}}',
+      }));
     }
   };
 
@@ -274,6 +288,10 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
       saveConfig({ [key]: path });
     } catch (err) {
       console.error('Failed to reset path:', err);
+      setError(t('quickSettings.error.resetPathFailed', {
+        error: String(err),
+        defaultValue: '重置路径失败：{{error}}',
+      }));
     } finally {
       setPathDetecting(false);
     }
@@ -608,6 +626,16 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
             <X size={16} />
           </button>
         </div>
+
+        {/* 错误提示 */}
+        {error && (
+          <div className="qs-error">
+            {error}
+            <button className="qs-error-close" onClick={() => setError(null)} aria-label={t('common.close')}>
+              <X size={12} />
+            </button>
+          </div>
+        )}
 
         {config && (
           <div className="qs-body">

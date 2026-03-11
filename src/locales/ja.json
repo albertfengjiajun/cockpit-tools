@@ -159,7 +159,8 @@
     "manual": "ユーザーマニュアル",
     "quickUpdate": {
       "update": "更新",
-      "restart": "再起動"
+      "restart": "再起動",
+      "installing": "インストール中"
     },
     "gemini": "Geminiアカウント",
     "codebuddy": "CodeBuddyアカウント"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} 件失敗: {{failList}}",
       "refreshingQuota": "クォータを更新中 {{done}}/{{total}}（このダイアログは閉じても構いません）",
       "quotaRefreshDone": "クォータの更新が完了しました"
+    },
+    "groups": {
+      "manageTitle": "グループ管理",
+      "title": "アカウントグループ",
+      "create": "作成",
+      "newPlaceholder": "グループ名を入力...",
+      "empty": "グループがありません。作成してください",
+      "accountCount": "{{count}} 件のアカウント",
+      "rename": "名前変更",
+      "addToGroup": "グループに追加",
+      "createAndAdd": "新規グループを作成して追加...",
+      "removeFromGroup": "グループから削除",
+      "allGroups": "すべてのグループ",
+      "noGroups": "グループなし",
+      "noGroupsDesc": "グループを作成してアカウントを一括管理",
+      "manage": "管理",
+      "error": {
+        "duplicate": "グループ名は既に存在します",
+        "createFailed": "グループの作成に失敗しました：{{error}}",
+        "renameFailed": "グループの名前変更に失敗しました：{{error}}",
+        "deleteFailed": "グループの削除に失敗しました：{{error}}",
+        "addFailed": "グループへの追加に失敗しました：{{error}}",
+        "createAndAddFailed": "グループの作成と追加に失敗しました：{{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "タスク名",
       "taskStatus": "タスク状態",
       "triggerMode": "トリガー方式",
-      "triggerModeHint": "1. 定時：設定した時間に実行。\\n2. Crontab：式で定義。\\n3. クォータリセット：満了時に一度実行。",
+      "triggerModeHint": "1. 定時：設定した時間に実行。\n2. Crontab：式で定義。\n3. クォータリセット：満了時に一度実行。",
       "modeScheduled": "📅 定時",
       "modeCrontab": "🧩 クロンタブ",
       "modeQuotaReset": "🔄 クォータリセット",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "詳細を表示",
     "hideErrorDetails": "詳細を隠す",
     "autoUpdateFailedAfterRetries": "{{count}} 回試行しましたが自動更新に失敗しました。しばらくして再試行するか、手動でダウンロードしてください。",
-    "updateCancelled": "更新をキャンセルしました。"
+    "updateCancelled": "更新をキャンセルしました。",
+    "installing": "インストール中...",
+    "authorizing": "システム認証を待っています...",
+    "installFailed": "システムへのインストールに失敗しました。後でもう一度試すか、手動でダウンロードしてください。",
+    "restartRequiredAfterInstall": "更新はインストール済みです。切り替えを完了するにはアプリを手動で再起動してください。"
   },
   "closeDialog": {
     "title": "ウィンドウを閉じる",
@@ -1302,7 +1331,8 @@
       "errorInfo": "エラー詳細",
       "filePath": "ファイルの場所",
       "helpText": "フォルダを開いて手動で修復するか、ファイルを削除してからアプリケーションを再起動してください。",
-      "openFolder": "フォルダを開く"
+      "openFolder": "フォルダを開く",
+      "openFolderFailed": "フォルダを開けませんでした：{{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "CodeBuddy 設定",
       "appPath": "CodeBuddy パス"
+    },
+    "error": {
+      "loadFailed": "設定の読み込みに失敗しました：{{error}}",
+      "saveFailed": "設定の保存に失敗しました：{{error}}",
+      "pickPathFailed": "パスの選択に失敗しました：{{error}}",
+      "resetPathFailed": "パスのリセットに失敗しました：{{error}}"
     }
   },
   "quotaAlert": {

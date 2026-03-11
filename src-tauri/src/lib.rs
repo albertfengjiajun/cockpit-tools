@@ -248,6 +248,8 @@ pub fn run() {
             commands::update::save_pending_update_notes,
             commands::update::check_version_jump,
             commands::update::update_log,
+            commands::update::get_update_runtime_info,
+            commands::update::install_linux_update,
             // Announcement Commands
             commands::announcement::announcement_get_state,
             commands::announcement::announcement_mark_as_read,

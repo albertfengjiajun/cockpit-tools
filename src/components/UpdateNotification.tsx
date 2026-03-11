@@ -24,7 +24,7 @@ interface UpdateInfo {
 
 type UpdateCheckSource = 'auto' | 'manual';
 type UpdateCheckStatus = 'has_update' | 'up_to_date' | 'failed';
-type UpdateActionState = 'hidden' | 'available' | 'downloading' | 'ready';
+type UpdateActionState = 'hidden' | 'available' | 'downloading' | 'installing' | 'ready';
 
 export interface UpdateCheckResult {
   source: UpdateCheckSource;
@@ -70,7 +70,6 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
   actionError = '',
   actionErrorDetails = '',
   onPrimaryAction,
-  onCancelUpdate,
 }) => {
   const { t, i18n } = useTranslation();
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
@@ -245,17 +244,15 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
 
   const versionMatched = actionVersion === updateInfo.latest_version;
   const isDownloading = actionState === 'downloading' && versionMatched;
+  const isInstalling = actionState === 'installing' && versionMatched;
   const isDownloaded = actionState === 'ready' && versionMatched;
   const clampedProgress = Math.max(0, Math.min(100, Math.round(actionProgress)));
   const mergedRetryStatus = actionRetryStatus || retryStatus;
-  const isError = Boolean(actionError) && !isDownloading && !isDownloaded;
+  const isError = Boolean(actionError) && !isDownloading && !isInstalling && !isDownloaded;
 
   const handleClose = () => {
-    if (isRestarting) {
+    if (isRestarting || isInstalling) {
       return;
-    }
-    if (isDownloading && onCancelUpdate) {
-      void onCancelUpdate();
     }
     onClose();
   };
@@ -274,7 +271,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
             className="modal-close"
             onClick={handleClose}
             aria-label={t('common.cancel')}
-            disabled={isRestarting}
+            disabled={isRestarting || isInstalling}
           >
             <X size={18} />
           </button>
@@ -352,10 +349,10 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
           <button
             className="btn btn-secondary"
             onClick={handleClose}
-            disabled={isRestarting}
+            disabled={isRestarting || isInstalling}
           >
             {isDownloading
-              ? t('update_notification.cancelUpdate', 'Cancel Update')
+              ? t('update_notification.later', 'Later')
               : isDownloaded
                 ? t('update_notification.later', 'Later')
                 : t('common.cancel')}
@@ -371,6 +368,11 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
                 {t('update_notification.action')}
               </button>
             </>
+          ) : isInstalling ? (
+            <button className="btn btn-primary" disabled>
+              <RefreshCw size={16} className="spin" />
+              {t('update_notification.installing', 'Installing...')}
+            </button>
           ) : isRestarting ? (
             <button className="btn btn-primary" disabled>
               <RefreshCw size={16} className="spin" />

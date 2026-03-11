@@ -169,8 +169,12 @@ fn resolve_codebuddy_oauth_webview_ui_texts(
 }
 
 fn handle_oauth_webview_snapshot(app: &AppHandle, raw_payload: String) -> Result<(), String> {
-    let encoded =
-        enrich_webview_snapshot_with_native_cookie(app, CB_OAUTH_WEBVIEW_LABEL, raw_payload, "OAuth");
+    let encoded = enrich_webview_snapshot_with_native_cookie(
+        app,
+        CB_OAUTH_WEBVIEW_LABEL,
+        raw_payload,
+        "OAuth",
+    );
 
     codebuddy_oauth::cache_pre_auth_quota_snapshot(&encoded)?;
     let _ = app.emit(
@@ -186,8 +190,12 @@ fn handle_quota_webview_snapshot(
     account_id: String,
     raw_payload: String,
 ) -> Result<(), String> {
-    let encoded =
-        enrich_webview_snapshot_with_native_cookie(app, CB_QUOTA_WEBVIEW_LABEL, raw_payload, "Quota");
+    let encoded = enrich_webview_snapshot_with_native_cookie(
+        app,
+        CB_QUOTA_WEBVIEW_LABEL,
+        raw_payload,
+        "Quota",
+    );
     let app_emit = app.clone();
 
     tauri::async_runtime::spawn(async move {

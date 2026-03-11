@@ -13,7 +13,7 @@ interface SideNavProps {
   easterEggClickCount: number;
   onEasterEggTriggerClick: () => void;
   hasBreakoutSession: boolean;
-  updateActionState: 'hidden' | 'available' | 'downloading' | 'ready';
+  updateActionState: 'hidden' | 'available' | 'downloading' | 'installing' | 'ready';
   updateProgress: number;
   onUpdateActionClick: () => void;
 }
@@ -98,7 +98,7 @@ export function SideNav({
   const clampedUpdateProgress = Math.max(0, Math.min(100, Math.round(updateProgress)));
   const updateVisualState = updateActionState === 'ready'
     ? 'restart'
-    : updateActionState === 'downloading'
+    : updateActionState === 'downloading' || updateActionState === 'installing'
       ? 'progress'
       : 'update';
 
@@ -113,11 +113,13 @@ export function SideNav({
             title={
               updateActionState === 'downloading'
                 ? t('update_notification.downloading', '下载中...')
+                : updateActionState === 'installing'
+                  ? t('nav.quickUpdate.installing', '安装中')
                 : updateActionState === 'ready'
                   ? t('nav.quickUpdate.restart', '重启')
                   : t('nav.quickUpdate.update', '更新')
             }
-            disabled={updateActionState === 'downloading'}
+            disabled={updateActionState === 'installing'}
           >
             {updateActionState === 'downloading' ? (
               <span className="side-nav-update-progress-lr">
@@ -129,6 +131,10 @@ export function SideNav({
                   <span className="side-nav-update-progress-ripple side-nav-update-progress-ripple-b" />
                 </span>
                 <span className="side-nav-update-progress-percent">{clampedUpdateProgress}%</span>
+              </span>
+            ) : updateActionState === 'installing' ? (
+              <span className="side-nav-update-text">
+                {t('nav.quickUpdate.installing', '安装中')}
               </span>
             ) : (
               <span className="side-nav-update-text">

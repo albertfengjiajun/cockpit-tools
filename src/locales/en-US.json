@@ -161,7 +161,8 @@
     "manual": "User Manual",
     "quickUpdate": {
       "update": "Update",
-      "restart": "Restart"
+      "restart": "Restart",
+      "installing": "Installing"
     }
   },
   "platformLayout": {
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} failed: {{failList}}",
       "refreshingQuota": "Refreshing quota {{done}}/{{total}} (you may close this dialog)",
       "quotaRefreshDone": "Quota refresh complete"
+    },
+    "groups": {
+      "manageTitle": "Group Management",
+      "title": "Account Groups",
+      "create": "Create",
+      "newPlaceholder": "Enter group name...",
+      "empty": "No groups yet, create one to get started",
+      "accountCount": "{{count}} account(s)",
+      "rename": "Rename",
+      "addToGroup": "Add to Group",
+      "createAndAdd": "Create group and add...",
+      "removeFromGroup": "Remove from Group",
+      "allGroups": "All Groups",
+      "noGroups": "No Groups",
+      "noGroupsDesc": "Create groups to manage your accounts in batches",
+      "manage": "Manage",
+      "error": {
+        "duplicate": "Group name already exists",
+        "createFailed": "Failed to create group: {{error}}",
+        "renameFailed": "Failed to rename group: {{error}}",
+        "deleteFailed": "Failed to delete group: {{error}}",
+        "addFailed": "Failed to add to group: {{error}}",
+        "createAndAddFailed": "Failed to create group and add: {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "Task name",
       "taskStatus": "Task status",
       "triggerMode": "Trigger mode",
-      "triggerModeHint": "1. Scheduled: trigger at set times.\\n2. Crontab: define with an expression.\\n3. Quota reset: trigger once when quota is full.",
+      "triggerModeHint": "1. Scheduled: trigger at set times.\n2. Crontab: define with an expression.\n3. Quota reset: trigger once when quota is full.",
       "modeScheduled": "📅 Scheduled",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Quota reset",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "View details",
     "hideErrorDetails": "Hide details",
     "autoUpdateFailedAfterRetries": "Auto-update failed after {{count}} attempts. Try again later or download manually.",
-    "updateCancelled": "Update canceled."
+    "updateCancelled": "Update canceled.",
+    "installing": "Installing...",
+    "authorizing": "Waiting for system authorization...",
+    "installFailed": "System installation failed. Try again later or download manually.",
+    "restartRequiredAfterInstall": "The update is installed. Restart the app manually to finish switching."
   },
   "closeDialog": {
     "title": "Close Window",
@@ -1470,7 +1499,8 @@
       "errorInfo": "Error Details",
       "filePath": "File Location",
       "helpText": "Please open the folder to repair manually or delete the file, then restart the application.",
-      "openFolder": "Open Folder"
+      "openFolder": "Open Folder",
+      "openFolderFailed": "Failed to open folder: {{error}}"
     }
   },
   "quickSettings": {
@@ -1530,7 +1560,13 @@
       "title": "Gemini Settings",
       "appPath": "Gemini CLI Path"
     },
-    "geminiRefreshInterval": "Quota Auto Refresh"
+    "geminiRefreshInterval": "Quota Auto Refresh",
+    "error": {
+      "loadFailed": "Failed to load config: {{error}}",
+      "saveFailed": "Failed to save config: {{error}}",
+      "pickPathFailed": "Failed to pick path: {{error}}",
+      "resetPathFailed": "Failed to reset path: {{error}}"
+    }
   },
   "quotaAlert": {
     "bannerText": "Quota alert for {{email}} (threshold {{threshold}}%, lowest {{lowest}}%, models: {{models}})",

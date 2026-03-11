@@ -159,7 +159,8 @@
     "manual": "Kullanım kılavuzu",
     "quickUpdate": {
       "update": "Güncelle",
-      "restart": "Yeniden başlat"
+      "restart": "Yeniden başlat",
+      "installing": "Yükleniyor"
     },
     "gemini": "İkizler burcu",
     "codebuddy": "CodeBuddy Hesapları"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} başarısız oldu: {{failList}}",
       "refreshingQuota": "Kota yenileniyor {{done}}/{{total}} (bu iletişim kutusunu kapatabilirsiniz)",
       "quotaRefreshDone": "Kota yenileme tamamlandı"
+    },
+    "groups": {
+      "manageTitle": "Grup yönetimi",
+      "title": "Hesap grupları",
+      "create": "Oluştur",
+      "newPlaceholder": "Grup adı girin...",
+      "empty": "Henüz grup yok. Başlamak için bir tane oluşturun",
+      "accountCount": "{{count}} hesap",
+      "rename": "Yeniden adlandır",
+      "addToGroup": "Gruba ekle",
+      "createAndAdd": "Grup oluştur ve ekle...",
+      "removeFromGroup": "Gruptan kaldır",
+      "allGroups": "Tüm gruplar",
+      "noGroups": "Grup yok",
+      "noGroupsDesc": "Hesaplarınızı toplu yönetmek için gruplar oluşturun",
+      "manage": "Yönet",
+      "error": {
+        "duplicate": "Grup adı zaten mevcut",
+        "createFailed": "Grup oluşturulamadı: {{error}}",
+        "renameFailed": "Grup yeniden adlandırılamadı: {{error}}",
+        "deleteFailed": "Grup silinemedi: {{error}}",
+        "addFailed": "Gruba eklenemedi: {{error}}",
+        "createAndAddFailed": "Grup oluşturulamadı ve eklenemedi: {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "Görev adı",
       "taskStatus": "Görev durumu",
       "triggerMode": "Tetikleme modu",
-      "triggerModeHint": "1. Planlı: ayarlanan zamanlarda tetiklenir.\\n2. Crontab: bir ifadeyle tanımlanır.\\n3. Kota sıfırlama: kota dolu olduğunda bir kez tetiklenir.",
+      "triggerModeHint": "1. Planlı: ayarlanan zamanlarda tetiklenir.\n2. Crontab: bir ifadeyle tanımlanır.\n3. Kota sıfırlama: kota dolu olduğunda bir kez tetiklenir.",
       "modeScheduled": "📅 Planlı",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Kota sıfırlama",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "Ayrıntıları göster",
     "hideErrorDetails": "Ayrıntıları gizle",
     "autoUpdateFailedAfterRetries": "Otomatik güncelleme {{count}} denemeden sonra başarısız oldu. Daha sonra tekrar deneyin veya manuel indirin.",
-    "updateCancelled": "Güncelleme iptal edildi."
+    "updateCancelled": "Güncelleme iptal edildi.",
+    "installing": "Yükleniyor...",
+    "authorizing": "Sistem yetkisi bekleniyor...",
+    "installFailed": "Sistem kurulumu başarısız oldu. Daha sonra yeniden deneyin veya paketi manuel indirin.",
+    "restartRequiredAfterInstall": "Güncelleme yüklendi. Geçişi tamamlamak için uygulamayı manuel olarak yeniden başlatın."
   },
   "closeDialog": {
     "title": "Pencereyi kapat",
@@ -1302,7 +1331,8 @@
       "errorInfo": "Hata Aytıntıları",
       "filePath": "Dosya Konumu",
       "helpText": "Lütfen dosyayı manuel olarak onarmak veya silmek için klasörü açın, ardından uygulamayı yeniden başlatın.",
-      "openFolder": "Klasörü Aç"
+      "openFolder": "Klasörü Aç",
+      "openFolderFailed": "Klasör açılamadı: {{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "CodeBuddy Ayarları",
       "appPath": "CodeBuddy Yolu"
+    },
+    "error": {
+      "loadFailed": "Yapılandırma yüklenemedi: {{error}}",
+      "saveFailed": "Yapılandırma kaydedilemedi: {{error}}",
+      "pickPathFailed": "Yol seçilemedi: {{error}}",
+      "resetPathFailed": "Yol sıfırlanamadı: {{error}}"
     }
   },
   "quotaAlert": {

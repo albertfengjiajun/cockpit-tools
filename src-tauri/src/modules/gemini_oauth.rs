@@ -21,8 +21,10 @@ const OAUTH_TIMEOUT_SECONDS: i64 = 300;
 const OAUTH_CALLBACK_PATH: &str = "/oauth2callback";
 const OAUTH_POLL_INTERVAL_SECONDS: u64 = 1;
 const HTTP_REDIRECT_STATUS: u16 = 301;
-const SIGN_IN_SUCCESS_URL: &str = "https://developers.google.com/gemini-code-assist/auth_success_gemini";
-const SIGN_IN_FAILURE_URL: &str = "https://developers.google.com/gemini-code-assist/auth_failure_gemini";
+const SIGN_IN_SUCCESS_URL: &str =
+    "https://developers.google.com/gemini-code-assist/auth_success_gemini";
+const SIGN_IN_FAILURE_URL: &str =
+    "https://developers.google.com/gemini-code-assist/auth_failure_gemini";
 
 const OAUTH_SCOPES: [&str; 3] = [
     "https://www.googleapis.com/auth/cloud-platform",
@@ -198,8 +200,8 @@ fn respond_text(request: tiny_http::Request, status: StatusCode, body: &str) {
 }
 
 fn respond_redirect(request: tiny_http::Request, location: &str) {
-    let mut response = Response::from_string(String::new())
-        .with_status_code(StatusCode(HTTP_REDIRECT_STATUS));
+    let mut response =
+        Response::from_string(String::new()).with_status_code(StatusCode(HTTP_REDIRECT_STATUS));
     if let Ok(header) = Header::from_bytes("Location".as_bytes(), location.as_bytes()) {
         response.add_header(header);
     }

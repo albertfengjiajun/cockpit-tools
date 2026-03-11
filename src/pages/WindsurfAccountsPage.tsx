@@ -31,6 +31,8 @@ import { TagEditModal } from '../components/TagEditModal';
 import { ExportJsonModal } from '../components/ExportJsonModal';
 import {
   getWindsurfCreditsSummary,
+  getWindsurfPlanDisplayName,
+  getWindsurfPlanLabel,
 } from '../types/windsurf';
 import { buildWindsurfAccountPresentation } from '../presentation/platformAccountPresentation';
 
@@ -38,7 +40,7 @@ import { WindsurfOverviewTabsHeader, WindsurfTab } from '../components/WindsurfO
 import { WindsurfInstancesContent } from './WindsurfInstancesPage';
 import { QuickSettingsPopover } from '../components/QuickSettingsPopover';
 import { useProviderAccountsPage } from '../hooks/useProviderAccountsPage';
-import type { WindsurfAccount } from '../types/windsurf';
+import type { WindsurfAccount, WindsurfPlanBadge } from '../types/windsurf';
 
 const WINDSURF_FLOW_NOTICE_COLLAPSED_KEY = 'agtools.windsurf.flow_notice_collapsed';
 const WINDSURF_CURRENT_ACCOUNT_ID_KEY = 'agtools.windsurf.current_account_id';
@@ -54,6 +56,18 @@ const WINDSURF_TOKEN_BATCH_EXAMPLE = `[
     "last_used": 1730000000
   }
 ]`;
+
+const WINDSURF_PLAN_FILTERS: WindsurfPlanBadge[] = [
+  'FREE',
+  'TRIAL',
+  'INDIVIDUAL',
+  'PRO',
+  'PRO_ULTIMATE',
+  'TEAMS',
+  'TEAMS_ULTIMATE',
+  'BUSINESS',
+  'ENTERPRISE',
+];
 
 export function WindsurfAccountsPage() {
   const [activeTab, setActiveTab] = useState<WindsurfTab>('overview');
@@ -200,7 +214,7 @@ export function WindsurfAccountsPage() {
   );
 
   const resolvePlanKey = useCallback(
-    (account: WindsurfAccount) => resolvePresentation(account).planClass.toUpperCase(),
+    (account: WindsurfAccount) => getWindsurfPlanDisplayName(resolvePresentation(account).planLabel || account.plan_type || null),
     [resolvePresentation],
   );
 
@@ -271,7 +285,10 @@ export function WindsurfAccountsPage() {
 
   // ─── Tier filter ────────────────────────────────────────────────────
   const tierCounts = useMemo(() => {
-    const counts = { all: accounts.length, FREE: 0, INDIVIDUAL: 0, PRO: 0, BUSINESS: 0, ENTERPRISE: 0 };
+    const counts: Record<string, number> = { all: accounts.length };
+    WINDSURF_PLAN_FILTERS.forEach((planKey) => {
+      counts[planKey] = 0;
+    });
     accounts.forEach((account) => {
       const tier = resolvePlanKey(account);
       if (tier in counts) counts[tier as keyof typeof counts] += 1;
@@ -499,7 +516,7 @@ export function WindsurfAccountsPage() {
     });
 
   return (
-    <div className="ghcp-accounts-page">
+    <div className="ghcp-accounts-page windsurf-accounts-page">
       <WindsurfOverviewTabsHeader active={activeTab} onTabChange={setActiveTab} />
       <div className={`ghcp-flow-notice ${isFlowNoticeCollapsed ? 'collapsed' : ''}`} role="note" aria-live="polite">
         <button type="button" className="ghcp-flow-notice-toggle" onClick={() => setIsFlowNoticeCollapsed((prev) => !prev)} aria-expanded={!isFlowNoticeCollapsed}>
@@ -536,11 +553,11 @@ export function WindsurfAccountsPage() {
           <div className="filter-select">
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)} aria-label={t('common.shared.filterLabel', '筛选')}>
               <option value="all">{`ALL (${tierCounts.all})`}</option>
-              <option value="FREE">{`FREE (${tierCounts.FREE})`}</option>
-              <option value="INDIVIDUAL">{`INDIVIDUAL (${tierCounts.INDIVIDUAL})`}</option>
-              <option value="PRO">{`PRO (${tierCounts.PRO})`}</option>
-              <option value="BUSINESS">{`BUSINESS (${tierCounts.BUSINESS})`}</option>
-              <option value="ENTERPRISE">{`ENTERPRISE (${tierCounts.ENTERPRISE})`}</option>
+              {WINDSURF_PLAN_FILTERS.map((planKey) => (
+                <option key={planKey} value={planKey}>
+                  {`${getWindsurfPlanLabel(planKey)} (${tierCounts[planKey] ?? 0})`}
+                </option>
+              ))}
             </select>
           </div>
           <div className="tag-filter" ref={tagFilterRef}>

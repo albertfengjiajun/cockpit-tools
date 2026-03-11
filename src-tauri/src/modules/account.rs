@@ -947,42 +947,47 @@ fn pick_quota_alert_recommendation(accounts: &[Account], current_id: &str) -> Op
 }
 
 fn build_quota_alert_notification_text(payload: &QuotaAlertPayload) -> (String, String) {
-    let title = format!(
-        "{} 配额预警",
-        match payload.platform.as_str() {
-            "codex" => "Codex",
-            "github_copilot" => "GitHub Copilot",
-            "windsurf" => "Windsurf",
-            _ => "Antigravity",
-        }
-    );
+    let locale = crate::modules::config::get_user_config().language;
+    let threshold_text = payload.threshold.to_string();
+    let lowest_text = payload.lowest_percentage.to_string();
     let model_text = if payload.low_models.is_empty() {
-        "未知模型".to_string()
+        modules::i18n::translate(&locale, "quotaAlert.modal.unknownModel", &[])
     } else {
         payload.low_models.join(", ")
     };
-    let mut body = format!(
-        "{} 低于 {}%（最低 {}%，模型：{}）",
-        payload.current_email, payload.threshold, payload.lowest_percentage, model_text
+
+    let platform_label = match payload.platform.as_str() {
+        "codex" => "Codex",
+        "github_copilot" => "GitHub Copilot",
+        "windsurf" => "Windsurf",
+        "kiro" => "Kiro",
+        "cursor" => "Cursor",
+        "gemini" => "Gemini",
+        "codebuddy" => "CodeBuddy",
+        _ => "Antigravity",
+    };
+    let title = format!(
+        "{} {}",
+        platform_label,
+        modules::i18n::translate(&locale, "quotaAlert.modal.title", &[])
+    );
+    let mut body = modules::i18n::translate(
+        &locale,
+        "quotaAlert.bannerText",
+        &[
+            ("email", payload.current_email.as_str()),
+            ("threshold", threshold_text.as_str()),
+            ("lowest", lowest_text.as_str()),
+            ("models", model_text.as_str()),
+        ],
     );
     if let Some(email) = payload.recommended_email.as_ref() {
-        body.push_str(&format!("，建议切换到 {}", email));
+        let recommended_label =
+            modules::i18n::translate(&locale, "quotaAlert.modal.recommended", &[]);
+        body.push_str(" · ");
+        body.push_str(&format!("{}: {}", recommended_label, email));
     }
     (title, body)
-}
-
-fn focus_main_window_and_emit_quota_alert(
-    app_handle: &tauri::AppHandle,
-    payload: &QuotaAlertPayload,
-) {
-    use tauri::Manager;
-
-    if let Some(window) = app_handle.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.unminimize();
-        let _ = window.set_focus();
-    }
-    emit_quota_alert(app_handle, payload);
 }
 
 pub fn emit_quota_alert(app_handle: &tauri::AppHandle, payload: &QuotaAlertPayload) {
@@ -1013,33 +1018,28 @@ pub fn send_quota_alert_native_notification(payload: &QuotaAlertPayload) {
 
 #[cfg(target_os = "macos")]
 pub fn send_quota_alert_native_notification(payload: &QuotaAlertPayload) {
-    let Some(app_handle) = crate::get_app_handle().cloned() else {
+    let Some(app_handle) = crate::get_app_handle() else {
         return;
     };
-    let payload_for_click = payload.clone();
+    let bundle_identifier = app_handle.config().identifier.to_string();
     let (title, body) = build_quota_alert_notification_text(payload);
 
     std::thread::spawn(move || {
         let mut notification = mac_notification_sys::Notification::new();
+        // Fire-and-forget on macOS. Waiting for clicks keeps a dedicated run loop alive
+        // inside mac-notification-sys, which can cause persistent background energy usage.
         notification
             .title(title.as_str())
             .message(body.as_str())
-            .wait_for_click(true)
-            .asynchronous(false);
+            .wait_for_click(false)
+            .asynchronous(true);
 
-        if let Err(e) = mac_notification_sys::set_application(&app_handle.config().identifier) {
+        if let Err(e) = mac_notification_sys::set_application(&bundle_identifier) {
             modules::logger::log_warn(&format!("[QuotaAlert] 设置通知应用标识失败: {}", e));
         }
 
-        match notification.send() {
-            Ok(mac_notification_sys::NotificationResponse::Click)
-            | Ok(mac_notification_sys::NotificationResponse::ActionButton(_)) => {
-                focus_main_window_and_emit_quota_alert(&app_handle, &payload_for_click);
-            }
-            Ok(_) => {}
-            Err(e) => {
-                modules::logger::log_warn(&format!("[QuotaAlert] 原生通知发送失败: {}", e));
-            }
+        if let Err(e) = notification.send() {
+            modules::logger::log_warn(&format!("[QuotaAlert] 原生通知发送失败: {}", e));
         }
     });
 }

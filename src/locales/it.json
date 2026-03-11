@@ -159,7 +159,8 @@
     "manual": "Manuale utente",
     "quickUpdate": {
       "update": "Aggiorna",
-      "restart": "Riavvia"
+      "restart": "Riavvia",
+      "installing": "Installazione"
     },
     "gemini": "Account Gemini",
     "codebuddy": "Account CodeBuddy"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} non riusciti: {{failList}}",
       "refreshingQuota": "Aggiornamento quota {{done}}/{{total}} (puoi chiudere questa finestra)",
       "quotaRefreshDone": "Aggiornamento quota completato"
+    },
+    "groups": {
+      "manageTitle": "Gestione gruppi",
+      "title": "Gruppi account",
+      "create": "Crea",
+      "newPlaceholder": "Inserisci il nome del gruppo...",
+      "empty": "Nessun gruppo. Creane uno per iniziare",
+      "accountCount": "{{count}} account",
+      "rename": "Rinomina",
+      "addToGroup": "Aggiungi al gruppo",
+      "createAndAdd": "Crea gruppo e aggiungi...",
+      "removeFromGroup": "Rimuovi dal gruppo",
+      "allGroups": "Tutti i gruppi",
+      "noGroups": "Nessun gruppo",
+      "noGroupsDesc": "Crea gruppi per gestire i tuoi account",
+      "manage": "Gestisci",
+      "error": {
+        "duplicate": "Il nome del gruppo esiste già",
+        "createFailed": "Creazione del gruppo non riuscita: {{error}}",
+        "renameFailed": "Rinomina del gruppo non riuscita: {{error}}",
+        "deleteFailed": "Eliminazione del gruppo non riuscita: {{error}}",
+        "addFailed": "Aggiunta al gruppo non riuscita: {{error}}",
+        "createAndAddFailed": "Creazione e aggiunta non riuscite: {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "Nome attività",
       "taskStatus": "Stato attività",
       "triggerMode": "Modalità di attivazione",
-      "triggerModeHint": "1. Programmato: attiva a orari definiti.\\n2. Crontab: definisci con un'espressione.\\n3. Reset quota: attiva una volta quando la quota è piena.",
+      "triggerModeHint": "1. Programmato: attiva a orari definiti.\n2. Crontab: definisci con un'espressione.\n3. Reset quota: attiva una volta quando la quota è piena.",
       "modeScheduled": "📅 Programmato",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Reset quota",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "Mostra dettagli",
     "hideErrorDetails": "Nascondi dettagli",
     "autoUpdateFailedAfterRetries": "Aggiornamento automatico non riuscito dopo {{count}} tentativi. Riprova più tardi o scarica manualmente.",
-    "updateCancelled": "Aggiornamento annullato."
+    "updateCancelled": "Aggiornamento annullato.",
+    "installing": "Installazione in corso...",
+    "authorizing": "In attesa dell'autorizzazione di sistema...",
+    "installFailed": "Installazione di sistema non riuscita. Riprova più tardi o scarica manualmente il pacchetto.",
+    "restartRequiredAfterInstall": "L'aggiornamento è installato. Riavvia manualmente l'app per completare il passaggio."
   },
   "closeDialog": {
     "title": "Chiudi finestra",
@@ -1302,7 +1331,8 @@
       "errorInfo": "Dettagli errore",
       "filePath": "Percorso file",
       "helpText": "Apri la cartella per riparare manualmente o eliminare il file, quindi riavvia l'applicazione.",
-      "openFolder": "Apri cartella"
+      "openFolder": "Apri cartella",
+      "openFolderFailed": "Apertura cartella non riuscita: {{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "Impostazioni CodeBuddy",
       "appPath": "Percorso CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Caricamento configurazione non riuscito: {{error}}",
+      "saveFailed": "Salvataggio configurazione non riuscito: {{error}}",
+      "pickPathFailed": "Selezione percorso non riuscita: {{error}}",
+      "resetPathFailed": "Ripristino percorso non riuscito: {{error}}"
     }
   },
   "quotaAlert": {

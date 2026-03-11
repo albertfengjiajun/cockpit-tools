@@ -161,7 +161,8 @@
     "manual": "使用手册",
     "quickUpdate": {
       "update": "更新",
-      "restart": "重启"
+      "restart": "重启",
+      "installing": "安装中"
     }
   },
   "platformLayout": {
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} 个失败: {{failList}}",
       "refreshingQuota": "刷新配额中 {{done}}/{{total}}（可关闭此弹窗，后台继续刷新）",
       "quotaRefreshDone": "配额刷新完成"
+    },
+    "groups": {
+      "manageTitle": "分组管理",
+      "title": "账号分组",
+      "create": "创建",
+      "newPlaceholder": "输入分组名称...",
+      "empty": "暂无分组，创建一个开始使用吧",
+      "accountCount": "{{count}} 个账号",
+      "rename": "重命名",
+      "addToGroup": "移入分组",
+      "createAndAdd": "新建分组并添加...",
+      "removeFromGroup": "移出分组",
+      "allGroups": "全部分组",
+      "noGroups": "暂无分组",
+      "noGroupsDesc": "创建分组来批量管理你的账号",
+      "manage": "管理",
+      "error": {
+        "duplicate": "分组名称已存在",
+        "createFailed": "创建分组失败：{{error}}",
+        "renameFailed": "重命名分组失败：{{error}}",
+        "deleteFailed": "删除分组失败：{{error}}",
+        "addFailed": "添加到分组失败：{{error}}",
+        "createAndAddFailed": "新建分组并添加失败：{{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "任务名称",
       "taskStatus": "任务状态",
       "triggerMode": "唤醒方式",
-      "triggerModeHint": "1. 定时：按照设定时间触发。\\n2. Crontab：使用表达式定义。\\n3. 配额重置：额度满后触发一次。",
+      "triggerModeHint": "1. 定时：按照设定时间触发。\n2. Crontab：使用表达式定义。\n3. 配额重置：额度满后触发一次。",
       "modeScheduled": "📅 定时触发",
       "modeCrontab": "🧩 定时任务",
       "modeQuotaReset": "🔄 配额重置",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "查看详情",
     "hideErrorDetails": "收起详情",
     "autoUpdateFailedAfterRetries": "自动更新失败，已重试 {{count}} 次。您可以稍后重试或手动下载安装。",
-    "updateCancelled": "更新已取消。"
+    "updateCancelled": "更新已取消。",
+    "installing": "安装中...",
+    "authorizing": "等待系统授权安装...",
+    "installFailed": "系统安装失败，请稍后重试或手动下载安装。",
+    "restartRequiredAfterInstall": "更新已安装，请手动重启应用完成切换。"
   },
   "closeDialog": {
     "title": "关闭窗口",
@@ -1470,7 +1499,8 @@
       "errorInfo": "错误信息",
       "filePath": "文件位置",
       "helpText": "请打开文件夹手动修复或删除该文件，然后重新启动应用。",
-      "openFolder": "打开文件夹"
+      "openFolder": "打开文件夹",
+      "openFolderFailed": "打开文件夹失败：{{error}}"
     }
   },
   "quickSettings": {
@@ -1530,7 +1560,13 @@
       "title": "Gemini 设置",
       "appPath": "Gemini CLI 路径"
     },
-    "geminiRefreshInterval": "配额自动刷新"
+    "geminiRefreshInterval": "配额自动刷新",
+    "error": {
+      "loadFailed": "加载配置失败：{{error}}",
+      "saveFailed": "保存配置失败：{{error}}",
+      "pickPathFailed": "选择路径失败：{{error}}",
+      "resetPathFailed": "重置路径失败：{{error}}"
+    }
   },
   "quotaAlert": {
     "bannerText": "账号 {{email}} 触发配额预警（阈值 {{threshold}}%，最低 {{lowest}}%，模型：{{models}}）",

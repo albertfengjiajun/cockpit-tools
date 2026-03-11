@@ -1,3 +1,4 @@
+use crate::modules::linux_updater::{self, UpdateRuntimeInfo};
 use crate::modules::logger;
 use crate::modules::update_checker::{self, UpdateSettings, VersionJumpInfo};
 
@@ -59,4 +60,17 @@ pub fn update_log(level: String, message: String) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_update_runtime_info() -> Result<UpdateRuntimeInfo, String> {
+    Ok(linux_updater::get_update_runtime_info())
+}
+
+#[tauri::command]
+pub async fn install_linux_update(
+    app: tauri::AppHandle,
+    expected_version: Option<String>,
+) -> Result<(), String> {
+    linux_updater::install_linux_update(app, expected_version).await
 }

@@ -159,7 +159,8 @@
     "manual": "Benutzerhandbuch",
     "quickUpdate": {
       "update": "Aktualisieren",
-      "restart": "Neustart"
+      "restart": "Neustart",
+      "installing": "Installation"
     },
     "gemini": "Gemini-Konten",
     "codebuddy": "CodeBuddy-Konten"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} fehlgeschlagen: {{failList}}",
       "refreshingQuota": "Kontingent wird aktualisiert {{done}}/{{total}} (dieses Fenster kann geschlossen werden)",
       "quotaRefreshDone": "Kontingentaktualisierung abgeschlossen"
+    },
+    "groups": {
+      "manageTitle": "Gruppenverwaltung",
+      "title": "Kontogruppen",
+      "create": "Erstellen",
+      "newPlaceholder": "Gruppenname eingeben...",
+      "empty": "Noch keine Gruppen vorhanden. Erstellen Sie eine",
+      "accountCount": "{{count}} Konto(en)",
+      "rename": "Umbenennen",
+      "addToGroup": "Zur Gruppe hinzufügen",
+      "createAndAdd": "Neue Gruppe erstellen und hinzufügen...",
+      "removeFromGroup": "Aus Gruppe entfernen",
+      "allGroups": "Alle Gruppen",
+      "noGroups": "Keine Gruppen",
+      "noGroupsDesc": "Erstellen Sie Gruppen, um Ihre Konten zu verwalten",
+      "manage": "Verwalten",
+      "error": {
+        "duplicate": "Gruppenname existiert bereits",
+        "createFailed": "Gruppe konnte nicht erstellt werden: {{error}}",
+        "renameFailed": "Gruppe konnte nicht umbenannt werden: {{error}}",
+        "deleteFailed": "Gruppe konnte nicht gelöscht werden: {{error}}",
+        "addFailed": "Hinzufügen zur Gruppe fehlgeschlagen: {{error}}",
+        "createAndAddFailed": "Erstellen und Hinzufügen fehlgeschlagen: {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "Aufgabenname",
       "taskStatus": "Aufgabenstatus",
       "triggerMode": "Auslösemodus",
-      "triggerModeHint": "1. Geplant: Auslösung zu festgelegten Zeiten.\\n2. Crontab: per Ausdruck definieren.\\n3. Quoten-Reset: einmal auslösen, wenn Quote voll ist.",
+      "triggerModeHint": "1. Geplant: Auslösung zu festgelegten Zeiten.\n2. Crontab: per Ausdruck definieren.\n3. Quoten-Reset: einmal auslösen, wenn Quote voll ist.",
       "modeScheduled": "📅 Geplant",
       "modeCrontab": "🧩 Crontab",
       "modeQuotaReset": "🔄 Quoten-Reset",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "Details anzeigen",
     "hideErrorDetails": "Details ausblenden",
     "autoUpdateFailedAfterRetries": "Automatisches Update ist nach {{count}} Versuchen fehlgeschlagen. Bitte später erneut versuchen oder manuell herunterladen.",
-    "updateCancelled": "Update wurde abgebrochen."
+    "updateCancelled": "Update wurde abgebrochen.",
+    "installing": "Installation läuft...",
+    "authorizing": "Warten auf Systemautorisierung...",
+    "installFailed": "Die Systeminstallation ist fehlgeschlagen. Versuchen Sie es später erneut oder laden Sie das Paket manuell herunter.",
+    "restartRequiredAfterInstall": "Das Update ist installiert. Starten Sie die App manuell neu, um den Wechsel abzuschließen."
   },
   "closeDialog": {
     "title": "Fenster schließen",
@@ -1302,7 +1331,8 @@
       "errorInfo": "Fehlerdetails",
       "filePath": "Dateipfad",
       "helpText": "Bitte öffnen Sie den Ordner, um die Datei manuell zu reparieren oder zu löschen, und starten Sie dann die Anwendung neu.",
-      "openFolder": "Ordner öffnen"
+      "openFolder": "Ordner öffnen",
+      "openFolderFailed": "Ordner konnte nicht geöffnet werden: {{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "CodeBuddy-Einstellungen",
       "appPath": "CodeBuddy-Pfad"
+    },
+    "error": {
+      "loadFailed": "Konfiguration konnte nicht geladen werden: {{error}}",
+      "saveFailed": "Konfiguration konnte nicht gespeichert werden: {{error}}",
+      "pickPathFailed": "Pfadauswahl fehlgeschlagen: {{error}}",
+      "resetPathFailed": "Pfad konnte nicht zurückgesetzt werden: {{error}}"
     }
   },
   "quotaAlert": {

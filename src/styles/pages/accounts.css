@@ -234,6 +234,12 @@
   border: 1px solid var(--plan-pro-border);
 }
 
+.tier-badge.pro-ultimate {
+  background: var(--plan-ultra-bg);
+  color: var(--plan-ultra-color);
+  border: 1px solid var(--plan-ultra-border);
+}
+
 .tier-badge.ultra {
   background: var(--plan-ultra-bg);
   color: var(--plan-ultra-color);
@@ -250,6 +256,19 @@
   background: var(--plan-business-bg);
   color: var(--plan-business-color);
   border: 1px solid var(--plan-business-border);
+}
+
+.tier-badge.team,
+.tier-badge.teams {
+  background: var(--plan-team-bg);
+  color: var(--plan-team-color);
+  border: 1px solid var(--plan-team-border);
+}
+
+.tier-badge.teams-ultimate {
+  background: var(--plan-ultra-bg);
+  color: var(--plan-ultra-color);
+  border: 1px solid var(--plan-ultra-border);
 }
 
 .tier-badge.enterprise {

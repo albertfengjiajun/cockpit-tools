@@ -162,7 +162,27 @@ type QuotaAlertPayload = {
 
 type QuotaAlertPlatform = 'antigravity' | 'codex' | 'github_copilot' | 'windsurf' | 'kiro' | 'cursor' | 'gemini' | 'codebuddy';
 type UpdateCheckSource = 'auto' | 'manual';
-type UpdateActionState = 'hidden' | 'available' | 'downloading' | 'ready';
+type UpdateActionState = 'hidden' | 'available' | 'downloading' | 'installing' | 'ready';
+
+type UpdateRuntimeInfo = {
+  platform: string;
+  linux_install_kind: string;
+  linux_managed_install_supported: boolean;
+};
+
+type LinuxUpdateProgressPhase =
+  | 'download_started'
+  | 'downloading'
+  | 'downloaded'
+  | 'auth_required'
+  | 'installing'
+  | 'completed';
+
+type LinuxUpdateProgressPayload = {
+  version: string;
+  phase: LinuxUpdateProgressPhase;
+  progress?: number | null;
+};
 
 type UpdateAction = {
   state: UpdateActionState;
@@ -279,6 +299,8 @@ function App() {
     release_notes: string;
     release_notes_zh: string;
   } | null>(null);
+  const [updateRuntimeInfo, setUpdateRuntimeInfo] = useState<UpdateRuntimeInfo | null>(null);
+  const [updateRuntimeInfoLoaded, setUpdateRuntimeInfoLoaded] = useState(false);
   const [silentUpdateVersion, setSilentUpdateVersion] = useState<string | null>(null);
   const [updateAction, setUpdateAction] = useState<UpdateAction>({
     state: 'hidden',
@@ -345,6 +367,37 @@ function App() {
     void invoke('update_log', { level, message }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    invoke<UpdateRuntimeInfo>('get_update_runtime_info')
+      .then((info) => {
+        if (cancelled) {
+          return;
+        }
+        setUpdateRuntimeInfo(info);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        console.error('[App] Failed to load update runtime info:', error);
+        writeUpdateLog('warn', `加载更新运行时信息失败: error=${sanitizeUpdaterErrorMessage(error)}`);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setUpdateRuntimeInfoLoaded(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [writeUpdateLog]);
+
+  const isLinuxManagedUpdate = updateRuntimeInfo?.platform === 'linux'
+    && updateRuntimeInfo.linux_managed_install_supported;
+
   const closeUpdaterHandle = useCallback(async (handle: UpdaterUpdate | null | undefined) => {
     if (!handle) {
       return;
@@ -387,6 +440,75 @@ function App() {
       writeUpdateLog('error', `用户手动应用更新失败: error=${sanitizeUpdaterErrorMessage(error)}`);
     }
   }, [silentUpdateVersion, updateAction, writeUpdateLog]);
+
+  const runLinuxManagedUpdate = useCallback(async (expectedVersion: string) => {
+    setUpdateRetryStatus('');
+    setUpdateDownloadError('');
+    setUpdateErrorDetails('');
+    setSilentUpdateVersion(null);
+    setUpdateAction({
+      state: 'downloading',
+      version: expectedVersion,
+      progress: 0,
+      requiresInstall: false,
+    });
+
+    if (pendingSilentUpdateRef.current) {
+      await closeUpdaterHandle(pendingSilentUpdateRef.current);
+      pendingSilentUpdateRef.current = null;
+    }
+
+    writeUpdateLog('info', `Linux 托管更新开始执行: version=${expectedVersion}`);
+
+    try {
+      await invoke('install_linux_update', {
+        expectedVersion,
+      });
+
+      setUpdateAction({
+        state: 'ready',
+        version: expectedVersion,
+        progress: 100,
+        requiresInstall: false,
+      });
+      setUpdateRetryStatus(t('update_notification.installSuccess', '更新已安装，正在重启...'));
+      setUpdateDownloadError('');
+      setUpdateErrorDetails('');
+
+      try {
+        const { relaunch } = await import('@tauri-apps/plugin-process');
+        await relaunch();
+      } catch (error) {
+        const compactError = sanitizeUpdaterErrorMessage(error);
+        console.error('[App] Linux managed update installed but relaunch failed:', error);
+        writeUpdateLog(
+          'error',
+          `Linux 托管更新安装完成但重启失败: version=${expectedVersion}, error=${compactError}`,
+        );
+        setUpdateRetryStatus('');
+        setUpdateDownloadError(
+          t('update_notification.restartRequiredAfterInstall', '更新已安装，请手动重启应用完成切换。'),
+        );
+        setUpdateErrorDetails(compactError);
+      }
+    } catch (error) {
+      console.error('[App] Linux managed update failed:', error);
+      const compactError = sanitizeUpdaterErrorMessage(error);
+      writeUpdateLog('error', `Linux 托管更新失败: version=${expectedVersion}, error=${compactError}`);
+      setUpdateRetryStatus('');
+      setUpdateDownloadError(
+        t('update_notification.installFailed', '系统安装失败，请稍后重试或手动下载安装。'),
+      );
+      setUpdateErrorDetails(compactError);
+      setUpdateAction({
+        state: 'available',
+        version: expectedVersion,
+        progress: 0,
+        requiresInstall: true,
+      });
+      throw error;
+    }
+  }, [closeUpdaterHandle, t, writeUpdateLog]);
 
   const runSharedUpdateDownload = useCallback(async (expectedVersion: string) => {
     const taskId = Date.now();
@@ -615,6 +737,10 @@ function App() {
 
   const handleQuickUpdateActionClick = useCallback(async () => {
     if (updateAction.state === 'downloading') {
+      setShowUpdateNotification(true);
+      return;
+    }
+    if (updateAction.state === 'installing') {
       return;
     }
 
@@ -629,13 +755,25 @@ function App() {
 
     const expectedVersion = updateAction.version;
     try {
-      await runSharedUpdateDownload(expectedVersion);
+      if (isLinuxManagedUpdate) {
+        await runLinuxManagedUpdate(expectedVersion);
+      } else {
+        await runSharedUpdateDownload(expectedVersion);
+      }
     } catch (error) {
       console.error('[App] Quick update download failed:', error);
       writeUpdateLog('error', `侧边栏更新失败: error=${sanitizeUpdaterErrorMessage(error)}`);
       openUpdateNotification('manual');
     }
-  }, [handleApplyPendingUpdate, openUpdateNotification, runSharedUpdateDownload, updateAction, writeUpdateLog]);
+  }, [
+    handleApplyPendingUpdate,
+    isLinuxManagedUpdate,
+    openUpdateNotification,
+    runLinuxManagedUpdate,
+    runSharedUpdateDownload,
+    updateAction,
+    writeUpdateLog,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -737,6 +875,10 @@ function App() {
 
   // Check for updates on startup
   useEffect(() => {
+    if (!updateRuntimeInfoLoaded) {
+      return;
+    }
+
     const checkUpdates = async () => {
       try {
         console.log('[App] Startup update check triggered; interval gating is ignored.');
@@ -762,7 +904,7 @@ function App() {
 
         writeUpdateLog('info', '启动检查不受检查周期限制，立即执行更新检查');
 
-        if (autoInstall) {
+        if (autoInstall && !isLinuxManagedUpdate) {
           // Silent update: check and download in background, install on restart
           console.log('[App] Auto-install enabled, attempting silent update...');
           writeUpdateLog('info', '后台自动更新已开启，尝试静默检查并下载');
@@ -959,6 +1101,12 @@ function App() {
           }
         } else {
           // Manual update: show notification dialog
+          if (autoInstall && isLinuxManagedUpdate) {
+            writeUpdateLog(
+              'info',
+              `Linux 包管理安装(${updateRuntimeInfo?.linux_install_kind || 'unknown'})跳过静默下载，改为一键安装弹窗`,
+            );
+          }
           writeUpdateLog('info', '后台自动更新关闭，展示手动更新弹窗');
           openUpdateNotification('auto');
         }
@@ -976,7 +1124,13 @@ function App() {
       void checkUpdates();
     }, 8000);
     return () => clearTimeout(timer);
-  }, [openUpdateNotification, writeUpdateLog]);
+  }, [
+    isLinuxManagedUpdate,
+    openUpdateNotification,
+    updateRuntimeInfo?.linux_install_kind,
+    updateRuntimeInfoLoaded,
+    writeUpdateLog,
+  ]);
 
   // Version jump detection (post-update changelog)
   useEffect(() => {
@@ -1218,6 +1372,9 @@ function App() {
         if (prev.state === 'downloading' && prev.version === latestVersion) {
           return prev;
         }
+        if (prev.state === 'installing' && prev.version === latestVersion) {
+          return prev;
+        }
         if (prev.state === 'ready' && prev.version === latestVersion) {
           return prev;
         }
@@ -1231,7 +1388,7 @@ function App() {
       setUpdateRetryStatus('');
     } else if (result.status === 'up_to_date') {
       setUpdateAction((prev) => {
-        if (prev.state === 'ready' || prev.state === 'downloading') {
+        if (prev.state === 'ready' || prev.state === 'downloading' || prev.state === 'installing') {
           return prev;
         }
         return {
@@ -1250,6 +1407,82 @@ function App() {
       window.dispatchEvent(new CustomEvent('update-check-finished', { detail: result }));
     }
   }, []);
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | undefined;
+
+    listen<LinuxUpdateProgressPayload>('update://linux-progress', (event) => {
+      const { phase, progress, version } = event.payload;
+      setUpdateDownloadError('');
+      setUpdateErrorDetails('');
+
+      setUpdateAction((prev) => {
+        if (
+          prev.version
+          && prev.version !== version
+          && (prev.state === 'downloading' || prev.state === 'installing' || prev.state === 'ready')
+        ) {
+          return prev;
+        }
+
+        if (phase === 'completed') {
+          return {
+            state: 'ready',
+            version,
+            progress: 100,
+            requiresInstall: false,
+          };
+        }
+
+        if (phase === 'auth_required' || phase === 'installing' || phase === 'downloaded') {
+          return {
+            state: 'installing',
+            version,
+            progress: 100,
+            requiresInstall: false,
+          };
+        }
+
+        return {
+          state: 'downloading',
+          version,
+          progress: Math.max(0, Math.min(100, Math.round(progress ?? 0))),
+          requiresInstall: false,
+        };
+      });
+
+      if (phase === 'auth_required' || phase === 'downloaded') {
+        setUpdateRetryStatus(
+          t('update_notification.authorizing', '等待系统授权安装...'),
+        );
+        return;
+      }
+
+      if (phase === 'installing') {
+        setUpdateRetryStatus(
+          t('update_notification.installing', '安装中...'),
+        );
+        return;
+      }
+
+      if (phase === 'completed') {
+        setUpdateRetryStatus(
+          t('update_notification.installSuccess', '更新已安装，正在重启...'),
+        );
+        return;
+      }
+
+      setUpdateRetryStatus('');
+    }).then((fn) => {
+      unlisten = fn;
+    });
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [t]);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -1585,8 +1818,9 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* 更新通知 */}
-      {showUpdateNotification && (
+      {/* 更新通知：活跃状态时保持挂载（CSS 隐藏），避免重新打开时再次网络请求 */}
+      {(showUpdateNotification || updateAction.state !== 'hidden') && (
+        <div style={showUpdateNotification ? undefined : { display: 'none' }}>
         <Suspense fallback={null}>
           <UpdateNotification
             key={updateNotificationKey}
@@ -1628,6 +1862,9 @@ function App() {
                 if (prev.state === 'downloading' && prev.version === version) {
                   return prev;
                 }
+                if (prev.state === 'installing' && prev.version === version) {
+                  return prev;
+                }
                 if (prev.state === 'ready' && prev.version === version) {
                   return prev;
                 }
@@ -1647,6 +1884,7 @@ function App() {
             onClose={() => setShowUpdateNotification(false)}
           />
         </Suspense>
+        </div>
       )}
       {/* 版本跳跃通知（更新后首次启动） */}
       {versionJumpInfo && (
@@ -1677,7 +1915,7 @@ function App() {
       )}
 
       {appPathMissing && (
-        <div className="qs-overlay">
+        <div className="qs-overlay" style={{ zIndex: 10100 }}>
           <div className="qs-modal app-path-missing-modal" onClick={(e) => e.stopPropagation()}>
             <div className="qs-header">
               <span className="qs-title">{t('appPath.missing.title', '未找到应用程序路径')}</span>

@@ -159,7 +159,8 @@
     "manual": "使用手冊",
     "quickUpdate": {
       "update": "更新",
-      "restart": "重新啟動"
+      "restart": "重新啟動",
+      "installing": "安裝中"
     },
     "gemini": "雙子座",
     "codebuddy": "CodeBuddy 帳號"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} 失敗：{{failList}}",
       "refreshingQuota": "刷新配額{{done}}/{{total}}（您可以關閉此對話方塊）",
       "quotaRefreshDone": "配額刷新完成"
+    },
+    "groups": {
+      "manageTitle": "分組管理",
+      "title": "帳號分組",
+      "create": "建立",
+      "newPlaceholder": "輸入分組名稱...",
+      "empty": "尚無分組，建立一個開始使用吧",
+      "accountCount": "{{count}} 個帳號",
+      "rename": "重新命名",
+      "addToGroup": "移入分組",
+      "createAndAdd": "新建分組並加入...",
+      "removeFromGroup": "移出分組",
+      "allGroups": "所有分組",
+      "noGroups": "尚無分組",
+      "noGroupsDesc": "建立分組來批次管理你的帳號",
+      "manage": "管理",
+      "error": {
+        "duplicate": "分組名稱已存在",
+        "createFailed": "建立分組失敗：{{error}}",
+        "renameFailed": "重新命名分組失敗：{{error}}",
+        "deleteFailed": "刪除分組失敗：{{error}}",
+        "addFailed": "加入分組失敗：{{error}}",
+        "createAndAddFailed": "新建分組並加入失敗：{{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "任務名稱",
       "taskStatus": "任務狀態",
       "triggerMode": "喚醒方式",
-      "triggerModeHint": "1. 定時：依照設定時間觸發。\\n2. Crontab：使用表達式定義。\\n3. 配額重置：額度滿後觸發一次。",
+      "triggerModeHint": "1. 定時：依照設定時間觸發。\n2. Crontab：使用表達式定義。\n3. 配額重置：額度滿後觸發一次。",
       "modeScheduled": "📅 定時觸發",
       "modeCrontab": "🧩 定時任務",
       "modeQuotaReset": "🔄 配額重置",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "查看詳情",
     "hideErrorDetails": "收起詳情",
     "autoUpdateFailedAfterRetries": "自動更新失敗，已重試 {{count}} 次。你可以稍後重試或手動下載安裝。",
-    "updateCancelled": "更新已取消。"
+    "updateCancelled": "更新已取消。",
+    "installing": "安裝中...",
+    "authorizing": "等待系統授權安裝...",
+    "installFailed": "系統安裝失敗，請稍後重試或手動下載安裝。",
+    "restartRequiredAfterInstall": "更新已安裝，請手動重新啟動應用程式完成切換。"
   },
   "closeDialog": {
     "title": "關閉視窗",
@@ -1302,7 +1331,8 @@
       "errorInfo": "錯誤資訊",
       "filePath": "檔案位置",
       "helpText": "請開啟資料夾手動修復或刪除該檔案，然後重新啟動應用程式。",
-      "openFolder": "開啟資料夾"
+      "openFolder": "開啟資料夾",
+      "openFolderFailed": "開啟資料夾失敗：{{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "CodeBuddy 設定",
       "appPath": "CodeBuddy 路徑"
+    },
+    "error": {
+      "loadFailed": "載入設定失敗：{{error}}",
+      "saveFailed": "儲存設定失敗：{{error}}",
+      "pickPathFailed": "選擇路徑失敗：{{error}}",
+      "resetPathFailed": "重設路徑失敗：{{error}}"
     }
   },
   "quotaAlert": {

@@ -345,7 +345,9 @@ fn parse_body_status_field(data: &Value, keys: &[&str]) -> Option<Vec<i32>> {
     })
 }
 
-fn parse_codebuddy_quota_curl_request(raw: &str) -> Result<ParsedCodebuddyQuotaCurlRequest, String> {
+fn parse_codebuddy_quota_curl_request(
+    raw: &str,
+) -> Result<ParsedCodebuddyQuotaCurlRequest, String> {
     if !is_curl_command(raw) {
         return Err(
             "仅支持完整 cURL 命令。请在浏览器 Network 中对 get-user-resource 使用“Copy as cURL”后原样粘贴。"
@@ -477,8 +479,8 @@ fn parse_codebuddy_quota_curl_request(raw: &str) -> Result<ParsedCodebuddyQuotaC
         }
 
         if let Some(value) = token.strip_prefix("--url=") {
-            let parsed =
-                normalize_non_empty(Some(value)).ok_or_else(|| "cURL 参数 --url 缺少值".to_string())?;
+            let parsed = normalize_non_empty(Some(value))
+                .ok_or_else(|| "cURL 参数 --url 缺少值".to_string())?;
             url = Some(parsed);
             idx += 1;
             continue;
@@ -498,9 +500,9 @@ fn parse_codebuddy_quota_curl_request(raw: &str) -> Result<ParsedCodebuddyQuotaC
     let request_url = url.ok_or_else(|| "cURL 命令中未找到请求 URL".to_string())?;
     let mut request_headers_for_replay = headers.clone();
     let cookie_from_header = pick_header_value(&request_headers_for_replay, "Cookie");
-    let cookie_raw = cookie_from_arg.or(cookie_from_header).ok_or_else(|| {
-        "cURL 命令缺少 Cookie（需包含 session 与 session_2）".to_string()
-    })?;
+    let cookie_raw = cookie_from_arg
+        .or(cookie_from_header)
+        .ok_or_else(|| "cURL 命令缺少 Cookie（需包含 session 与 session_2）".to_string())?;
     let normalized_cookie_header = normalize_session_cookie_header(&cookie_raw)?;
 
     if pick_header_value(&request_headers_for_replay, "Cookie").is_none() {
@@ -550,15 +552,24 @@ fn parse_codebuddy_quota_curl_request(raw: &str) -> Result<ParsedCodebuddyQuotaC
     let mut page_size = None;
     if let Some(body) = request_body.as_deref() {
         if let Ok(json) = serde_json::from_str::<Value>(body) {
-            product_code = parse_body_string_field(&json, &["ProductCode", "productCode", "product_code"]);
+            product_code =
+                parse_body_string_field(&json, &["ProductCode", "productCode", "product_code"]);
             status = parse_body_status_field(&json, &["Status", "status"]);
             package_end_time_range_begin = parse_body_string_field(
                 &json,
-                &["PackageEndTimeRangeBegin", "packageEndTimeRangeBegin", "package_end_time_range_begin"],
+                &[
+                    "PackageEndTimeRangeBegin",
+                    "packageEndTimeRangeBegin",
+                    "package_end_time_range_begin",
+                ],
             );
             package_end_time_range_end = parse_body_string_field(
                 &json,
-                &["PackageEndTimeRangeEnd", "packageEndTimeRangeEnd", "package_end_time_range_end"],
+                &[
+                    "PackageEndTimeRangeEnd",
+                    "packageEndTimeRangeEnd",
+                    "package_end_time_range_end",
+                ],
             );
             page_number = parse_body_i32_field(&json, &["PageNumber", "pageNumber", "page_number"]);
             page_size = parse_body_i32_field(&json, &["PageSize", "pageSize", "page_size"]);

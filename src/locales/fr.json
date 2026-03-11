@@ -159,7 +159,8 @@
     "manual": "Guide d'utilisation",
     "quickUpdate": {
       "update": "Mettre à jour",
-      "restart": "Redémarrer"
+      "restart": "Redémarrer",
+      "installing": "Installation"
     },
     "gemini": "Comptes Gemini",
     "codebuddy": "Comptes CodeBuddy"
@@ -644,6 +645,30 @@
       "importPartialFailed": "{{failCount}} échecs : {{failList}}",
       "refreshingQuota": "Actualisation du quota {{done}}/{{total}} (vous pouvez fermer cette fenêtre)",
       "quotaRefreshDone": "Actualisation du quota terminée"
+    },
+    "groups": {
+      "manageTitle": "Gestion des groupes",
+      "title": "Groupes de comptes",
+      "create": "Créer",
+      "newPlaceholder": "Entrez le nom du groupe...",
+      "empty": "Aucun groupe. Créez-en un pour commencer",
+      "accountCount": "{{count}} compte(s)",
+      "rename": "Renommer",
+      "addToGroup": "Ajouter au groupe",
+      "createAndAdd": "Créer un groupe et ajouter...",
+      "removeFromGroup": "Retirer du groupe",
+      "allGroups": "Tous les groupes",
+      "noGroups": "Aucun groupe",
+      "noGroupsDesc": "Créez des groupes pour gérer vos comptes",
+      "manage": "Gérer",
+      "error": {
+        "duplicate": "Le nom du groupe existe déjà",
+        "createFailed": "Échec de la création du groupe : {{error}}",
+        "renameFailed": "Échec du renommage du groupe : {{error}}",
+        "deleteFailed": "Échec de la suppression du groupe : {{error}}",
+        "addFailed": "Échec de l'ajout au groupe : {{error}}",
+        "createAndAddFailed": "Échec de la création et de l'ajout : {{error}}"
+      }
     }
   },
   "overview": {
@@ -980,7 +1005,7 @@
       "taskName": "Nom de la tâche",
       "taskStatus": "Statut de la tâche",
       "triggerMode": "Mode de déclenchement",
-      "triggerModeHint": "1. Planifié : déclenche à des heures définies.\\n2. Crontab : définir via une expression.\\n3. Reset quota : déclenche une fois quand le quota est plein.",
+      "triggerModeHint": "1. Planifié : déclenche à des heures définies.\n2. Crontab : définir via une expression.\n3. Reset quota : déclenche une fois quand le quota est plein.",
       "modeScheduled": "📅 Planifié",
       "modeCrontab": "🧩Crontab",
       "modeQuotaReset": "🔄 Reset de quota",
@@ -1056,7 +1081,11 @@
     "showErrorDetails": "Voir les détails",
     "hideErrorDetails": "Masquer les détails",
     "autoUpdateFailedAfterRetries": "La mise à jour automatique a échoué après {{count}} tentatives. Réessayez plus tard ou téléchargez manuellement.",
-    "updateCancelled": "Mise à jour annulée."
+    "updateCancelled": "Mise à jour annulée.",
+    "installing": "Installation en cours...",
+    "authorizing": "En attente de l'autorisation système...",
+    "installFailed": "L'installation système a échoué. Réessayez plus tard ou téléchargez le paquet manuellement.",
+    "restartRequiredAfterInstall": "La mise à jour est installée. Redémarrez l'application manuellement pour terminer le basculement."
   },
   "closeDialog": {
     "title": "Fermer la fenêtre",
@@ -1302,7 +1331,8 @@
       "errorInfo": "Détails de l'erreur",
       "filePath": "Emplacement du fichier",
       "helpText": "Veuillez ouvrir le dossier pour réparer manuellement ou supprimer le fichier, puis redémarrez l'application.",
-      "openFolder": "Ouvrir le dossier"
+      "openFolder": "Ouvrir le dossier",
+      "openFolderFailed": "Impossible d'ouvrir le dossier : {{error}}"
     }
   },
   "quickSettings": {
@@ -1362,6 +1392,12 @@
     "codebuddy": {
       "title": "Parametres CodeBuddy",
       "appPath": "Chemin CodeBuddy"
+    },
+    "error": {
+      "loadFailed": "Échec du chargement de la configuration : {{error}}",
+      "saveFailed": "Échec de la sauvegarde de la configuration : {{error}}",
+      "pickPathFailed": "Échec de la sélection du chemin : {{error}}",
+      "resetPathFailed": "Échec de la réinitialisation du chemin : {{error}}"
     }
   },
   "quotaAlert": {

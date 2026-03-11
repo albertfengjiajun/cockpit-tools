@@ -316,6 +316,12 @@
   letter-spacing: normal;
 }
 
+.windsurf-accounts-page .ghcp-account-card .tier-badge,
+.windsurf-accounts-page .account-table .tier-badge {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .ghcp-account-card .tier-badge.free,
 .ghcp-accounts-page .account-table .tier-badge.free {
   background: var(--plan-free-bg);
@@ -351,6 +357,13 @@
   border: 1px solid var(--plan-team-border);
 }
 
+.ghcp-account-card .tier-badge.teams,
+.ghcp-accounts-page .account-table .tier-badge.teams {
+  background: var(--plan-team-bg);
+  color: var(--plan-team-color);
+  border: 1px solid var(--plan-team-border);
+}
+
 .ghcp-account-card .tier-badge.enterprise,
 .ghcp-accounts-page .account-table .tier-badge.enterprise {
   background: var(--plan-enterprise-bg);
@@ -374,6 +387,15 @@
 
 .ghcp-account-card .tier-badge.ultra,
 .ghcp-accounts-page .account-table .tier-badge.ultra {
+  background: var(--plan-ultra-bg);
+  color: var(--plan-ultra-color);
+  border: 1px solid var(--plan-ultra-border);
+}
+
+.ghcp-account-card .tier-badge.pro-ultimate,
+.ghcp-accounts-page .account-table .tier-badge.pro-ultimate,
+.ghcp-account-card .tier-badge.teams-ultimate,
+.ghcp-accounts-page .account-table .tier-badge.teams-ultimate {
   background: var(--plan-ultra-bg);
   color: var(--plan-ultra-color);
   border: 1px solid var(--plan-ultra-border);

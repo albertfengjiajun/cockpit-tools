@@ -989,3 +989,189 @@
   background: rgba(15, 23, 42, 0.7);
   border-bottom-color: rgba(148, 163, 184, 0.18);
 }
+
+/* ============================================
+   Account Folder / Group  Section
+   ============================================ */
+
+/* ---------- folder section header ---------- */
+.folder-section {
+  margin: 0 0 20px;
+  padding: 0 4px;
+}
+
+.folder-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.folder-section-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  margin: 0;
+}
+
+/* ---------- folder card grid ---------- */
+.account-folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.account-folder-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-secondary, rgba(255,255,255,0.72));
+  border: 1px solid var(--border-secondary, rgba(15,23,42,0.08));
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.account-folder-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(29,78,216,0.12);
+  border-color: var(--primary, #3b82f6);
+}
+
+.folder-card-icon {
+  color: var(--primary, #3b82f6);
+  opacity: 0.8;
+}
+
+.folder-card-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.folder-card-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-card-count {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.folder-card-preview {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.folder-preview-email {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface-tertiary, rgba(59,130,246,0.08));
+  color: var(--text-secondary, #64748b);
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-preview-more {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface-tertiary, rgba(59,130,246,0.08));
+  color: var(--primary, #3b82f6);
+  font-weight: 600;
+}
+
+/* ---------- Breadcrumb ---------- */
+.folder-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  border-radius: 8px;
+  background: var(--surface-secondary, rgba(255,255,255,0.72));
+  border: 1px solid var(--border-secondary, rgba(15,23,42,0.06));
+}
+
+.breadcrumb-back {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--primary, #3b82f6);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  transition: background 0.15s;
+}
+
+.breadcrumb-back:hover {
+  background: var(--surface-tertiary, rgba(59,130,246,0.08));
+}
+
+.breadcrumb-sep {
+  color: var(--text-tertiary, #94a3b8);
+}
+
+.breadcrumb-current {
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+}
+
+.breadcrumb-count {
+  font-weight: 400;
+  color: var(--text-secondary, #64748b);
+  margin-left: 4px;
+}
+
+.breadcrumb-remove-btn {
+  margin-left: auto;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------- dark mode ---------- */
+[data-theme="dark"] .account-folder-card {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+[data-theme="dark"] .account-folder-card:hover {
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 8px 24px rgba(29,78,216,0.2);
+}
+
+[data-theme="dark"] .folder-card-name {
+  color: rgba(226, 232, 240, 0.9);
+}
+
+[data-theme="dark"] .folder-breadcrumb {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+[data-theme="dark"] .breadcrumb-current {
+  color: rgba(226, 232, 240, 0.9);
+}

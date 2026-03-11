@@ -29,8 +29,10 @@ import {
 import {
   formatWindsurfResetTime,
   getWindsurfAccountDisplayEmail,
+  getWindsurfPlanBadgeClass,
   getWindsurfCreditsSummary,
   getWindsurfPlanDisplayName,
+  getWindsurfResolvedPlanLabel,
   getWindsurfQuotaClass,
 } from '../types/windsurf';
 import {
@@ -422,10 +424,8 @@ export function buildWindsurfAccountPresentation(
   t: Translate,
 ): UnifiedAccountPresentation {
   const credits = getWindsurfCreditsSummary(account);
-  const normalizedPlan = getWindsurfPlanDisplayName(
-    account.plan_type ?? account.copilot_plan ?? credits.planName ?? null,
-  );
-  const rawPlan = account.plan_type?.trim() || account.copilot_plan?.trim() || credits.planName?.trim();
+  const rawPlan = getWindsurfResolvedPlanLabel(account) ?? credits.planName?.trim() ?? null;
+  const normalizedPlan = getWindsurfPlanDisplayName(rawPlan ?? account.plan_type ?? null);
   const promptMetrics = buildCreditMetrics(
     credits.promptCreditsUsed,
     credits.promptCreditsTotal,
@@ -441,7 +441,7 @@ export function buildWindsurfAccountPresentation(
     id: account.id,
     displayName: account.email?.trim() || getWindsurfAccountDisplayEmail(account),
     planLabel: rawPlan || normalizedPlan,
-    planClass: normalizedPlan.toLowerCase(),
+    planClass: getWindsurfPlanBadgeClass(rawPlan ?? account.plan_type ?? null),
     cycleText: credits.planEndsAt
       ? formatWindsurfResetTime(credits.planEndsAt, t)
       : t('common.shared.credits.planEndsUnknown', '配额周期时间未知'),

@@ -33,7 +33,11 @@ import {
   Tag,
   BookOpen,
   FileUp,
-  ExternalLink
+  ExternalLink,
+  FolderOpen,
+  FolderPlus,
+  ChevronRight,
+  LogOut
 } from 'lucide-react'
 import { useTranslation, Trans } from 'react-i18next'
 import { useAccountStore } from '../stores/useAccountStore'
@@ -53,6 +57,12 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { GroupSettingsModal } from '../components/GroupSettingsModal'
 import { TagEditModal } from '../components/TagEditModal'
 import { ExportJsonModal } from '../components/ExportJsonModal'
+import { AccountGroupModal, AddToGroupModal } from '../components/AccountGroupModal'
+import {
+  AccountGroup,
+  getAccountGroups,
+  removeAccountsFromGroup,
+} from '../services/accountGroupService'
 import {
   GroupSettings,
   DisplayGroup,
@@ -316,10 +326,32 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
   // 标签编辑弹窗
   const [showTagModal, setShowTagModal] = useState<string | null>(null)
 
-  // 分组管理
+  // 模型分组管理
   const [showGroupModal, setShowGroupModal] = useState(false)
   const [displayGroups, setDisplayGroups] = useState<DisplayGroup[]>([])
   const [displayGroupsLoaded, setDisplayGroupsLoaded] = useState(false)
+
+  // ─── 账号分组（文件夹）────────────────────────────────────
+  const [accountGroups, setAccountGroups] = useState<AccountGroup[]>(() => getAccountGroups())
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null)
+  const [showAccountGroupModal, setShowAccountGroupModal] = useState(false)
+  const [showAddToGroupModal, setShowAddToGroupModal] = useState(false)
+
+  const reloadAccountGroups = useCallback(() => {
+    setAccountGroups(getAccountGroups())
+  }, [])
+
+  const activeGroup = useMemo(() => {
+    if (!activeGroupId) return null
+    return accountGroups.find((g) => g.id === activeGroupId) || null
+  }, [accountGroups, activeGroupId])
+
+  // 离开已删除的分组
+  useEffect(() => {
+    if (activeGroupId && !accountGroups.find((g) => g.id === activeGroupId)) {
+      setActiveGroupId(null)
+    }
+  }, [accountGroups, activeGroupId])
   const [sortBy, setSortBy] = useState<string>(() =>
     normalizeAntigravitySortBy(
       localStorage.getItem(ANTIGRAVITY_ACCOUNTS_SORT_BY_STORAGE_KEY)
@@ -471,6 +503,12 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
   const filteredAccounts = useMemo(() => {
     let result = [...accounts]
 
+    // 分组过滤（进入分组后只显示该组的账号）
+    if (activeGroup) {
+      const groupAccountSet = new Set(activeGroup.accountIds)
+      result = result.filter((acc) => groupAccountSet.has(acc.id))
+    }
+
     // 搜索过滤
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
@@ -511,6 +549,7 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
     tagFilter,
     accountSortComparator,
     verificationStatusMap,
+    activeGroup,
   ])
 
   const groupedAccounts = useMemo(() => {
@@ -872,8 +911,17 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
   const handleRefreshAll = async () => {
     setRefreshingAll(true)
     try {
-      const stats = await refreshAllQuotas()
-      setRefreshWarnings(buildWarningMapFromDetails(stats.details || []))
+      if (activeGroup) {
+        // 分组内刷新：只刷新该组的账号
+        const groupAccountIds = new Set(activeGroup.accountIds)
+        const groupAccounts = accounts.filter((acc) => groupAccountIds.has(acc.id))
+        await Promise.allSettled(
+          groupAccounts.map((acc) => refreshQuota(acc.id))
+        )
+      } else {
+        const stats = await refreshAllQuotas()
+        setRefreshWarnings(buildWarningMapFromDetails(stats.details || []))
+      }
     } catch (e) {
       console.error(e)
     } finally {
@@ -1286,6 +1334,74 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
   const toggleSelectAll = () => {
     if (selected.size === filteredAccounts.length) setSelected(new Set())
     else setSelected(new Set(filteredAccounts.map((a) => a.id)))
+  }
+
+  // 从当前分组中移除选中账号
+  const handleRemoveFromGroup = () => {
+    if (!activeGroupId || selected.size === 0) return
+    removeAccountsFromGroup(activeGroupId, Array.from(selected))
+    setSelected(new Set())
+    reloadAccountGroups()
+  }
+
+  // 渲染分组文件夹卡片
+  const renderFolderGrid = () => {
+    if (accountGroups.length === 0) {
+      return (
+        <div className="empty-state">
+          <FolderPlus size={40} />
+          <h3>{t('accounts.groups.noGroups', '暂无分组')}</h3>
+          <p>{t('accounts.groups.noGroupsDesc', '创建分组来批量管理你的账号')}</p>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowAccountGroupModal(true)}
+          >
+            <Plus size={18} />
+            {t('accounts.groups.create', '创建分组')}
+          </button>
+        </div>
+      )
+    }
+    return (
+      <div className="account-folder-grid">
+        {accountGroups.map((group) => {
+          const groupAccounts = accounts.filter((acc) => group.accountIds.includes(acc.id))
+          return (
+            <div
+              key={group.id}
+              className="account-folder-card"
+              onClick={() => {
+                setActiveGroupId(group.id)
+                setSelected(new Set())
+              }}
+            >
+              <div className="folder-card-icon">
+                <FolderOpen size={32} />
+              </div>
+              <div className="folder-card-info">
+                <span className="folder-card-name">{group.name}</span>
+                <span className="folder-card-count">
+                  {t('accounts.groups.accountCount', {
+                    count: groupAccounts.length,
+                    defaultValue: '{{count}} 个账号',
+                  })}
+                </span>
+              </div>
+              <div className="folder-card-preview">
+                {groupAccounts.slice(0, 3).map((acc) => (
+                  <span key={acc.id} className="folder-preview-email" title={acc.email}>
+                    {acc.email.split('@')[0]}
+                  </span>
+                ))}
+                {groupAccounts.length > 3 && (
+                  <span className="folder-preview-more">+{groupAccounts.length - 3}</span>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    )
   }
 
   const toggleTagFilterValue = (tag: string) => {
@@ -2285,6 +2401,58 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
           onOpenManual={() => onNavigate?.('manual')}
           subtitle={t('overview.subtitle')}
         />
+
+        {/* 面包屑：进入分组后显示 */}
+        {activeGroup && (
+          <div className="folder-breadcrumb">
+            <button
+              className="breadcrumb-back"
+              onClick={() => {
+                setActiveGroupId(null)
+                setSelected(new Set())
+              }}
+            >
+              <FolderOpen size={14} />
+              {t('accounts.groups.allGroups', '全部分组')}
+            </button>
+            <ChevronRight size={14} className="breadcrumb-sep" />
+            <span className="breadcrumb-current">
+              {activeGroup.name}
+              <span className="breadcrumb-count">({filteredAccounts.length})</span>
+            </span>
+            {selected.size > 0 && (
+              <button
+                className="btn btn-secondary breadcrumb-remove-btn"
+                onClick={handleRemoveFromGroup}
+                title={t('accounts.groups.removeFromGroup', '移出分组')}
+              >
+                <LogOut size={14} />
+                {t('accounts.groups.removeFromGroup', '移出分组')} ({selected.size})
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* 分组文件夹网格（未进入分组且有分组时显示） */}
+        {!activeGroupId && accountGroups.length > 0 && (
+          <div className="folder-section">
+            <div className="folder-section-header">
+              <h3>
+                <FolderOpen size={16} />
+                {t('accounts.groups.title', '账号分组')}
+              </h3>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowAccountGroupModal(true)}
+              >
+                <Plus size={14} />
+                {t('accounts.groups.manage', '管理')}
+              </button>
+            </div>
+            {renderFolderGrid()}
+          </div>
+        )}
+
         {/* 工具栏 */}
         <div className="toolbar">
           <div className="toolbar-left">
@@ -2530,13 +2698,33 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
               <Upload size={14} />
             </button>
             {selected.size > 0 && (
+              <>
+                <button
+                  className="btn btn-secondary icon-only"
+                  onClick={() => setShowAddToGroupModal(true)}
+                  title={t('accounts.groups.addToGroup', '移入分组')}
+                  aria-label={t('accounts.groups.addToGroup', '移入分组')}
+                >
+                  <FolderPlus size={14} />
+                </button>
+                <button
+                  className="btn btn-danger icon-only"
+                  onClick={handleBatchDelete}
+                  title={`${t('common.delete')} (${selected.size})`}
+                  aria-label={`${t('common.delete')} (${selected.size})`}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </>
+            )}
+            {!activeGroupId && (
               <button
-                className="btn btn-danger icon-only"
-                onClick={handleBatchDelete}
-                title={`${t('common.delete')} (${selected.size})`}
-                aria-label={`${t('common.delete')} (${selected.size})`}
+                className="btn btn-secondary icon-only"
+                onClick={() => setShowAccountGroupModal(true)}
+                title={t('accounts.groups.manageTitle', '分组管理')}
+                aria-label={t('accounts.groups.manageTitle', '分组管理')}
               >
-                <Trash2 size={14} />
+                <FolderOpen size={14} />
               </button>
             )}
             <QuickSettingsPopover type="antigravity" />
@@ -3325,6 +3513,24 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
         onClose={() => {
           setShowGroupModal(false)
           loadDisplayGroups()
+        }}
+      />
+
+      {/* 账号分组管理弹窗 */}
+      <AccountGroupModal
+        isOpen={showAccountGroupModal}
+        onClose={() => setShowAccountGroupModal(false)}
+        onGroupsChanged={reloadAccountGroups}
+      />
+
+      {/* 添加到分组弹窗 */}
+      <AddToGroupModal
+        isOpen={showAddToGroupModal}
+        onClose={() => setShowAddToGroupModal(false)}
+        accountIds={Array.from(selected)}
+        onAdded={() => {
+          reloadAccountGroups()
+          setSelected(new Set())
         }}
       />
 

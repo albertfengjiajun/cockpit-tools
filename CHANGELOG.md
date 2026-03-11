@@ -7,6 +7,23 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.12.2] - 2026-03-11
+
+### Added
+- **Linux package installs now support managed in-app updates**: Added `.deb`/`.rpm` runtime detection, signed package download, progress reporting, and privileged install flow so Linux package-manager installs can complete updates directly in Cockpit.
+- **Antigravity accounts now support local account groups**: Added local folder-style account groups on the Antigravity accounts page, including create/rename/delete, batch add/remove, grouped browsing, and per-group quota refresh.
+
+### Changed
+- **Windsurf plan presentation now recognizes more official tiers**: Windsurf account cards, badges, and filters now resolve Trial, Teams, Teams Ultimate, and Pro Ultimate labels from remote plan data and teams-tier metadata.
+- **Linux updater behavior now matches package-managed installs**: Background silent download is skipped for managed `.deb`/`.rpm` installs, and the sidebar/update dialog now shows authorization and installation progress states during one-click update.
+- **Quota alert native notifications now follow the selected UI language**: Backend notification text now resolves from locale keys and covers Codex, GitHub Copilot, Windsurf, Kiro, Cursor, Gemini, and CodeBuddy consistently.
+
+### Fixed
+- **Wakeup task creation/test now checks runtime readiness first**: Opening “new task” and “test task” now stops early and reuses the existing runtime-path guidance when the wakeup runtime is not configured.
+- **Settings and recovery dialogs now surface action failures inline**: Quick Settings path/config errors, file-corruption “open folder” failures, and global modal action failures are now shown in the UI instead of only logging to console.
+- **macOS quota alerts no longer keep a click-wait notification loop alive**: Native quota notifications now use fire-and-forget delivery to avoid unnecessary background energy usage after notification delivery.
+
+---
 ## [0.12.1] - 2026-03-10
 
 ### Added
