@@ -76,58 +76,40 @@ const LINUX_EMPTY_KEY: [u8; 16] = [
     0xd0, 0xd0, 0xec, 0x9c, 0x7d, 0x77, 0xd4, 0x3a, 0xc5, 0x41, 0x87, 0xfa, 0x48, 0x18, 0xd1, 0x7f,
 ];
 
-fn get_vscode_data_root() -> Result<PathBuf, String> {
-    #[cfg(target_os = "windows")]
-    {
-        let appdata = std::env::var("APPDATA")
-            .map_err(|_| "Cannot read APPDATA environment variable".to_string())?;
-        return Ok(PathBuf::from(appdata).join("Code"));
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        let home = dirs::home_dir().ok_or("Cannot locate home directory".to_string())?;
-        return Ok(home
-            .join("Library")
-            .join("Application Support")
-            .join("Code"));
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        if let Ok(xdg_config_home) = std::env::var("XDG_CONFIG_HOME") {
-            let trimmed = xdg_config_home.trim();
-            if !trimmed.is_empty() {
-                return Ok(PathBuf::from(trimmed).join("Code"));
-            }
-        }
-        let home = dirs::home_dir().ok_or("Cannot locate home directory".to_string())?;
-        return Ok(home.join(".config").join("Code"));
-    }
-
-    #[allow(unreachable_code)]
-    Err("Unsupported platform".to_string())
-}
-
 fn resolve_vscode_data_root(user_data_dir: Option<&str>) -> Result<PathBuf, String> {
-    if let Some(raw) = user_data_dir {
-        let trimmed = raw.trim();
-        if !trimmed.is_empty() {
-            return Ok(PathBuf::from(trimmed));
+    crate::modules::vscode_paths::resolve_vscode_data_root(user_data_dir).map_err(|err| {
+        if err == "GitHub Copilot 仅支持 macOS、Windows 和 Linux" {
+            "Unsupported platform".to_string()
+        } else {
+            err
         }
-    }
-    get_vscode_data_root()
+    })
 }
 
 fn get_vscode_db_path_from_data_root(data_root: &Path) -> Result<PathBuf, String> {
-    let path = data_root
-        .join("User")
-        .join("globalStorage")
-        .join("state.vscdb");
+    let path = crate::modules::vscode_paths::vscode_state_db_path(data_root);
     if path.exists() {
         Ok(path)
     } else {
-        Err(format!("VS Code database not found: {}", path.display()))
+        let attempted = crate::modules::vscode_paths::vscode_data_root_candidates()
+            .ok()
+            .filter(|candidates| candidates.iter().any(|candidate| candidate == data_root))
+            .map(|candidates| {
+                candidates
+                    .iter()
+                    .map(|candidate| {
+                        crate::modules::vscode_paths::vscode_state_db_path(candidate)
+                            .display()
+                            .to_string()
+                    })
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            });
+        if let Some(paths) = attempted {
+            Err(format!("VS Code database not found. Tried: {}", paths))
+        } else {
+            Err(format!("VS Code database not found: {}", path.display()))
+        }
     }
 }
 
@@ -140,11 +122,29 @@ fn build_secret_storage_item_key(extension_id: &str, key: &str) -> String {
 
 #[cfg(target_os = "windows")]
 fn get_local_state_path(data_root: &Path) -> Result<PathBuf, String> {
-    let path = data_root.join("Local State");
+    let path = crate::modules::vscode_paths::vscode_local_state_path(data_root);
     if path.exists() {
         Ok(path)
     } else {
-        Err(format!("VS Code Local State not found: {}", path.display()))
+        let attempted = crate::modules::vscode_paths::vscode_data_root_candidates()
+            .ok()
+            .filter(|candidates| candidates.iter().any(|candidate| candidate == data_root))
+            .map(|candidates| {
+                candidates
+                    .iter()
+                    .map(|candidate| {
+                        crate::modules::vscode_paths::vscode_local_state_path(candidate)
+                            .display()
+                            .to_string()
+                    })
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            });
+        if let Some(paths) = attempted {
+            Err(format!("VS Code Local State not found. Tried: {}", paths))
+        } else {
+            Err(format!("VS Code Local State not found: {}", path.display()))
+        }
     }
 }
 
@@ -154,7 +154,14 @@ fn get_windows_encryption_key(data_root: Option<&Path>) -> Result<Vec<u8>, Strin
     let root = if let Some(path) = data_root {
         path
     } else {
-        owned_root = get_vscode_data_root()?;
+        owned_root = crate::modules::vscode_paths::resolve_vscode_data_root_for_state_db()
+            .map_err(|err| {
+                if err == "GitHub Copilot 仅支持 macOS、Windows 和 Linux" {
+                    "Unsupported platform".to_string()
+                } else {
+                    err
+                }
+            })?;
         owned_root.as_path()
     };
     let path = get_local_state_path(root)?;
@@ -420,9 +427,16 @@ fn build_macos_safe_storage_candidates(
     // Default mode is used by VS Code / GitHub Copilot injection path.
     // Keep this list strictly VS Code-family to avoid cross-platform key probing.
     app_names.extend(
-        ["Code", "Visual Studio Code", "Code - OSS", "VSCodium"]
-            .iter()
-            .map(|value| value.to_string()),
+        [
+            "Code",
+            "Code - Insiders",
+            "Visual Studio Code",
+            "Visual Studio Code - Insiders",
+            "Code - OSS",
+            "VSCodium",
+        ]
+        .iter()
+        .map(|value| value.to_string()),
     );
 
     let mut candidates: Vec<(String, Option<String>)> = Vec::new();
@@ -502,7 +516,15 @@ fn get_linux_v11_key(mode: SafeStorageReadMode) -> Option<[u8; 16]> {
             "codebuddycn",
         ],
         SafeStorageReadMode::QoderOnly => &["Qoder", "qoder"],
-        _ => &["code", "Code", "code-oss", "Code - OSS", "VSCodium"],
+        _ => &[
+            "code",
+            "Code",
+            "code-insiders",
+            "Code - Insiders",
+            "code-oss",
+            "Code - OSS",
+            "VSCodium",
+        ],
     };
 
     for app in app_names {

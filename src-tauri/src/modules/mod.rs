@@ -51,6 +51,7 @@ pub mod tray;
 pub mod tray_layout;
 pub mod update_checker;
 pub mod vscode_inject;
+pub mod vscode_paths;
 pub mod wakeup;
 pub mod wakeup_gateway;
 pub mod wakeup_history;

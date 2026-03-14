@@ -7,6 +7,12 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
 ---
+## [0.14.2] - 2026-03-14
+
+### 修复
+- **GitHub Copilot 切号现已自动回退识别 VS Code Insiders 本地存储**：当标准版 VS Code 的 `Code` 用户目录不存在时，默认实例与 Token 注入链路现在会继续探测 `Code - Insiders` 下的 `state.vscdb`、Windows `Local State` 与 VS Code Safe Storage 凭据，恢复仅安装 Insiders 用户的切号能力。
+
+---
 ## [0.14.1] - 2026-03-14
 
 ### 新增

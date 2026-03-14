@@ -68,27 +68,7 @@ pub fn update_default_settings(
 }
 
 pub fn get_default_vscode_user_data_dir() -> Result<PathBuf, String> {
-    #[cfg(target_os = "macos")]
-    {
-        let home = dirs::home_dir().ok_or("无法获取用户主目录")?;
-        return Ok(home.join("Library/Application Support/Code"));
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        let appdata =
-            std::env::var("APPDATA").map_err(|_| "无法获取 APPDATA 环境变量".to_string())?;
-        return Ok(PathBuf::from(appdata).join("Code"));
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        let home = dirs::home_dir().ok_or("无法获取用户主目录")?;
-        return Ok(home.join(".config/Code"));
-    }
-
-    #[allow(unreachable_code)]
-    Err("GitHub Copilot 多开实例仅支持 macOS、Windows 和 Linux".to_string())
+    modules::vscode_paths::resolve_preferred_vscode_data_root()
 }
 
 pub fn get_default_instances_root_dir() -> Result<PathBuf, String> {

@@ -7,6 +7,12 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.14.2] - 2026-03-14
+
+### Fixed
+- **GitHub Copilot switching now falls back to VS Code Insiders local storage automatically**: when the standard VS Code `Code` user-data path is missing, default-instance and token-injection flows now probe `Code - Insiders` for `state.vscdb`, Windows `Local State`, and VS Code safe-storage credentials, restoring switching for Insiders-only installs.
+
+---
 ## [0.14.1] - 2026-03-14
 
 ### Added
