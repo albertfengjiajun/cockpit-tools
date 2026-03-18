@@ -1412,7 +1412,7 @@ async fn fetch_usage_summary_with_client(
 // Refresh (re-reads local state.vscdb + fetches usage from API)
 // ---------------------------------------------------------------------------
 
-pub async fn refresh_account_async(account_id: &str) -> Result<CursorAccount, String> {
+async fn refresh_account_async_once(account_id: &str) -> Result<CursorAccount, String> {
     let existing = load_account(account_id).ok_or_else(|| "账号不存在".to_string())?;
     logger::log_info(&format!(
         "[Cursor Refresh] 开始刷新账号: id={}, email={}",
@@ -1543,6 +1543,13 @@ pub async fn refresh_account_async(account_id: &str) -> Result<CursorAccount, St
         updated.id, updated.email
     ));
     Ok(updated)
+}
+
+pub async fn refresh_account_async(account_id: &str) -> Result<CursorAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay("Cursor Refresh", account_id, || async {
+        refresh_account_async_once(account_id).await
+    })
+    .await
 }
 
 pub async fn refresh_all_tokens() -> Result<Vec<(String, Result<CursorAccount, String>)>, String> {

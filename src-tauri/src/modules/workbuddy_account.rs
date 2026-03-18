@@ -9,7 +9,7 @@ use tauri::Emitter;
 use crate::models::workbuddy::{
     WorkbuddyAccount, WorkbuddyAccountIndex, WorkbuddyOAuthCompletePayload,
 };
-use crate::modules::{account, workbuddy_oauth, logger};
+use crate::modules::{account, logger, workbuddy_oauth};
 
 const ACCOUNTS_INDEX_FILE: &str = "workbuddy_accounts.json";
 const ACCOUNTS_DIR: &str = "workbuddy_accounts";
@@ -160,7 +160,6 @@ fn normalize_email_identity(value: Option<&str>) -> Option<String> {
         }
     })
 }
-
 
 fn account_matches_payload_identity(
     existing_uid: Option<&String>,
@@ -528,7 +527,7 @@ pub fn upsert_account(payload: WorkbuddyOAuthCompletePayload) -> Result<Workbudd
     Ok(account)
 }
 
-pub async fn refresh_account_token(account_id: &str) -> Result<WorkbuddyAccount, String> {
+async fn refresh_account_token_once(account_id: &str) -> Result<WorkbuddyAccount, String> {
     let started_at = Instant::now();
     let mut account = load_account(account_id).ok_or_else(|| "账号不存在".to_string())?;
     logger::log_info(&format!(
@@ -536,7 +535,8 @@ pub async fn refresh_account_token(account_id: &str) -> Result<WorkbuddyAccount,
         account.id, account.email
     ));
 
-    let (payload, quota_refresh_error) = workbuddy_oauth::refresh_payload_for_account(&account).await?;
+    let (payload, quota_refresh_error) =
+        workbuddy_oauth::refresh_payload_for_account(&account).await?;
     let tags = account.tags.clone();
     let created_at = account.created_at;
     apply_payload(&mut account, payload);
@@ -560,6 +560,15 @@ pub async fn refresh_account_token(account_id: &str) -> Result<WorkbuddyAccount,
         started_at.elapsed().as_millis()
     ));
     Ok(updated)
+}
+
+pub async fn refresh_account_token(account_id: &str) -> Result<WorkbuddyAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay(
+        "WorkBuddy Refresh",
+        account_id,
+        || async { refresh_account_token_once(account_id).await },
+    )
+    .await
 }
 
 pub async fn refresh_all_tokens() -> Result<Vec<(String, Result<WorkbuddyAccount, String>)>, String>
@@ -1106,8 +1115,7 @@ pub fn import_payload_from_local() -> Result<Option<WorkbuddyOAuthCompletePayloa
         return Err("本地 WorkBuddy 登录信息解析失败: 未找到 access token".to_string());
     };
 
-    let Some((uid_from_token, normalized_token)) =
-        extract_local_workbuddy_token_parts(&raw_token)
+    let Some((uid_from_token, normalized_token)) = extract_local_workbuddy_token_parts(&raw_token)
     else {
         return Err("本地 WorkBuddy 登录信息解析失败: access token 无效".to_string());
     };

@@ -53,7 +53,17 @@
         "label": "匯入",
         "importing": "正在匯入本地帳號...",
         "pickFile": "選擇要匯入的 JSON 檔案",
-        "orJson": "或從 JSON 檔案匯入"
+        "orJson": "或從 JSON 檔案匯入",
+        "progress": {
+          "overallLine": "總體進度 {{percent}}%（{{completedPlatforms}}/{{totalPlatforms}} 平台，{{processedAccounts}}/{{totalAccounts}} 帳號已處理）",
+          "currentPlatformLine": "正在匯入：{{platform}}（{{count}} 個帳號）",
+          "currentStatusLine": "當前平台狀態：{{status}}",
+          "platformDetailsTitle": "平台詳情",
+          "statusProcessing": "處理中...",
+          "statusRunning": "匯入中...",
+          "statusSkipped": "已略過",
+          "statusPending": "待匯入"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "選單列顯示",
     "hiddenBadge": "已隱藏",
     "openFromMore": "管理平台佈局",
-    "dragHandleLabel": "拖曳排序"
+    "dragHandleLabel": "拖曳排序",
+    "tipWithGroups": "可拖曳排序；側邊欄最多顯示兩個入口。分組子項不參與側邊欄/儀表板開關，僅用於選單列顯示與預設平台切換。",
+    "addGroup": "新增分組",
+    "editGroup": "編輯分組",
+    "deleteGroup": "刪除分組",
+    "groupBadge": "分組",
+    "groupDefault": "預設平台",
+    "groupName": "分組名稱",
+    "groupNamePlaceholder": "例如：CodeBuddy 套件",
+    "groupIcon": "分組圖示",
+    "groupIconFromPlatform": "平台圖示",
+    "groupIconCustom": "自訂圖片",
+    "groupIconPreview": "圖示預覽",
+    "groupChildren": "子平台",
+    "groupNameRequired": "請輸入分組名稱",
+    "groupChildrenRequired": "至少選擇一個子平台",
+    "groupCustomIconRequired": "請上傳自訂圖示",
+    "groupSwitchLabel": "切換同組平台",
+    "collapseAllChildren": "收合全部子層",
+    "expandAllChildren": "展開全部子層",
+    "addChildPlatform": "新增子平台",
+    "collapseChildren": "收合子層",
+    "expandChildren": "展開子層",
+    "noAvailableChildren": "暫無可新增的平台",
+    "customIconDeleteConfirm": "確認刪除這個自訂圖示嗎？",
+    "editChildPlatform": "編輯子平台",
+    "setAsDefaultInGroup": "設為群組內預設平台",
+    "removeFromGroup": "移出群組"
   },
   "privacy": {
     "hideSensitive": "隱藏電子郵件",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "配額異常",
       "generic": "配額重新整理失敗，請稍後再試",
-      "deactivatedWorkspace": "工作區已停用，請切換帳號或重新授權"
+      "deactivatedWorkspace": "工作區已停用，請切換帳號或重新授權",
+      "requestFailedManualRetry": "請求失敗，請手動重試：{{error}}"
     },
     "plan": {
       "free": "FREE",

@@ -2313,7 +2313,7 @@ fn apply_check_login_response(account: &mut TraeAccount, response: &Value) {
     }
 }
 
-pub async fn refresh_account_async(account_id: &str) -> Result<TraeAccount, String> {
+async fn refresh_account_async_once(account_id: &str) -> Result<TraeAccount, String> {
     let existing = load_account(account_id).ok_or_else(|| "账号不存在".to_string())?;
     logger::log_info(&format!(
         "[Trae Refresh] 开始刷新账号: id={}, email={}",
@@ -2435,6 +2435,13 @@ pub async fn refresh_account_async(account_id: &str) -> Result<TraeAccount, Stri
         updated.id, updated.email
     ));
     Ok(updated)
+}
+
+pub async fn refresh_account_async(account_id: &str) -> Result<TraeAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay("Trae Refresh", account_id, || async {
+        refresh_account_async_once(account_id).await
+    })
+    .await
 }
 
 pub async fn refresh_all_tokens() -> Result<Vec<(String, Result<TraeAccount, String>)>, String> {

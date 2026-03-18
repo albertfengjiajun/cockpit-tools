@@ -1,7 +1,8 @@
 //! 托盘平台布局配置
-//! 用于控制托盘中平台的显示与排序模式
+//! 用于控制托盘中平台的显示、排序模式与分组层级
 
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
@@ -18,8 +19,9 @@ pub const PLATFORM_CODEBUDDY: &str = "codebuddy";
 pub const PLATFORM_CODEBUDDY_CN: &str = "codebuddy_cn";
 pub const PLATFORM_QODER: &str = "qoder";
 pub const PLATFORM_TRAE: &str = "trae";
+pub const PLATFORM_WORKBUDDY: &str = "workbuddy";
 
-pub const SUPPORTED_PLATFORM_IDS: [&str; 11] = [
+pub const SUPPORTED_PLATFORM_IDS: [&str; 12] = [
     PLATFORM_ANTIGRAVITY,
     PLATFORM_CODEX,
     PLATFORM_GITHUB_COPILOT,
@@ -31,10 +33,23 @@ pub const SUPPORTED_PLATFORM_IDS: [&str; 11] = [
     PLATFORM_CODEBUDDY_CN,
     PLATFORM_QODER,
     PLATFORM_TRAE,
+    PLATFORM_WORKBUDDY,
 ];
 
 pub const SORT_MODE_AUTO: &str = "auto";
 pub const SORT_MODE_MANUAL: &str = "manual";
+
+const DEFAULT_CODEBUDDY_GROUP_ID: &str = "codebuddy-suite";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrayLayoutGroup {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub platform_ids: Vec<String>,
+    pub default_platform_id: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -45,6 +60,10 @@ pub struct TrayLayoutConfig {
     pub ordered_platform_ids: Vec<String>,
     #[serde(default = "default_tray_platforms")]
     pub tray_platform_ids: Vec<String>,
+    #[serde(default = "default_ordered_entries")]
+    pub ordered_entry_ids: Vec<String>,
+    #[serde(default = "default_platform_groups")]
+    pub platform_groups: Vec<TrayLayoutGroup>,
 }
 
 fn default_sort_mode() -> String {
@@ -62,12 +81,31 @@ fn default_tray_platforms() -> Vec<String> {
     default_order()
 }
 
+fn default_platform_groups() -> Vec<TrayLayoutGroup> {
+    vec![TrayLayoutGroup {
+        id: DEFAULT_CODEBUDDY_GROUP_ID.to_string(),
+        name: "CodeBuddy".to_string(),
+        platform_ids: vec![
+            PLATFORM_CODEBUDDY.to_string(),
+            PLATFORM_CODEBUDDY_CN.to_string(),
+            PLATFORM_WORKBUDDY.to_string(),
+        ],
+        default_platform_id: PLATFORM_CODEBUDDY.to_string(),
+    }]
+}
+
+fn default_ordered_entries() -> Vec<String> {
+    build_ordered_entries_from_platform_order(&default_order(), &default_platform_groups())
+}
+
 impl Default for TrayLayoutConfig {
     fn default() -> Self {
         Self {
             sort_mode: default_sort_mode(),
             ordered_platform_ids: default_order(),
             tray_platform_ids: default_tray_platforms(),
+            ordered_entry_ids: default_ordered_entries(),
+            platform_groups: default_platform_groups(),
         }
     }
 }
@@ -125,6 +163,7 @@ fn normalize_tray_platforms(ids: &[String], raw_order_has_new: &[&str]) -> Vec<S
         PLATFORM_CODEBUDDY_CN,
         PLATFORM_QODER,
         PLATFORM_TRAE,
+        PLATFORM_WORKBUDDY,
     ] {
         let already_present = contains_platform(&sanitized, new_platform);
         let was_in_raw_order = raw_order_has_new.contains(&new_platform);
@@ -147,7 +186,179 @@ fn normalize_sort_mode(raw: &str) -> String {
     }
 }
 
+fn normalize_group_id(raw: &str, index: usize, used: &HashSet<String>) -> String {
+    let mut candidate = raw
+        .trim()
+        .to_ascii_lowercase()
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string();
+
+    if candidate.is_empty() {
+        candidate = format!("group-{}", index + 1);
+    }
+
+    if !used.contains(&candidate) {
+        return candidate;
+    }
+
+    let mut suffix = 2usize;
+    loop {
+        let next = format!("{}-{}", candidate, suffix);
+        if !used.contains(&next) {
+            return next;
+        }
+        suffix += 1;
+    }
+}
+
+fn normalize_platform_groups(groups: &[TrayLayoutGroup]) -> Vec<TrayLayoutGroup> {
+    let mut normalized = Vec::new();
+    let mut used_platforms: HashSet<String> = HashSet::new();
+    let mut used_group_ids: HashSet<String> = HashSet::new();
+
+    for (index, group) in groups.iter().enumerate() {
+        let group_id = normalize_group_id(&group.id, index, &used_group_ids);
+
+        let mut platform_ids = Vec::new();
+        for platform in sanitize_platform_ids(&group.platform_ids) {
+            if used_platforms.insert(platform.clone()) {
+                platform_ids.push(platform);
+            }
+        }
+
+        if platform_ids.is_empty() {
+            continue;
+        }
+
+        let default_platform_id = if platform_ids
+            .iter()
+            .any(|id| id == &group.default_platform_id)
+        {
+            group.default_platform_id.clone()
+        } else {
+            platform_ids[0].clone()
+        };
+
+        let name = if group.name.trim().is_empty() {
+            default_platform_id.clone()
+        } else {
+            group.name.trim().to_string()
+        };
+
+        normalized.push(TrayLayoutGroup {
+            id: group_id.clone(),
+            name,
+            platform_ids,
+            default_platform_id,
+        });
+        used_group_ids.insert(group_id);
+    }
+
+    normalized
+}
+
+fn get_available_entry_ids(groups: &[TrayLayoutGroup]) -> Vec<String> {
+    let mut entries = Vec::new();
+    let mut grouped_platforms: HashSet<String> = HashSet::new();
+
+    for group in groups {
+        entries.push(format!("group:{}", group.id));
+        for platform in &group.platform_ids {
+            grouped_platforms.insert(platform.clone());
+        }
+    }
+
+    for platform in SUPPORTED_PLATFORM_IDS {
+        if grouped_platforms.contains(platform) {
+            continue;
+        }
+        entries.push(format!("platform:{}", platform));
+    }
+
+    entries
+}
+
+fn build_ordered_entries_from_platform_order(
+    ordered_platform_ids: &[String],
+    groups: &[TrayLayoutGroup],
+) -> Vec<String> {
+    let mut platform_to_group: HashMap<String, String> = HashMap::new();
+    for group in groups {
+        for platform in &group.platform_ids {
+            platform_to_group.insert(platform.clone(), group.id.clone());
+        }
+    }
+
+    let mut entries = Vec::new();
+    let mut added_groups: HashSet<String> = HashSet::new();
+
+    for platform in normalize_order(ordered_platform_ids) {
+        if let Some(group_id) = platform_to_group.get(&platform) {
+            if added_groups.insert(group_id.clone()) {
+                entries.push(format!("group:{}", group_id));
+            }
+            continue;
+        }
+        entries.push(format!("platform:{}", platform));
+    }
+
+    for entry in get_available_entry_ids(groups) {
+        if !entries.iter().any(|value| value == &entry) {
+            entries.push(entry);
+        }
+    }
+
+    entries
+}
+
+fn normalize_ordered_entries(
+    raw_entries: &[String],
+    ordered_platform_ids: &[String],
+    groups: &[TrayLayoutGroup],
+) -> Vec<String> {
+    let available = get_available_entry_ids(groups);
+    let available_set: HashSet<&String> = available.iter().collect();
+
+    if raw_entries.is_empty() {
+        return build_ordered_entries_from_platform_order(ordered_platform_ids, groups);
+    }
+
+    let mut result = Vec::new();
+    for entry in raw_entries {
+        let trimmed = entry.trim().to_string();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if !available_set.contains(&trimmed) {
+            continue;
+        }
+        if result.iter().any(|value| value == &trimmed) {
+            continue;
+        }
+        result.push(trimmed);
+    }
+
+    for fallback in build_ordered_entries_from_platform_order(ordered_platform_ids, groups) {
+        if !result.iter().any(|value| value == &fallback) {
+            result.push(fallback);
+        }
+    }
+
+    result
+}
+
 fn normalize_config(config: TrayLayoutConfig) -> TrayLayoutConfig {
+    let ordered_platform_ids = normalize_order(&config.ordered_platform_ids);
+
     let raw_order_new_platforms: Vec<&str> = [
         PLATFORM_KIRO,
         PLATFORM_CURSOR,
@@ -156,18 +367,29 @@ fn normalize_config(config: TrayLayoutConfig) -> TrayLayoutConfig {
         PLATFORM_CODEBUDDY_CN,
         PLATFORM_QODER,
         PLATFORM_TRAE,
+        PLATFORM_WORKBUDDY,
     ]
     .iter()
-    .filter(|&&p| config.ordered_platform_ids.iter().any(|id| id.trim() == p))
+    .filter(|&&p| ordered_platform_ids.iter().any(|id| id.trim() == p))
     .copied()
     .collect();
+
+    let platform_groups = normalize_platform_groups(&config.platform_groups);
+    let ordered_entry_ids = normalize_ordered_entries(
+        &config.ordered_entry_ids,
+        &ordered_platform_ids,
+        &platform_groups,
+    );
+
     TrayLayoutConfig {
         sort_mode: normalize_sort_mode(&config.sort_mode),
-        ordered_platform_ids: normalize_order(&config.ordered_platform_ids),
+        ordered_platform_ids,
         tray_platform_ids: normalize_tray_platforms(
             &config.tray_platform_ids,
             &raw_order_new_platforms,
         ),
+        ordered_entry_ids,
+        platform_groups,
     }
 }
 
@@ -196,11 +418,15 @@ pub fn save_tray_layout(
     sort_mode: String,
     ordered_platform_ids: Vec<String>,
     tray_platform_ids: Vec<String>,
+    ordered_entry_ids: Option<Vec<String>>,
+    platform_groups: Option<Vec<TrayLayoutGroup>>,
 ) -> Result<TrayLayoutConfig, String> {
     let normalized = normalize_config(TrayLayoutConfig {
         sort_mode,
         ordered_platform_ids,
         tray_platform_ids,
+        ordered_entry_ids: ordered_entry_ids.unwrap_or_default(),
+        platform_groups: platform_groups.unwrap_or_else(default_platform_groups),
     });
 
     let path = get_tray_layout_path()?;

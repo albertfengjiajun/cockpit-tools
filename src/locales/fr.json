@@ -53,7 +53,17 @@
         "label": "Importer",
         "importing": "Importation du compte local...",
         "pickFile": "Sélectionner un fichier JSON à importer",
-        "orJson": "Ou importer depuis un fichier JSON"
+        "orJson": "Ou importer depuis un fichier JSON",
+        "progress": {
+          "overallLine": "Progression globale {{percent}} % ({{completedPlatforms}}/{{totalPlatforms}} plateformes, {{processedAccounts}}/{{totalAccounts}} comptes traités)",
+          "currentPlatformLine": "Import en cours : {{platform}} ({{count}} comptes)",
+          "currentStatusLine": "Statut actuel de la plateforme : {{status}}",
+          "platformDetailsTitle": "Détails des plateformes",
+          "statusProcessing": "Traitement en cours...",
+          "statusRunning": "Import en cours...",
+          "statusSkipped": "Ignoré",
+          "statusPending": "En attente d'import"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "Afficher dans la zone de notification",
     "hiddenBadge": "Masqué",
     "openFromMore": "Gérer la disposition des plateformes",
-    "dragHandleLabel": "Glisser pour réorganiser"
+    "dragHandleLabel": "Glisser pour réorganiser",
+    "tipWithGroups": "Faites glisser pour réordonner. Deux entrées maximum peuvent être affichées dans la barre latérale. Les sous-plateformes d’un groupe n’ont pas de bascules barre latérale/tableau de bord et servent uniquement pour la barre de menu et le changement de plateforme par défaut.",
+    "addGroup": "Ajouter un groupe",
+    "editGroup": "Modifier le groupe",
+    "deleteGroup": "Supprimer le groupe",
+    "groupBadge": "Groupe",
+    "groupDefault": "Plateforme par défaut",
+    "groupName": "Nom du groupe",
+    "groupNamePlaceholder": "Exemple : Suite CodeBuddy",
+    "groupIcon": "Icône du groupe",
+    "groupIconFromPlatform": "Icône de la plateforme",
+    "groupIconCustom": "Image personnalisée",
+    "groupIconPreview": "Aperçu de l’icône",
+    "groupChildren": "Sous-plateformes",
+    "groupNameRequired": "Veuillez saisir un nom de groupe",
+    "groupChildrenRequired": "Sélectionnez au moins une sous-plateforme",
+    "groupCustomIconRequired": "Veuillez téléverser une icône personnalisée",
+    "groupSwitchLabel": "Changer de plateforme du groupe",
+    "collapseAllChildren": "Réduire toutes les sous-plateformes",
+    "expandAllChildren": "Développer toutes les sous-plateformes",
+    "addChildPlatform": "Ajouter une sous-plateforme",
+    "collapseChildren": "Réduire les sous-plateformes",
+    "expandChildren": "Développer les sous-plateformes",
+    "noAvailableChildren": "Aucune plateforme disponible à ajouter",
+    "customIconDeleteConfirm": "Supprimer cette icône personnalisée ?",
+    "editChildPlatform": "Modifier la sous-plateforme",
+    "setAsDefaultInGroup": "Définir comme plateforme par défaut de ce groupe",
+    "removeFromGroup": "Retirer du groupe"
   },
   "privacy": {
     "hideSensitive": "Masquer les e-mails",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "Erreur de quota",
       "generic": "Échec de l’actualisation du quota, veuillez réessayer plus tard",
-      "deactivatedWorkspace": "L’espace de travail est désactivé, changez de compte ou réautorisez"
+      "deactivatedWorkspace": "L’espace de travail est désactivé, changez de compte ou réautorisez",
+      "requestFailedManualRetry": "Échec de la requête, veuillez réessayer manuellement : {{error}}"
     },
     "plan": {
       "free": "FREE",

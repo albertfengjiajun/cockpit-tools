@@ -53,7 +53,17 @@
         "label": "Nhập",
         "importing": "Đang nhập tài khoản cục bộ...",
         "pickFile": "Chọn tệp JSON để nhập",
-        "orJson": "Hoặc nhập từ tệp JSON"
+        "orJson": "Hoặc nhập từ tệp JSON",
+        "progress": {
+          "overallLine": "Tiến độ tổng thể {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} nền tảng, đã xử lý {{processedAccounts}}/{{totalAccounts}} tài khoản)",
+          "currentPlatformLine": "Đang nhập: {{platform}} ({{count}} tài khoản)",
+          "currentStatusLine": "Trạng thái nền tảng hiện tại: {{status}}",
+          "platformDetailsTitle": "Chi tiết nền tảng",
+          "statusProcessing": "Đang xử lý...",
+          "statusRunning": "Đang nhập...",
+          "statusSkipped": "Đã bỏ qua",
+          "statusPending": "Đang chờ nhập"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "Hiển thị trên khay hệ thống",
     "hiddenBadge": "Ẩn",
     "openFromMore": "Quản lý bố cục nền tảng",
-    "dragHandleLabel": "Kéo để sắp xếp lại"
+    "dragHandleLabel": "Kéo để sắp xếp lại",
+    "tipWithGroups": "Kéo để sắp xếp lại. Tối đa chỉ hiển thị 2 mục ở thanh bên. Nền tảng con trong nhóm không có công tắc thanh bên/bảng điều khiển và chỉ dùng cho thanh menu cùng chuyển nền tảng mặc định.",
+    "addGroup": "Thêm nhóm",
+    "editGroup": "Sửa nhóm",
+    "deleteGroup": "Xóa nhóm",
+    "groupBadge": "Nhóm",
+    "groupDefault": "Nền tảng mặc định",
+    "groupName": "Tên nhóm",
+    "groupNamePlaceholder": "Ví dụ: Bộ CodeBuddy",
+    "groupIcon": "Biểu tượng nhóm",
+    "groupIconFromPlatform": "Biểu tượng nền tảng",
+    "groupIconCustom": "Ảnh tùy chỉnh",
+    "groupIconPreview": "Xem trước biểu tượng",
+    "groupChildren": "Nền tảng con",
+    "groupNameRequired": "Vui lòng nhập tên nhóm",
+    "groupChildrenRequired": "Chọn ít nhất một nền tảng con",
+    "groupCustomIconRequired": "Vui lòng tải lên biểu tượng tùy chỉnh",
+    "groupSwitchLabel": "Chuyển nền tảng trong nhóm",
+    "collapseAllChildren": "Thu gọn tất cả nền tảng con",
+    "expandAllChildren": "Mở rộng tất cả nền tảng con",
+    "addChildPlatform": "Thêm nền tảng con",
+    "collapseChildren": "Thu gọn nền tảng con",
+    "expandChildren": "Mở rộng nền tảng con",
+    "noAvailableChildren": "Không có nền tảng nào để thêm",
+    "customIconDeleteConfirm": "Xóa biểu tượng tùy chỉnh này?",
+    "editChildPlatform": "Chỉnh sửa nền tảng con",
+    "setAsDefaultInGroup": "Đặt làm nền tảng mặc định trong nhóm này",
+    "removeFromGroup": "Xóa khỏi nhóm"
   },
   "privacy": {
     "hideSensitive": "Ẩn email",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "Lỗi quota",
       "generic": "Làm mới quota thất bại, vui lòng thử lại sau",
-      "deactivatedWorkspace": "Workspace đã bị vô hiệu hoá, hãy đổi tài khoản hoặc cấp quyền lại"
+      "deactivatedWorkspace": "Workspace đã bị vô hiệu hoá, hãy đổi tài khoản hoặc cấp quyền lại",
+      "requestFailedManualRetry": "Yêu cầu thất bại, vui lòng thử lại thủ công: {{error}}"
     },
     "plan": {
       "free": "FREE",

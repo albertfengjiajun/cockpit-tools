@@ -1035,7 +1035,7 @@ async fn fetch_qoder_user_status_bundle_with_fallback(
     Err(first_error)
 }
 
-pub async fn refresh_account_from_openapi(account_id: &str) -> Result<QoderAccount, String> {
+async fn refresh_account_from_openapi_once(account_id: &str) -> Result<QoderAccount, String> {
     let target = qoder_account::load_account(account_id)
         .ok_or_else(|| format!("Qoder 账号不存在: {}", account_id))?;
 
@@ -1103,6 +1103,13 @@ pub async fn refresh_account_from_openapi(account_id: &str) -> Result<QoderAccou
         ));
     }
     Ok(refreshed)
+}
+
+pub async fn refresh_account_from_openapi(account_id: &str) -> Result<QoderAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay("Qoder Refresh", account_id, || async {
+        refresh_account_from_openapi_once(account_id).await
+    })
+    .await
 }
 
 pub async fn refresh_all_accounts_from_openapi() -> Result<i32, String> {

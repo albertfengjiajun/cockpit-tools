@@ -53,7 +53,17 @@
         "label": "استيراد",
         "importing": "جارٍ الاستيراد...",
         "pickFile": "اختر ملف JSON للاستيراد",
-        "orJson": "أو الاستيراد من ملف JSON"
+        "orJson": "أو الاستيراد من ملف JSON",
+        "progress": {
+          "overallLine": "التقدم الإجمالي {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} منصات، تمت معالجة {{processedAccounts}}/{{totalAccounts}} حسابات)",
+          "currentPlatformLine": "جارٍ الاستيراد: {{platform}} ({{count}} حسابات)",
+          "currentStatusLine": "حالة المنصة الحالية: {{status}}",
+          "platformDetailsTitle": "تفاصيل المنصات",
+          "statusProcessing": "جارٍ المعالجة...",
+          "statusRunning": "جارٍ الاستيراد...",
+          "statusSkipped": "تم التخطي",
+          "statusPending": "بانتظار الاستيراد"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "إظهار في شريط النظام",
     "hiddenBadge": "مخفي",
     "openFromMore": "إدارة تخطيط المنصات",
-    "dragHandleLabel": "اسحب لإعادة الترتيب"
+    "dragHandleLabel": "اسحب لإعادة الترتيب",
+    "tipWithGroups": "اسحب لإعادة الترتيب. يمكن عرض مدخلين كحد أقصى في الشريط الجانبي. عناصر المجموعة الفرعية لا تدعم تبديل الشريط الجانبي/لوحة المعلومات وتُستخدم فقط لعرض شريط القوائم وتبديل المنصة الافتراضية.",
+    "addGroup": "إضافة مجموعة",
+    "editGroup": "تحرير المجموعة",
+    "deleteGroup": "حذف المجموعة",
+    "groupBadge": "مجموعة",
+    "groupDefault": "المنصة الافتراضية",
+    "groupName": "اسم المجموعة",
+    "groupNamePlaceholder": "مثال: مجموعة CodeBuddy",
+    "groupIcon": "أيقونة المجموعة",
+    "groupIconFromPlatform": "أيقونة المنصة",
+    "groupIconCustom": "صورة مخصصة",
+    "groupIconPreview": "معاينة الأيقونة",
+    "groupChildren": "المنصات الفرعية",
+    "groupNameRequired": "يرجى إدخال اسم المجموعة",
+    "groupChildrenRequired": "اختر منصة فرعية واحدة على الأقل",
+    "groupCustomIconRequired": "يرجى رفع أيقونة مخصصة",
+    "groupSwitchLabel": "التبديل بين منصات المجموعة",
+    "collapseAllChildren": "طي جميع المنصات الفرعية",
+    "expandAllChildren": "توسيع جميع المنصات الفرعية",
+    "addChildPlatform": "إضافة منصة فرعية",
+    "collapseChildren": "طي المنصات الفرعية",
+    "expandChildren": "توسيع المنصات الفرعية",
+    "noAvailableChildren": "لا توجد منصات متاحة للإضافة",
+    "customIconDeleteConfirm": "هل تريد حذف هذه الأيقونة المخصصة؟",
+    "editChildPlatform": "تحرير المنصة الفرعية",
+    "setAsDefaultInGroup": "تعيينها كمنصة افتراضية في هذه المجموعة",
+    "removeFromGroup": "إزالة من المجموعة"
   },
   "privacy": {
     "hideSensitive": "إخفاء البريد الإلكتروني",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "خطأ في الحصة",
       "generic": "فشل تحديث الحصة، يرجى المحاولة لاحقا",
-      "deactivatedWorkspace": "تم تعطيل مساحة العمل، بدّل الحساب أو أعد التفويض"
+      "deactivatedWorkspace": "تم تعطيل مساحة العمل، بدّل الحساب أو أعد التفويض",
+      "requestFailedManualRetry": "فشل الطلب، يُرجى إعادة المحاولة يدويًا: {{error}}"
     },
     "plan": {
       "free": "FREE",

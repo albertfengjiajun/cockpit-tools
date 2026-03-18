@@ -1716,39 +1716,88 @@ fn extract_ordered_model_ids(response: &AvailableModelsResponse) -> Vec<String> 
     ids
 }
 
-/// 获取可用模型列表（用于唤醒配置）
-pub async fn fetch_available_models() -> Result<Vec<AvailableModel>, String> {
-    let current = modules::get_current_account()?;
-    let account = if let Some(account) = current {
-        account
-    } else {
-        let accounts = modules::list_accounts()?;
-        accounts
-            .into_iter()
-            .next()
-            .ok_or_else(|| "未找到可用账号".to_string())?
-    };
+fn has_abnormal_account_marker(account: &crate::models::Account) -> bool {
+    if account.disabled {
+        return true;
+    }
+    account
+        .disabled_reason
+        .as_deref()
+        .map(str::trim)
+        .is_some_and(|reason| !reason.is_empty())
+}
 
-    let token = modules::oauth::ensure_fresh_token(&account.token).await?;
-    if token.access_token != account.token.access_token
-        || token.expiry_timestamp != account.token.expiry_timestamp
-    {
-        let mut updated = account.clone();
-        updated.token = token.clone();
-        let _ = modules::save_account(&updated);
+fn build_models_from_available_models_response(
+    response: &AvailableModelsResponse,
+) -> Vec<AvailableModel> {
+    let mut models = Vec::new();
+    if let Some(entries) = extract_available_models_map(response) {
+        let ordered_ids = extract_ordered_model_ids(response);
+        for id in ordered_ids {
+            if let Some(meta) = entries.get(&id) {
+                models.push(AvailableModel {
+                    id: id.clone(),
+                    display_name: meta.display_name.clone().unwrap_or_else(|| id.clone()),
+                    model_constant: meta.model_constant.clone(),
+                    recommended: meta.recommended,
+                });
+            }
+        }
+    }
+    models
+}
+
+fn build_local_fallback_models(accounts: &[crate::models::Account]) -> Vec<AvailableModel> {
+    let mut result: Vec<AvailableModel> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+
+    for account in accounts {
+        let Some(quota) = account.quota.as_ref() else {
+            continue;
+        };
+        for item in &quota.models {
+            let id = item.name.trim();
+            if id.is_empty() {
+                continue;
+            }
+            let dedupe_key = id.to_ascii_lowercase();
+            if !seen.insert(dedupe_key) {
+                continue;
+            }
+
+            let display_name = item
+                .display_name
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .unwrap_or(id)
+                .to_string();
+
+            result.push(AvailableModel {
+                id: id.to_string(),
+                display_name,
+                model_constant: None,
+                recommended: Some(true),
+            });
+        }
     }
 
-    let payload = json!({});
+    result
+}
 
+async fn fetch_available_models_from_access_token(
+    access_token: &str,
+) -> Result<AvailableModelsResponse, String> {
+    let payload = json!({});
     let client = crate::utils::http::create_client(15);
     let mut last_error: Option<String> = None;
-    let mut data: Option<AvailableModelsResponse> = None;
-    'outer: for base in CLOUD_CODE_BASE_URLS {
+
+    for base in CLOUD_CODE_BASE_URLS {
         for attempt in 1..=DEFAULT_ATTEMPTS {
             let url = format!("{}{}", base, FETCH_MODELS_PATH);
             let response = client
                 .post(url)
-                .bearer_auth(&token.access_token)
+                .bearer_auth(access_token)
                 .header(reqwest::header::USER_AGENT, USER_AGENT)
                 .header(reqwest::header::CONTENT_TYPE, "application/json")
                 .header(reqwest::header::ACCEPT_ENCODING, "gzip")
@@ -1763,8 +1812,7 @@ pub async fn fetch_available_models() -> Result<Vec<AvailableModel>, String> {
                             .json()
                             .await
                             .map_err(|e| format!("解析模型列表失败: {}", e))?;
-                        data = Some(parsed);
-                        break 'outer;
+                        return Ok(parsed);
                     }
                     if res.status() == reqwest::StatusCode::UNAUTHORIZED {
                         return Err("Authorization expired".to_string());
@@ -1799,26 +1847,101 @@ pub async fn fetch_available_models() -> Result<Vec<AvailableModel>, String> {
         }
     }
 
-    let data = data.ok_or_else(|| last_error.unwrap_or_else(|| "获取模型列表失败".to_string()))?;
+    Err(last_error.unwrap_or_else(|| "获取模型列表失败".to_string()))
+}
 
-    let mut models = Vec::new();
-    if let Some(entries) = extract_available_models_map(&data) {
-        let ordered_ids = extract_ordered_model_ids(&data);
-        for id in ordered_ids {
-            if let Some(meta) = entries.get(&id) {
-                models.push(AvailableModel {
-                    id: id.clone(),
-                    display_name: meta.display_name.clone().unwrap_or_else(|| id.clone()),
-                    model_constant: meta.model_constant.clone(),
-                    recommended: meta.recommended,
-                });
+/// 获取可用模型列表（用于唤醒配置）
+pub async fn fetch_available_models() -> Result<Vec<AvailableModel>, String> {
+    let all_accounts = modules::list_accounts()?;
+    if all_accounts.is_empty() {
+        return Err("未找到可用账号".to_string());
+    }
+
+    let mut normal_accounts: Vec<crate::models::Account> = all_accounts
+        .iter()
+        .filter(|account| !has_abnormal_account_marker(account))
+        .cloned()
+        .collect();
+
+    let current_account_id = modules::get_current_account_id().ok().flatten();
+    if let Some(current_id) = current_account_id.as_deref() {
+        if let Some(pos) = normal_accounts
+            .iter()
+            .position(|account| account.id == current_id)
+        {
+            if pos > 0 {
+                let current = normal_accounts.remove(pos);
+                normal_accounts.insert(0, current);
             }
         }
     }
 
-    if models.is_empty() {
-        return Err("模型列表为空：官方接口未返回可用模型".to_string());
+    let local_fallback_models = build_local_fallback_models(&all_accounts);
+
+    if normal_accounts.is_empty() {
+        if !local_fallback_models.is_empty() {
+            crate::modules::logger::log_warn(
+                "[Wakeup] fetch_available_models 未找到无异常标识账号，回退本地模型列表",
+            );
+            return Ok(local_fallback_models);
+        }
+        return Err("未找到无异常标识账号，且本地模型列表为空".to_string());
     }
 
-    Ok(models)
+    let mut last_error: Option<String> = None;
+    for account in normal_accounts {
+        let token = match modules::oauth::ensure_fresh_token(&account.token).await {
+            Ok(value) => {
+                if value.access_token != account.token.access_token
+                    || value.refresh_token != account.token.refresh_token
+                    || value.expiry_timestamp != account.token.expiry_timestamp
+                    || value.project_id != account.token.project_id
+                    || value.is_gcp_tos != account.token.is_gcp_tos
+                {
+                    let mut updated = account.clone();
+                    updated.token = value.clone();
+                    let _ = modules::save_account(&updated);
+                }
+                value
+            }
+            Err(err) => {
+                let message = format!("账号 {} 刷新 token 失败: {}", account.email, err);
+                crate::modules::logger::log_warn(&format!("[Wakeup] {}", message));
+                last_error = Some(message);
+                continue;
+            }
+        };
+
+        match fetch_available_models_from_access_token(&token.access_token).await {
+            Ok(response) => {
+                let models = build_models_from_available_models_response(&response);
+                if !models.is_empty() {
+                    return Ok(models);
+                }
+                let message = format!(
+                    "账号 {} 模型列表为空：官方接口未返回可用模型",
+                    account.email
+                );
+                crate::modules::logger::log_warn(&format!("[Wakeup] {}", message));
+                last_error = Some(message);
+            }
+            Err(err) => {
+                let message = format!("账号 {} 获取模型列表失败: {}", account.email, err);
+                crate::modules::logger::log_warn(&format!("[Wakeup] {}", message));
+                last_error = Some(message);
+            }
+        }
+    }
+
+    if !local_fallback_models.is_empty() {
+        crate::modules::logger::log_warn(&format!(
+            "[Wakeup] fetch_available_models 所有无异常标识账号获取失败，回退本地模型列表，last_error={}",
+            last_error.clone().unwrap_or_else(|| "-".to_string())
+        ));
+        return Ok(local_fallback_models);
+    }
+
+    Err(last_error.unwrap_or_else(|| {
+        "获取模型列表失败：无异常标识账号均不可用，且本地模型列表为空".to_string()
+    }))
 }

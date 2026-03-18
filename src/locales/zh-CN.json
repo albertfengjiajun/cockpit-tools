@@ -53,7 +53,17 @@
         "label": "导入",
         "importing": "正在导入...",
         "pickFile": "选择 JSON 文件导入",
-        "orJson": "或从 JSON 文件导入"
+        "orJson": "或从 JSON 文件导入",
+        "progress": {
+          "overallLine": "总体进度 {{percent}}%（{{completedPlatforms}}/{{totalPlatforms}} 平台，{{processedAccounts}}/{{totalAccounts}} 账号已处理）",
+          "currentPlatformLine": "正在导入：{{platform}}（{{count}} 个账号）",
+          "currentStatusLine": "当前平台状态：{{status}}",
+          "platformDetailsTitle": "平台详情",
+          "statusProcessing": "处理中...",
+          "statusRunning": "导入中...",
+          "statusSkipped": "已跳过",
+          "statusPending": "待导入"
+        }
       },
       "instances": {
         "unsupported": {
@@ -182,12 +192,39 @@
     "sidebarSelected": "侧边栏已选择 {{count}}/{{max}}",
     "reset": "恢复默认",
     "tip": "拖拽可排序；最多选择两个平台显示在侧边栏。若只选择一个，侧边栏只显示一个。",
+    "tipWithGroups": "拖拽可排序；最多选择两个入口显示在侧边栏。分组子级不参与侧边栏/仪表盘开关，仅用于菜单栏与默认平台切换。",
+    "addGroup": "新建分组",
+    "editGroup": "编辑",
+    "deleteGroup": "删除分组",
+    "groupBadge": "分组",
     "sidebarToggle": "侧边栏显示",
     "dashboardToggle": "仪表盘显示",
     "trayToggle": "菜单栏显示",
+    "groupDefault": "默认平台",
+    "groupName": "分组名称",
+    "groupNamePlaceholder": "例如：CodeBuddy 套件",
+    "groupIcon": "分组图标",
+    "groupIconFromPlatform": "平台图标",
+    "groupIconCustom": "自定义图片",
+    "groupIconPreview": "图标预览",
+    "groupChildren": "子级平台",
+    "groupNameRequired": "请输入分组名称",
+    "groupChildrenRequired": "至少选择一个子平台",
+    "groupCustomIconRequired": "请上传自定义图标",
+    "groupSwitchLabel": "切换同组平台",
     "hiddenBadge": "已隐藏",
     "openFromMore": "管理平台布局",
-    "dragHandleLabel": "拖拽排序"
+    "dragHandleLabel": "拖拽排序",
+    "collapseAllChildren": "收起全部子级",
+    "expandAllChildren": "展开全部子级",
+    "addChildPlatform": "添加子级平台",
+    "collapseChildren": "收起子级",
+    "expandChildren": "展开子级",
+    "noAvailableChildren": "暂无可添加的平台",
+    "customIconDeleteConfirm": "确认删除这个自定义图标吗？",
+    "editChildPlatform": "编辑子级平台",
+    "setAsDefaultInGroup": "设为分组内默认平台",
+    "removeFromGroup": "移出分组"
   },
   "privacy": {
     "hideSensitive": "隐藏邮箱",
@@ -1226,7 +1263,8 @@
     "quotaError": {
       "badge": "配额异常",
       "generic": "配额刷新失败，请稍后重试",
-      "deactivatedWorkspace": "工作区已停用，请切换账号或重新授权"
+      "deactivatedWorkspace": "工作区已停用，请切换账号或重新授权",
+      "requestFailedManualRetry": "请求失败，请手动重试：{{error}}"
     },
     "plan": {
       "free": "FREE",

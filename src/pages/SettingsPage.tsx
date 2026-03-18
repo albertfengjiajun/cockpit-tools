@@ -10,6 +10,7 @@ import * as accountService from '../services/accountService';
 import { usePlatformRuntimeSupport } from '../hooks/usePlatformRuntimeSupport';
 import { usePlatformLayoutStore } from '../stores/usePlatformLayoutStore';
 import { ALL_PLATFORM_IDS, PlatformId } from '../types/platform';
+import { SettingsAccountTransferSection } from '../components/SettingsAccountTransferSection';
 import './settings/Settings.css';
 import { 
   Github, User, Rocket, Save, FolderOpen,
@@ -1194,6 +1195,8 @@ export function SettingsPage() {
                 </div>
               </div>
             </div>
+
+            <SettingsAccountTransferSection />
 
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ order: platformSettingsOrder.antigravity }}>

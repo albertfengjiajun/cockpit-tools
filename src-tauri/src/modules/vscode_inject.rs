@@ -539,12 +539,9 @@ fn get_linux_v11_key(mode: SafeStorageReadMode) -> Option<[u8; 16]> {
             "codebuddycn",
         ],
         SafeStorageReadMode::QoderOnly => &["Qoder", "qoder"],
-        SafeStorageReadMode::WorkBuddyOnly => &[
-            "WorkBuddy",
-            "workbuddy",
-            "workbuddy-cn",
-            "workbuddycn",
-        ],
+        SafeStorageReadMode::WorkBuddyOnly => {
+            &["WorkBuddy", "workbuddy", "workbuddy-cn", "workbuddycn"]
+        }
         _ => &[
             "code",
             "Code",

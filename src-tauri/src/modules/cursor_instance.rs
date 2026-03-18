@@ -3,7 +3,9 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
+#[cfg(not(target_os = "macos"))]
+use std::process::Stdio;
 use std::sync::Mutex;
 
 use chrono::Utc;
@@ -1158,7 +1160,51 @@ fn spawn_cursor_windows(
     Ok(child.id())
 }
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(target_os = "macos")]
+fn spawn_cursor_macos_open(
+    launch_path: &Path,
+    user_data_dir: &str,
+    extra_args: &[String],
+    use_new_window: bool,
+) -> Result<u32, String> {
+    let app_root = normalize_macos_app_root(launch_path).ok_or("APP_PATH_NOT_FOUND:cursor")?;
+    let target = user_data_dir.trim();
+
+    let mut cmd = Command::new("open");
+    sanitize_macos_gui_launch_env(&mut cmd);
+    cmd.arg("-n").arg("-a").arg(&app_root);
+    cmd.arg("--args");
+    cmd.arg("--user-data-dir").arg(target);
+    if use_new_window {
+        cmd.arg("--new-window");
+    } else {
+        cmd.arg("--reuse-window");
+    }
+    for arg in extra_args {
+        if !arg.trim().is_empty() {
+            cmd.arg(arg.trim());
+        }
+    }
+
+    let child =
+        spawn_command_with_trace(&mut cmd).map_err(|e| format!("启动 Cursor 失败: {}", e))?;
+    modules::logger::log_info("Cursor 启动命令已发送（open -n -a）");
+    let probe_started = std::time::Instant::now();
+    let timeout = std::time::Duration::from_secs(6);
+    while probe_started.elapsed() < timeout {
+        if let Some(resolved_pid) = resolve_cursor_pid(None, Some(target)) {
+            return Ok(resolved_pid);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    modules::logger::log_warn(&format!(
+        "[Cursor Start] 启动后 6s 内未匹配到实例 PID，回退 open pid={}",
+        child.id()
+    ));
+    Ok(child.id())
+}
+
+#[cfg(target_os = "linux")]
 fn spawn_cursor_unix(
     launch_path: &Path,
     user_data_dir: &str,
@@ -1202,7 +1248,12 @@ pub fn start_cursor_with_args_with_new_window(
         return spawn_cursor_windows(&launch_path, target, extra_args, use_new_window);
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(target_os = "macos")]
+    {
+        return spawn_cursor_macos_open(&launch_path, target, extra_args, use_new_window);
+    }
+
+    #[cfg(target_os = "linux")]
     {
         return spawn_cursor_unix(&launch_path, target, extra_args, use_new_window);
     }

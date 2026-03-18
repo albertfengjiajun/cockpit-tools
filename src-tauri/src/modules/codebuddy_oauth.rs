@@ -546,7 +546,10 @@ pub async fn fetch_user_resource_with_access_token(
     page_size: i32,
 ) -> Result<Value, String> {
     let client = build_client()?;
-    let url = format!("{}/v2/billing/meter/get-user-resource", CODEBUDDY_API_ENDPOINT);
+    let url = format!(
+        "{}/v2/billing/meter/get-user-resource",
+        CODEBUDDY_API_ENDPOINT
+    );
 
     let body = json!({
         "PageNumber": page_number,
@@ -754,8 +757,9 @@ async fn refresh_payload_for_account_inner(
             ));
             quota_refresh_error = Some(err.clone());
             if require_user_resource {
-                return Err("使用 IDE token 刷新 user_resource 失败，无法获取资源包配额"
-                    .to_string());
+                return Err(
+                    "使用 IDE token 刷新 user_resource 失败，无法获取资源包配额".to_string()
+                );
             }
             None
         }

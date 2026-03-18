@@ -7,6 +7,21 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.16.0] - 2026-03-18
+
+### Added
+- **Cross-platform account transfer center in Settings**: Added one-click export/import for all platforms with a unified JSON bundle schema, platform-level import progress, and modal/file workflows.
+- **Platform grouping and quick-switch UX across core surfaces**: Added editable platform groups (name, icon, default child, child-level metadata), group switcher in headers, grouped cards on dashboard, and grouped entry rendering in side navigation and layout modal.
+- **Custom group icon library with local persistence**: Added icon upload, reuse, and cleanup for group/child icons in platform layout configuration.
+
+### Changed
+- **Tray layout model now supports ordered entries plus platform groups**: tray persistence now stores `orderedEntryIds` + `platformGroups`, and tray menu rendering now understands grouped entries while keeping manual ordering and visibility controls.
+- **macOS app launch flow now aligns around LaunchServices `open -n -a` with PID probing for isolated instances**: Antigravity/Codex/VS Code/CodeBuddy/CodeBuddy CN/WorkBuddy plus Qoder/Trae/Cursor/Kiro/Windsurf start paths now use consistent launch semantics and post-launch PID matching for target profiles.
+- **Account refresh reliability improved with delayed retry across providers**: Antigravity quota refresh and multiple provider token/profile/quota refresh paths now perform one delayed retry with unified logs before surfacing failure.
+- **Codex OAuth add-account flow now supports in-place token-exchange retry**: OAuth error state now exposes a retry action for token exchange without restarting the full authorization flow.
+- **Settings, dashboard, and navigation visuals were updated for grouped-platform operations**: added new layout/modal/switcher/transfer styles and supporting locale keys across all supported languages.
+
+---
 ## [0.15.1] - 2026-03-16
 
 ### Changed

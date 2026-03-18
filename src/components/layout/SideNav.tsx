@@ -3,7 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Page } from '../../types/navigation';
 import { PlatformId, PLATFORM_PAGE_MAP } from '../../types/platform';
-import { usePlatformLayoutStore } from '../../stores/usePlatformLayoutStore';
+import {
+  resolveGroupChildIcon,
+  resolveGroupChildName,
+  parseGroupEntryId,
+  parsePlatformEntryId,
+  PlatformLayoutEntryId,
+  PlatformLayoutGroup,
+  resolveEntryDefaultPlatformId,
+  resolveEntryIdForPlatform,
+  usePlatformLayoutStore,
+} from '../../stores/usePlatformLayoutStore';
 import { getPlatformLabel, renderPlatformIcon } from '../../utils/platformMeta';
 
 interface SideNavProps {
@@ -23,6 +33,15 @@ interface FlyingRocket {
   x: number;
 }
 
+interface SideNavEntry {
+  id: PlatformLayoutEntryId;
+  label: string;
+  hidden: boolean;
+  targetPlatformId: PlatformId;
+  platformIds: PlatformId[];
+  group: PlatformLayoutGroup | null;
+}
+
 const PAGE_PLATFORM_MAP: Partial<Record<Page, PlatformId>> = {
   overview: 'antigravity',
   codex: 'codex',
@@ -37,6 +56,26 @@ const PAGE_PLATFORM_MAP: Partial<Record<Page, PlatformId>> = {
   trae: 'trae',
   workbuddy: 'workbuddy',
 };
+
+function renderEntryIcon(entry: SideNavEntry, size: number) {
+  if (entry.group && entry.group.iconKind === 'custom' && entry.group.iconCustomDataUrl) {
+    return (
+      <img
+        src={entry.group.iconCustomDataUrl}
+        alt={entry.label}
+        className="side-nav-group-icon"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
+  if (entry.group) {
+    const iconPlatform = entry.group.iconPlatformId ?? entry.targetPlatformId;
+    return renderPlatformIcon(iconPlatform, size);
+  }
+
+  return renderPlatformIcon(entry.targetPlatformId, size);
+}
 
 export function SideNav({
   page,
@@ -56,15 +95,70 @@ export function SideNav({
   const logoRef = useRef<HTMLDivElement>(null);
   const morePopoverRef = useRef<HTMLDivElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
-  const { orderedPlatformIds, hiddenPlatformIds, sidebarPlatformIds } = usePlatformLayoutStore();
+
+  const {
+    orderedEntryIds,
+    hiddenEntryIds,
+    sidebarEntryIds,
+    platformGroups,
+  } = usePlatformLayoutStore();
 
   const currentPlatformId = PAGE_PLATFORM_MAP[page] ?? null;
-  const hiddenSet = useMemo(() => new Set(hiddenPlatformIds), [hiddenPlatformIds]);
-  const sidebarVisiblePlatformIds = useMemo(
-    () => orderedPlatformIds.filter((id) => sidebarPlatformIds.includes(id) && !hiddenSet.has(id)),
-    [orderedPlatformIds, sidebarPlatformIds, hiddenSet],
+  const currentEntryId = useMemo(
+    () => (currentPlatformId ? resolveEntryIdForPlatform(currentPlatformId, platformGroups) : null),
+    [currentPlatformId, platformGroups],
   );
-  const isMoreActive = !!currentPlatformId && !sidebarVisiblePlatformIds.includes(currentPlatformId);
+
+  const hiddenSet = useMemo(() => new Set(hiddenEntryIds), [hiddenEntryIds]);
+  const sidebarSet = useMemo(() => new Set(sidebarEntryIds), [sidebarEntryIds]);
+
+  const orderedEntries = useMemo<SideNavEntry[]>(() => {
+    return orderedEntryIds
+      .map((entryId) => {
+        const platformId = parsePlatformEntryId(entryId);
+        if (platformId) {
+          return {
+            id: entryId,
+            label: getPlatformLabel(platformId, t),
+            hidden: hiddenSet.has(entryId),
+            targetPlatformId: platformId,
+            platformIds: [platformId],
+            group: null,
+          };
+        }
+
+        const groupId = parseGroupEntryId(entryId);
+        if (!groupId) {
+          return null;
+        }
+        const group = platformGroups.find((item) => item.id === groupId);
+        if (!group) {
+          return null;
+        }
+
+        const targetPlatformId = resolveEntryDefaultPlatformId(entryId, platformGroups);
+        if (!targetPlatformId) {
+          return null;
+        }
+
+        return {
+          id: entryId,
+          label: group.name,
+          hidden: hiddenSet.has(entryId),
+          targetPlatformId,
+          platformIds: [...group.platformIds],
+          group,
+        };
+      })
+      .filter((entry): entry is SideNavEntry => !!entry);
+  }, [orderedEntryIds, platformGroups, hiddenSet, t]);
+
+  const sidebarVisibleEntries = useMemo(
+    () => orderedEntries.filter((entry) => sidebarSet.has(entry.id) && !entry.hidden),
+    [orderedEntries, sidebarSet],
+  );
+
+  const isMoreActive = !!currentEntryId && !sidebarVisibleEntries.some((entry) => entry.id === currentEntryId);
 
   const handleLogoClick = useCallback(() => {
     if (hasBreakoutSession) {
@@ -74,14 +168,13 @@ export function SideNav({
 
     const newRocket: FlyingRocket = {
       id: rocketIdRef.current++,
-      x: (Math.random() - 0.5) * 40, // 随机水平偏移
+      x: (Math.random() - 0.5) * 40,
     };
 
-    setFlyingRockets(prev => [...prev, newRocket]);
+    setFlyingRockets((prev) => [...prev, newRocket]);
 
-    // 动画完成后移除火箭 (1.5秒)
     setTimeout(() => {
-      setFlyingRockets(prev => prev.filter(r => r.id !== newRocket.id));
+      setFlyingRockets((prev) => prev.filter((rocket) => rocket.id !== newRocket.id));
     }, 1500);
 
     onEasterEggTriggerClick();
@@ -119,9 +212,9 @@ export function SideNav({
                 ? t('update_notification.downloading', '下载中...')
                 : updateActionState === 'installing'
                   ? t('nav.quickUpdate.installing', '安装中')
-                : updateActionState === 'ready'
-                  ? t('nav.quickUpdate.restart', '重启')
-                  : t('nav.quickUpdate.update', '更新')
+                  : updateActionState === 'ready'
+                    ? t('nav.quickUpdate.restart', '重启')
+                    : t('nav.quickUpdate.update', '更新')
             }
             disabled={updateActionState === 'installing'}
           >
@@ -137,9 +230,7 @@ export function SideNav({
                 <span className="side-nav-update-progress-percent">{clampedUpdateProgress}%</span>
               </span>
             ) : updateActionState === 'installing' ? (
-              <span className="side-nav-update-text">
-                {t('nav.quickUpdate.installing', '安装中')}
-              </span>
+              <span className="side-nav-update-text">{t('nav.quickUpdate.installing', '安装中')}</span>
             ) : (
               <span className="side-nav-update-text">
                 {updateActionState === 'ready'
@@ -152,38 +243,44 @@ export function SideNav({
       )}
 
       <div className="nav-brand" style={{ position: 'relative', zIndex: 10 }}>
-         <div 
-           ref={logoRef}
-           className={`brand-logo rocket-easter-egg${hasBreakoutSession ? ' rocket-easter-egg-active' : ''}`}
-           onClick={handleLogoClick}
-           title={hasBreakoutSession ? t('breakout.resumeGameNav', '继续游戏') : undefined}
-         >
-           <Rocket size={20} />
-           {hasBreakoutSession && <span className="rocket-session-indicator" aria-hidden="true" />}
-           {/* 点击计数器保持在里面，跟随缩放 */}
-           {!hasBreakoutSession && easterEggClickCount > 0 && (
-             <span className="rocket-click-count">{easterEggClickCount}</span>
-           )}
-         </div>
+        <div
+          ref={logoRef}
+          className={`brand-logo rocket-easter-egg${hasBreakoutSession ? ' rocket-easter-egg-active' : ''}`}
+          onClick={handleLogoClick}
+          title={hasBreakoutSession ? t('breakout.resumeGameNav', '继续游戏') : undefined}
+        >
+          <Rocket size={20} />
+          {hasBreakoutSession && <span className="rocket-session-indicator" aria-hidden="true" />}
+          {!hasBreakoutSession && easterEggClickCount > 0 && (
+            <span className="rocket-click-count">{easterEggClickCount}</span>
+          )}
+        </div>
 
-         {/* 把火箭层移到外面，放在后面以自然层叠在上方，使用 pointer-events-none 防止遮挡点击 */}
-         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-           {flyingRockets.map(rocket => (
-             <span 
-               key={rocket.id} 
-               className="flying-rocket"
-               style={{ '--rocket-x': `${rocket.x}px` } as React.CSSProperties}
-             >
-               🚀
-             </span>
-           ))}
-         </div>
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+          }}
+        >
+          {flyingRockets.map((rocket) => (
+            <span
+              key={rocket.id}
+              className="flying-rocket"
+              style={{ '--rocket-x': `${rocket.x}px` } as React.CSSProperties}
+            >
+              🚀
+            </span>
+          ))}
+        </div>
       </div>
-      
-      <div className="nav-items">
 
-        <button 
-          className={`nav-item ${page === 'dashboard' ? 'active' : ''}`} 
+      <div className="nav-items">
+        <button
+          className={`nav-item ${page === 'dashboard' ? 'active' : ''}`}
           onClick={() => setPage('dashboard')}
           title={t('nav.dashboard')}
         >
@@ -191,17 +288,17 @@ export function SideNav({
           <span className="tooltip">{t('nav.dashboard')}</span>
         </button>
 
-        {sidebarVisiblePlatformIds.map((platformId) => {
-          const active = currentPlatformId === platformId;
+        {sidebarVisibleEntries.map((entry) => {
+          const active = currentEntryId === entry.id;
           return (
             <button
-              key={platformId}
+              key={entry.id}
               className={`nav-item ${active ? 'active' : ''}`}
-              onClick={() => setPage(PLATFORM_PAGE_MAP[platformId])}
-              title={getPlatformLabel(platformId, t)}
+              onClick={() => setPage(PLATFORM_PAGE_MAP[entry.targetPlatformId])}
+              title={entry.label}
             >
-              {renderPlatformIcon(platformId, 20)}
-              <span className="tooltip">{getPlatformLabel(platformId, t)}</span>
+              {renderEntryIcon(entry, 20)}
+              <span className="tooltip">{entry.label}</span>
             </button>
           );
         })}
@@ -220,22 +317,63 @@ export function SideNav({
           <div className="side-nav-more-popover" ref={morePopoverRef}>
             <div className="side-nav-more-title">{t('nav.morePlatforms', '更多平台')}</div>
             <div className="side-nav-more-list">
-              {orderedPlatformIds.map((platformId) => {
-                const active = currentPlatformId === platformId;
-                const hidden = hiddenSet.has(platformId);
+              {orderedEntries.map((entry) => {
+                const active = currentEntryId === entry.id;
                 return (
-                  <button
-                    key={platformId}
-                    className={`side-nav-more-item ${active ? 'active' : ''}`}
-                    onClick={() => {
-                      setPage(PLATFORM_PAGE_MAP[platformId]);
-                      setShowMore(false);
-                    }}
-                  >
-                    <span className="side-nav-more-item-icon">{renderPlatformIcon(platformId, 16)}</span>
-                    <span className="side-nav-more-item-label">{getPlatformLabel(platformId, t)}</span>
-                    {hidden && <span className="side-nav-more-item-badge">{t('platformLayout.hiddenBadge', '已隐藏')}</span>}
-                  </button>
+                  <div className="side-nav-more-group" key={entry.id}>
+                    <button
+                      className={`side-nav-more-item ${active ? 'active' : ''}`}
+                      onClick={() => {
+                        setPage(PLATFORM_PAGE_MAP[entry.targetPlatformId]);
+                        setShowMore(false);
+                      }}
+                    >
+                      <span className="side-nav-more-item-icon">{renderEntryIcon(entry, 16)}</span>
+                      <span className="side-nav-more-item-label">{entry.label}</span>
+                      {entry.hidden && (
+                        <span className="side-nav-more-item-badge">
+                          {t('platformLayout.hiddenBadge', '已隐藏')}
+                        </span>
+                      )}
+                    </button>
+
+                    {entry.group && entry.platformIds.length > 1 && (
+                      <div className="side-nav-more-sub-list">
+                        {entry.platformIds.map((platformId) => {
+                          const icon = resolveGroupChildIcon(entry.group!, platformId);
+                          const label = resolveGroupChildName(
+                            entry.group!,
+                            platformId,
+                            getPlatformLabel(platformId, t),
+                          );
+                          return (
+                            <button
+                              key={`${entry.id}:${platformId}`}
+                              className={`side-nav-more-sub-item ${currentPlatformId === platformId ? 'active' : ''}`}
+                              onClick={() => {
+                                setPage(PLATFORM_PAGE_MAP[platformId]);
+                                setShowMore(false);
+                              }}
+                            >
+                              <span className="side-nav-more-sub-item-icon">
+                                {icon.iconKind === 'custom' && icon.iconCustomDataUrl ? (
+                                  <img
+                                    src={icon.iconCustomDataUrl}
+                                    alt={label}
+                                    className="side-nav-group-icon"
+                                    style={{ width: 14, height: 14 }}
+                                  />
+                                ) : (
+                                  renderPlatformIcon(icon.iconPlatformId, 14)
+                                )}
+                              </span>
+                              <span className="side-nav-more-sub-item-label">{label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -263,7 +401,6 @@ export function SideNav({
           <span className="tooltip">{t('nav.settings')}</span>
         </button>
       </div>
-
     </nav>
   );
 }

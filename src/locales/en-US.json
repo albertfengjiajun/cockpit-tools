@@ -53,7 +53,17 @@
         "label": "Import",
         "importing": "Importing...",
         "pickFile": "Select JSON file to import",
-        "orJson": "Or import from JSON file"
+        "orJson": "Or import from JSON file",
+        "progress": {
+          "overallLine": "Overall progress {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} platforms, {{processedAccounts}}/{{totalAccounts}} accounts processed)",
+          "currentPlatformLine": "Importing: {{platform}} ({{count}} accounts)",
+          "currentStatusLine": "Current platform status: {{status}}",
+          "platformDetailsTitle": "Platform details",
+          "statusProcessing": "Processing...",
+          "statusRunning": "Importing...",
+          "statusSkipped": "Skipped",
+          "statusPending": "Pending import"
+        }
       },
       "instances": {
         "unsupported": {
@@ -182,12 +192,39 @@
     "sidebarSelected": "Sidebar selected {{count}}/{{max}}",
     "reset": "Reset to default",
     "tip": "Drag to reorder. Up to two platforms can be shown in the sidebar. If only one is selected, only one is shown.",
+    "tipWithGroups": "Drag to reorder. Up to two entries can appear in the sidebar. Group children do not have sidebar/dashboard toggles and are only used for tray visibility and default-platform switching.",
+    "addGroup": "Add group",
+    "editGroup": "Edit",
+    "deleteGroup": "Delete group",
+    "groupBadge": "Group",
     "sidebarToggle": "Show in sidebar",
     "dashboardToggle": "Show in dashboard",
     "trayToggle": "Show in tray",
+    "groupDefault": "Default platform",
+    "groupName": "Group name",
+    "groupNamePlaceholder": "Example: CodeBuddy Suite",
+    "groupIcon": "Group icon",
+    "groupIconFromPlatform": "Platform icon",
+    "groupIconCustom": "Custom image",
+    "groupIconPreview": "Icon preview",
+    "groupChildren": "Child platforms",
+    "groupNameRequired": "Please enter a group name",
+    "groupChildrenRequired": "Select at least one child platform",
+    "groupCustomIconRequired": "Please upload a custom icon",
+    "groupSwitchLabel": "Switch platform in this group",
     "hiddenBadge": "Hidden",
     "openFromMore": "Manage platform layout",
-    "dragHandleLabel": "Drag to reorder"
+    "dragHandleLabel": "Drag to reorder",
+    "collapseAllChildren": "Collapse all child platforms",
+    "expandAllChildren": "Expand all child platforms",
+    "addChildPlatform": "Add child platform",
+    "collapseChildren": "Collapse child platforms",
+    "expandChildren": "Expand child platforms",
+    "noAvailableChildren": "No platforms available to add",
+    "customIconDeleteConfirm": "Delete this custom icon?",
+    "editChildPlatform": "Edit child platform",
+    "setAsDefaultInGroup": "Set as the default platform in this group",
+    "removeFromGroup": "Remove from group"
   },
   "privacy": {
     "hideSensitive": "Hide emails",
@@ -1226,7 +1263,8 @@
     "quotaError": {
       "badge": "Quota error",
       "generic": "Quota refresh failed, please try again later",
-      "deactivatedWorkspace": "Workspace is deactivated, switch account or re-authorize"
+      "deactivatedWorkspace": "Workspace is deactivated, switch account or re-authorize",
+      "requestFailedManualRetry": "Request failed, please retry manually: {{error}}"
     },
     "plan": {
       "free": "FREE",

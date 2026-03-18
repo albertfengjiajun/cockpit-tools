@@ -12,7 +12,14 @@ import { useCodebuddyCnAccountStore } from '../stores/useCodebuddyCnAccountStore
 import { useQoderAccountStore } from '../stores/useQoderAccountStore';
 import { useTraeAccountStore } from '../stores/useTraeAccountStore';
 import { useWorkbuddyAccountStore } from '../stores/useWorkbuddyAccountStore';
-import { usePlatformLayoutStore } from '../stores/usePlatformLayoutStore';
+import {
+  parseGroupEntryId,
+  PlatformLayoutEntryId,
+  resolveEntryDefaultPlatformId,
+  resolveEntryPlatformIds,
+  resolveGroupChildName,
+  usePlatformLayoutStore,
+} from '../stores/usePlatformLayoutStore';
 import { Page } from '../types/navigation';
 import { Users, CheckCircle2, Sparkles, RotateCw, Play, Github, HelpCircle } from 'lucide-react';
 import { Account } from '../types/account';
@@ -119,10 +126,18 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
   const { t, i18n } = useTranslation();
   // 类型适配器，将 i18next 的 t 函数转换为简单的 (key, defaultValue?) => string 签名
   const tSimple = (key: string, defaultValue?: string) => t(key, defaultValue ?? key);
-  const { orderedPlatformIds, hiddenPlatformIds } = usePlatformLayoutStore();
+  const { orderedEntryIds, hiddenEntryIds, platformGroups } = usePlatformLayoutStore();
+  const hiddenEntrySet = useMemo(() => new Set(hiddenEntryIds), [hiddenEntryIds]);
+  const visibleEntryOrder = useMemo(
+    () => orderedEntryIds.filter((entryId) => !hiddenEntrySet.has(entryId)),
+    [orderedEntryIds, hiddenEntrySet],
+  );
   const visiblePlatformOrder = useMemo(
-    () => orderedPlatformIds.filter((platformId) => !hiddenPlatformIds.includes(platformId)),
-    [orderedPlatformIds, hiddenPlatformIds],
+    () =>
+      visibleEntryOrder
+        .map((entryId) => resolveEntryDefaultPlatformId(entryId, platformGroups))
+        .filter((platformId): platformId is PlatformId => !!platformId),
+    [visibleEntryOrder, platformGroups],
   );
   const [privacyModeEnabled, setPrivacyModeEnabled] = React.useState<boolean>(() =>
     isPrivacyModeEnabledByDefault()
@@ -2627,6 +2642,16 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
     workbuddy: stats.workbuddy,
   };
 
+  const entryCounts = useMemo(() => {
+    const result = new Map<PlatformLayoutEntryId, number>();
+    for (const entryId of visibleEntryOrder) {
+      const platformIds = resolveEntryPlatformIds(entryId, platformGroups);
+      const count = platformIds.reduce((sum, platformId) => sum + (platformCounts[platformId] ?? 0), 0);
+      result.set(entryId, count);
+    }
+    return result;
+  }, [visibleEntryOrder, platformGroups, platformCounts]);
+
   const visibleCardPlatformIds = visiblePlatformOrder;
   const isSinglePlatformMode = visibleCardPlatformIds.length === 1;
   const cardRows = useMemo(() => {
@@ -3229,7 +3254,23 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
           </div>
         </div>
 
-        {visiblePlatformOrder.map((platformId) => {
+        {visibleEntryOrder.map((entryId) => {
+          const platformId = resolveEntryDefaultPlatformId(entryId, platformGroups);
+          if (!platformId) {
+            return null;
+          }
+          const groupId = parseGroupEntryId(entryId);
+          const group = groupId ? platformGroups.find((item) => item.id === groupId) : null;
+          const groupChildLabels = group
+            ? group.platformIds.map((childPlatformId) =>
+                resolveGroupChildName(group, childPlatformId, getPlatformLabel(childPlatformId, t)),
+              )
+            : [];
+          const groupExtraCount = Math.max(groupChildLabels.length - 1, 0);
+          const groupTooltip = groupChildLabels.join(', ');
+          const label = group
+            ? group.name
+            : getPlatformLabel(platformId, t);
           const iconClass =
             platformId === 'antigravity'
               ? 'success'
@@ -3247,10 +3288,19 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
           return (
             <button
               className="stat-card stat-card-button"
-              key={platformId}
+              key={entryId}
               onClick={() => onNavigate(PLATFORM_PAGE_MAP[platformId])}
-              title={t('dashboard.switchTo', '切换到此账号')}
+              title={
+                groupExtraCount > 0
+                  ? `${t('dashboard.switchTo', '切换到此账号')} · ${groupTooltip}`
+                  : t('dashboard.switchTo', '切换到此账号')
+              }
             >
+              {groupExtraCount > 0 && (
+                <span className="stat-group-more-badge stat-group-more-badge-corner" title={groupTooltip} aria-label={groupTooltip}>
+                  +{groupExtraCount}
+                </span>
+              )}
               <div
                 className={`stat-icon-bg ${iconClass} stat-icon-trigger`}
                 onClick={(event) => {
@@ -3259,11 +3309,20 @@ export function DashboardPage({ onNavigate, onOpenPlatformLayout, onEasterEggTri
                   onEasterEggTriggerClick();
                 }}
               >
-                {renderPlatformIcon(platformId, 24)}
+                {group?.iconKind === 'custom' && group.iconCustomDataUrl ? (
+                  <img
+                    src={group.iconCustomDataUrl}
+                    alt={label}
+                    className="dashboard-group-icon"
+                    style={{ width: 24, height: 24 }}
+                  />
+                ) : (
+                  renderPlatformIcon(group?.iconPlatformId ?? platformId, 24)
+                )}
               </div>
               <div className="stat-info">
-                <span className="stat-label">{getPlatformLabel(platformId, t)}</span>
-                <span className="stat-value">{platformCounts[platformId]}</span>
+                <span className="stat-label">{label}</span>
+                <span className="stat-value">{entryCounts.get(entryId) ?? 0}</span>
               </div>
             </button>
           );

@@ -505,17 +505,13 @@ pub fn list_accounts() -> Vec<CodexAccount> {
 }
 
 /// 刷新账号资料（团队名/结构）
-pub async fn refresh_account_profile(account_id: &str) -> Result<CodexAccount, String> {
+async fn refresh_account_profile_once(account_id: &str) -> Result<CodexAccount, String> {
     let mut account = prepare_account_for_injection(account_id).await?;
     let (account_name, account_structure, account_id_from_remote) =
         match fetch_remote_account_profile(&account).await {
             Ok(profile) => profile,
             Err(err) if should_force_refresh_token(&err) => {
-                let refresh_token = account
-                    .tokens
-                    .refresh_token
-                    .clone()
-                    .ok_or(err.clone())?;
+                let refresh_token = account.tokens.refresh_token.clone().ok_or(err.clone())?;
 
                 logger::log_warn(&format!(
                     "Codex 账号资料请求检测到失效 Token，准备强制刷新后重试: account={}, error={}",
@@ -561,6 +557,15 @@ pub async fn refresh_account_profile(account_id: &str) -> Result<CodexAccount, S
     }
 
     Ok(account)
+}
+
+pub async fn refresh_account_profile(account_id: &str) -> Result<CodexAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay(
+        "Codex Profile Refresh",
+        account_id,
+        || async { refresh_account_profile_once(account_id).await },
+    )
+    .await
 }
 
 /// 添加或更新账号
@@ -1302,7 +1307,11 @@ fn average_quota_percentage(metrics: &[CodexQuotaMetric]) -> f64 {
     sum as f64 / metrics.len() as f64
 }
 
-fn metric_crossed_threshold(metric: &CodexQuotaMetric, primary_threshold: i32, secondary_threshold: i32) -> bool {
+fn metric_crossed_threshold(
+    metric: &CodexQuotaMetric,
+    primary_threshold: i32,
+    secondary_threshold: i32,
+) -> bool {
     match metric.key {
         "primary_window" => metric.percentage <= primary_threshold,
         "secondary_window" => metric.percentage <= secondary_threshold,
@@ -1310,7 +1319,11 @@ fn metric_crossed_threshold(metric: &CodexQuotaMetric, primary_threshold: i32, s
     }
 }
 
-fn metric_above_threshold(metric: &CodexQuotaMetric, primary_threshold: i32, secondary_threshold: i32) -> bool {
+fn metric_above_threshold(
+    metric: &CodexQuotaMetric,
+    primary_threshold: i32,
+    secondary_threshold: i32,
+) -> bool {
     match metric.key {
         "primary_window" => metric.percentage > primary_threshold,
         "secondary_window" => metric.percentage > secondary_threshold,
@@ -1388,7 +1401,10 @@ fn pick_best_candidate(mut candidates: Vec<CodexSwitchCandidate>) -> Option<Code
             .then_with(|| a.account.last_used.cmp(&b.account.last_used))
     });
 
-    candidates.into_iter().next().map(|candidate| candidate.account)
+    candidates
+        .into_iter()
+        .next()
+        .map(|candidate| candidate.account)
 }
 
 fn build_quota_alert_cooldown_key(
@@ -1456,7 +1472,9 @@ fn pick_quota_alert_recommendation(
     let candidates: Vec<CodexSwitchCandidate> = accounts
         .iter()
         .filter(|account| account.id != current_id)
-        .filter_map(|account| build_switch_candidate(account, primary_threshold, secondary_threshold))
+        .filter_map(|account| {
+            build_switch_candidate(account, primary_threshold, secondary_threshold)
+        })
         .collect();
 
     pick_best_candidate(candidates)
@@ -1505,7 +1523,9 @@ pub fn pick_auto_switch_target_if_needed() -> Result<Option<CodexAccount>, Strin
         let candidates: Vec<CodexSwitchCandidate> = accounts
             .iter()
             .filter(|account| account.id != current_id)
-            .filter_map(|account| build_switch_candidate(account, primary_threshold, secondary_threshold))
+            .filter_map(|account| {
+                build_switch_candidate(account, primary_threshold, secondary_threshold)
+            })
             .collect();
 
         if candidates.is_empty() {

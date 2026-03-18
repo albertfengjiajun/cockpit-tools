@@ -53,7 +53,17 @@
         "label": "가져오기",
         "importing": "로컬 계정 가져오는 중...",
         "pickFile": "가져올 JSON 파일 선택",
-        "orJson": "또는 JSON 파일에서 가져오기"
+        "orJson": "또는 JSON 파일에서 가져오기",
+        "progress": {
+          "overallLine": "전체 진행률 {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}}개 플랫폼, {{processedAccounts}}/{{totalAccounts}}개 계정 처리됨)",
+          "currentPlatformLine": "가져오는 중: {{platform}} ({{count}}개 계정)",
+          "currentStatusLine": "현재 플랫폼 상태: {{status}}",
+          "platformDetailsTitle": "플랫폼 상세",
+          "statusProcessing": "처리 중...",
+          "statusRunning": "가져오는 중...",
+          "statusSkipped": "건너뜀",
+          "statusPending": "가져오기 대기"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "트레이에 표시",
     "hiddenBadge": "숨김",
     "openFromMore": "플랫폼 레이아웃 관리",
-    "dragHandleLabel": "드래그하여 순서 변경"
+    "dragHandleLabel": "드래그하여 순서 변경",
+    "tipWithGroups": "드래그로 정렬할 수 있습니다. 사이드바에는 최대 2개의 항목만 표시할 수 있습니다. 그룹 하위 플랫폼은 사이드바/대시보드 토글을 제공하지 않으며 메뉴바 표시와 기본 플랫폼 전환에만 사용됩니다.",
+    "addGroup": "그룹 추가",
+    "editGroup": "그룹 편집",
+    "deleteGroup": "그룹 삭제",
+    "groupBadge": "그룹",
+    "groupDefault": "기본 플랫폼",
+    "groupName": "그룹 이름",
+    "groupNamePlaceholder": "예: CodeBuddy 모음",
+    "groupIcon": "그룹 아이콘",
+    "groupIconFromPlatform": "플랫폼 아이콘",
+    "groupIconCustom": "사용자 지정 이미지",
+    "groupIconPreview": "아이콘 미리보기",
+    "groupChildren": "하위 플랫폼",
+    "groupNameRequired": "그룹 이름을 입력하세요",
+    "groupChildrenRequired": "하위 플랫폼을 하나 이상 선택하세요",
+    "groupCustomIconRequired": "사용자 지정 아이콘을 업로드하세요",
+    "groupSwitchLabel": "같은 그룹 플랫폼 전환",
+    "collapseAllChildren": "모든 하위 플랫폼 접기",
+    "expandAllChildren": "모든 하위 플랫폼 펼치기",
+    "addChildPlatform": "하위 플랫폼 추가",
+    "collapseChildren": "하위 플랫폼 접기",
+    "expandChildren": "하위 플랫폼 펼치기",
+    "noAvailableChildren": "추가할 수 있는 플랫폼이 없습니다",
+    "customIconDeleteConfirm": "이 사용자 지정 아이콘을 삭제하시겠습니까?",
+    "editChildPlatform": "하위 플랫폼 편집",
+    "setAsDefaultInGroup": "이 그룹의 기본 플랫폼으로 설정",
+    "removeFromGroup": "그룹에서 제거"
   },
   "privacy": {
     "hideSensitive": "이메일 숨기기",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "할당량 오류",
       "generic": "할당량 새로고침에 실패했습니다. 나중에 다시 시도하세요",
-      "deactivatedWorkspace": "워크스페이스가 비활성화되었습니다. 계정을 전환하거나 다시 인증하세요"
+      "deactivatedWorkspace": "워크스페이스가 비활성화되었습니다. 계정을 전환하거나 다시 인증하세요",
+      "requestFailedManualRetry": "요청에 실패했습니다. 수동으로 다시 시도하세요: {{error}}"
     },
     "plan": {
       "free": "FREE",

@@ -3,7 +3,7 @@ use std::time::Instant;
 use tauri::{AppHandle, Emitter};
 
 use crate::models::workbuddy::{WorkbuddyAccount, WorkbuddyOAuthStartResponse};
-use crate::modules::{workbuddy_account, workbuddy_oauth, logger};
+use crate::modules::{logger, workbuddy_account, workbuddy_oauth};
 
 fn build_session_json(account: &WorkbuddyAccount) -> String {
     let uid = account.uid.as_deref().unwrap_or("");
@@ -78,16 +78,12 @@ pub fn delete_workbuddy_accounts(account_ids: Vec<String>) -> Result<(), String>
 }
 
 #[tauri::command]
-pub fn import_workbuddy_from_json(
-    json_content: String,
-) -> Result<Vec<WorkbuddyAccount>, String> {
+pub fn import_workbuddy_from_json(json_content: String) -> Result<Vec<WorkbuddyAccount>, String> {
     workbuddy_account::import_from_json(&json_content)
 }
 
 #[tauri::command]
-pub async fn import_workbuddy_from_local(
-    app: AppHandle,
-) -> Result<Vec<WorkbuddyAccount>, String> {
+pub async fn import_workbuddy_from_local(app: AppHandle) -> Result<Vec<WorkbuddyAccount>, String> {
     let mut local_payload = match workbuddy_account::import_payload_from_local()? {
         Some(payload) => payload,
         None => return Err("未在本机 WorkBuddy 客户端中找到登录信息".to_string()),
@@ -379,8 +375,7 @@ pub async fn inject_workbuddy_to_vscode(
     {
         Ok(_) => None,
         Err(err) => {
-            if err.starts_with("APP_PATH_NOT_FOUND:") || err.contains("启动 WorkBuddy 失败")
-            {
+            if err.starts_with("APP_PATH_NOT_FOUND:") || err.contains("启动 WorkBuddy 失败") {
                 logger::log_warn(&format!("WorkBuddy 默认实例启动失败：{}", err));
                 if err.starts_with("APP_PATH_NOT_FOUND:") || err.contains("APP_PATH_NOT_FOUND:") {
                     let _ = app.emit(

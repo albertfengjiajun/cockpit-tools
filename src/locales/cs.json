@@ -53,7 +53,17 @@
         "label": "Importovat",
         "importing": "Import lokálního účtu...",
         "pickFile": "Vyberte soubor JSON k importu",
-        "orJson": "Nebo importujte ze souboru JSON"
+        "orJson": "Nebo importujte ze souboru JSON",
+        "progress": {
+          "overallLine": "Celkový průběh {{percent}} % ({{completedPlatforms}}/{{totalPlatforms}} platforem, {{processedAccounts}}/{{totalAccounts}} účtů zpracováno)",
+          "currentPlatformLine": "Importuje se: {{platform}} ({{count}} účtů)",
+          "currentStatusLine": "Aktuální stav platformy: {{status}}",
+          "platformDetailsTitle": "Detaily platforem",
+          "statusProcessing": "Zpracovává se...",
+          "statusRunning": "Importuje se...",
+          "statusSkipped": "Přeskočeno",
+          "statusPending": "Čeká na import"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "Zobrazit v systémové liště",
     "hiddenBadge": "Skryto",
     "openFromMore": "Spravovat rozložení platforem",
-    "dragHandleLabel": "Přetažením změnit pořadí"
+    "dragHandleLabel": "Přetažením změnit pořadí",
+    "tipWithGroups": "Přetažením změňte pořadí. V postranním panelu mohou být nejvýše dvě položky. Podřízené platformy skupiny nelze zobrazit v postranním panelu/přehledu; slouží jen pro lištu a přepnutí výchozí platformy.",
+    "addGroup": "Přidat skupinu",
+    "editGroup": "Upravit skupinu",
+    "deleteGroup": "Smazat skupinu",
+    "groupBadge": "Skupina",
+    "groupDefault": "Výchozí platforma",
+    "groupName": "Název skupiny",
+    "groupNamePlaceholder": "Např.: CodeBuddy Suite",
+    "groupIcon": "Ikona skupiny",
+    "groupIconFromPlatform": "Ikona platformy",
+    "groupIconCustom": "Vlastní obrázek",
+    "groupIconPreview": "Náhled ikony",
+    "groupChildren": "Podřízené platformy",
+    "groupNameRequired": "Zadejte název skupiny",
+    "groupChildrenRequired": "Vyberte alespoň jednu podřízenou platformu",
+    "groupCustomIconRequired": "Nahrajte vlastní ikonu",
+    "groupSwitchLabel": "Přepnout platformu ve skupině",
+    "collapseAllChildren": "Sbalit všechny podřízené platformy",
+    "expandAllChildren": "Rozbalit všechny podřízené platformy",
+    "addChildPlatform": "Přidat podřízenou platformu",
+    "collapseChildren": "Sbalit podřízené platformy",
+    "expandChildren": "Rozbalit podřízené platformy",
+    "noAvailableChildren": "Žádné platformy k přidání",
+    "customIconDeleteConfirm": "Smazat tuto vlastní ikonu?",
+    "editChildPlatform": "Upravit podřízenou platformu",
+    "setAsDefaultInGroup": "Nastavit jako výchozí platformu v této skupině",
+    "removeFromGroup": "Odebrat ze skupiny"
   },
   "privacy": {
     "hideSensitive": "Skrýt e-maily",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "Chyba kvóty",
       "generic": "Obnovení kvóty se nezdařilo, zkuste to prosím později",
-      "deactivatedWorkspace": "Pracovní prostor je deaktivovaný, přepněte účet nebo znovu autorizujte"
+      "deactivatedWorkspace": "Pracovní prostor je deaktivovaný, přepněte účet nebo znovu autorizujte",
+      "requestFailedManualRetry": "Požadavek selhal, zkuste to prosím znovu ručně: {{error}}"
     },
     "plan": {
       "free": "FREE",

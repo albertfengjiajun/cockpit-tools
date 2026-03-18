@@ -53,7 +53,17 @@
         "label": "Import",
         "importing": "Importowanie lokalnego konta...",
         "pickFile": "Wybierz plik JSON do importu",
-        "orJson": "Lub zaimportuj z pliku JSON"
+        "orJson": "Lub zaimportuj z pliku JSON",
+        "progress": {
+          "overallLine": "Postęp ogólny {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} platform, {{processedAccounts}}/{{totalAccounts}} kont przetworzono)",
+          "currentPlatformLine": "Importowanie: {{platform}} ({{count}} kont)",
+          "currentStatusLine": "Aktualny status platformy: {{status}}",
+          "platformDetailsTitle": "Szczegóły platform",
+          "statusProcessing": "Przetwarzanie...",
+          "statusRunning": "Importowanie...",
+          "statusSkipped": "Pominięto",
+          "statusPending": "Oczekuje na import"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "Pokaż w zasobniku",
     "hiddenBadge": "Ukryte",
     "openFromMore": "Zarządzaj układem platform",
-    "dragHandleLabel": "Przeciągnij, aby zmienić kolejność"
+    "dragHandleLabel": "Przeciągnij, aby zmienić kolejność",
+    "tipWithGroups": "Przeciągnij, aby zmienić kolejność. Na pasku bocznym można wyświetlić maksymalnie dwa wpisy. Elementy podrzędne grupy nie mają przełączników paska bocznego/pulpitu i służą tylko do paska menu oraz przełączania platformy domyślnej.",
+    "addGroup": "Dodaj grupę",
+    "editGroup": "Edytuj grupę",
+    "deleteGroup": "Usuń grupę",
+    "groupBadge": "Grupa",
+    "groupDefault": "Domyślna platforma",
+    "groupName": "Nazwa grupy",
+    "groupNamePlaceholder": "Przykład: Pakiet CodeBuddy",
+    "groupIcon": "Ikona grupy",
+    "groupIconFromPlatform": "Ikona platformy",
+    "groupIconCustom": "Własny obraz",
+    "groupIconPreview": "Podgląd ikony",
+    "groupChildren": "Platformy podrzędne",
+    "groupNameRequired": "Wpisz nazwę grupy",
+    "groupChildrenRequired": "Wybierz co najmniej jedną platformę podrzędną",
+    "groupCustomIconRequired": "Prześlij własną ikonę",
+    "groupSwitchLabel": "Przełącz platformę w grupie",
+    "collapseAllChildren": "Zwiń wszystkie platformy podrzędne",
+    "expandAllChildren": "Rozwiń wszystkie platformy podrzędne",
+    "addChildPlatform": "Dodaj platformę podrzędną",
+    "collapseChildren": "Zwiń platformy podrzędne",
+    "expandChildren": "Rozwiń platformy podrzędne",
+    "noAvailableChildren": "Brak platform do dodania",
+    "customIconDeleteConfirm": "Usunąć tę niestandardową ikonę?",
+    "editChildPlatform": "Edytuj platformę podrzędną",
+    "setAsDefaultInGroup": "Ustaw jako domyślną platformę w tej grupie",
+    "removeFromGroup": "Usuń z grupy"
   },
   "privacy": {
     "hideSensitive": "Ukryj e-maile",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "Błąd limitu",
       "generic": "Odświeżenie limitu nie powiodło się, spróbuj ponownie później",
-      "deactivatedWorkspace": "Obszar roboczy jest wyłączony, przełącz konto lub ponownie autoryzuj"
+      "deactivatedWorkspace": "Obszar roboczy jest wyłączony, przełącz konto lub ponownie autoryzuj",
+      "requestFailedManualRetry": "Żądanie nie powiodło się, spróbuj ponownie ręcznie: {{error}}"
     },
     "plan": {
       "free": "FREE",

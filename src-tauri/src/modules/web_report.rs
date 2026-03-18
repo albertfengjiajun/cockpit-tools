@@ -148,9 +148,7 @@ fn needs_auth_refresh_trigger(now: chrono::DateTime<chrono::Utc>) -> bool {
 
 async fn run_refresh_for_service(policy: ServiceRefreshPolicy) -> Result<(), String> {
     match policy.key {
-        "antigravity" => super::account::refresh_all_quotas_logic()
-            .await
-            .map(|_| ()),
+        "antigravity" => super::account::refresh_all_quotas_logic().await.map(|_| ()),
         "codex" => super::codex_quota::refresh_all_quotas().await.map(|_| ()),
         "ghcp" => super::github_copilot_account::refresh_all_tokens()
             .await
@@ -159,9 +157,15 @@ async fn run_refresh_for_service(policy: ServiceRefreshPolicy) -> Result<(), Str
             .await
             .map(|_| ()),
         "kiro" => super::kiro_account::refresh_all_tokens().await.map(|_| ()),
-        "cursor" => super::cursor_account::refresh_all_tokens().await.map(|_| ()),
-        "gemini" => super::gemini_account::refresh_all_tokens().await.map(|_| ()),
-        "codebuddy" => super::codebuddy_account::refresh_all_tokens().await.map(|_| ()),
+        "cursor" => super::cursor_account::refresh_all_tokens()
+            .await
+            .map(|_| ()),
+        "gemini" => super::gemini_account::refresh_all_tokens()
+            .await
+            .map(|_| ()),
+        "codebuddy" => super::codebuddy_account::refresh_all_tokens()
+            .await
+            .map(|_| ()),
         "codebuddy_cn" => super::codebuddy_cn_account::refresh_all_tokens()
             .await
             .map(|_| ()),
@@ -463,9 +467,10 @@ async fn handle_connection(mut stream: TcpStream, port: u16) -> Result<(), Strin
         ("text/html; charset=utf-8", render_html(&meta, &rows))
     } else {
         match report_format {
-            ReportFormat::Markdown => {
-                ("text/markdown; charset=utf-8", render_markdown(&meta, &rows))
-            }
+            ReportFormat::Markdown => (
+                "text/markdown; charset=utf-8",
+                render_markdown(&meta, &rows),
+            ),
             ReportFormat::Yaml => (
                 "application/x-yaml; charset=utf-8",
                 render_yaml(&meta, &rows),
@@ -1666,12 +1671,18 @@ fn render_yaml(meta: &ReportMeta, rows: &[ReportRow]) -> String {
     let now = chrono::Utc::now();
     let data_collected_at = format_data_collected_at(meta);
     let mut output = String::new();
-    output.push_str(&format!("generated_at: {}\n", yaml_quote(&meta.generated_at)));
+    output.push_str(&format!(
+        "generated_at: {}\n",
+        yaml_quote(&meta.generated_at)
+    ));
     output.push_str(&format!(
         "data_collected_at: {}\n",
         yaml_quote(&data_collected_at)
     ));
-    output.push_str(&format!("data_delayed: {}\n", yaml_quote(&meta.data_delayed)));
+    output.push_str(&format!(
+        "data_delayed: {}\n",
+        yaml_quote(&meta.data_delayed)
+    ));
     output.push_str(&format!(
         "next_auth_refresh_trigger_time: {}\n",
         yaml_quote(&meta.next_auth_refresh_trigger_time)
@@ -1773,7 +1784,10 @@ fn render_html(meta: &ReportMeta, rows: &[ReportRow]) -> String {
         output.push_str(&format!("<td>{}</td>", html_escape(&row.service)));
         output.push_str(&format!("<td>{}</td>", html_escape(&row.account)));
         output.push_str(&format!("<td>{}</td>", html_escape(&row.metric)));
-        output.push_str(&format!("<td class=\"mono\">{}</td>", html_escape(&row.used)));
+        output.push_str(&format!(
+            "<td class=\"mono\">{}</td>",
+            html_escape(&row.used)
+        ));
         output.push_str(&format!(
             "<td class=\"mono\">{}</td>",
             html_escape(&row.remaining)
@@ -1865,7 +1879,11 @@ fn parse_reset_cycle_to_utc(reset_cycle: &str) -> Option<chrono::DateTime<chrono
     }
 
     if let Ok(raw) = trimmed.parse::<i64>() {
-        let ts = if raw > 10_000_000_000 { raw / 1000 } else { raw };
+        let ts = if raw > 10_000_000_000 {
+            raw / 1000
+        } else {
+            raw
+        };
         if ts > 0 {
             if let Some(dt) = chrono::DateTime::<chrono::Utc>::from_timestamp(ts, 0) {
                 return Some(dt);

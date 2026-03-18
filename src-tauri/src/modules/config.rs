@@ -714,7 +714,10 @@ pub fn load_user_config() -> Result<UserConfig, String> {
         }
 
         if !obj.contains_key("report_enabled") {
-            obj.insert("report_enabled".to_string(), json!(default_report_enabled()));
+            obj.insert(
+                "report_enabled".to_string(),
+                json!(default_report_enabled()),
+            );
         }
         if !obj.contains_key("report_port") {
             obj.insert("report_port".to_string(), json!(default_report_port()));

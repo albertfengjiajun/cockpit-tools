@@ -53,7 +53,17 @@
         "label": "インポート",
         "importing": "ローカルアカウントをインポート中...",
         "pickFile": "インポートする JSON ファイルを選択",
-        "orJson": "またはJSONファイルからインポート"
+        "orJson": "またはJSONファイルからインポート",
+        "progress": {
+          "overallLine": "全体進捗 {{percent}}%（{{completedPlatforms}}/{{totalPlatforms}} プラットフォーム、{{processedAccounts}}/{{totalAccounts}} アカウント処理済み）",
+          "currentPlatformLine": "インポート中：{{platform}}（{{count}} アカウント）",
+          "currentStatusLine": "現在のプラットフォーム状態：{{status}}",
+          "platformDetailsTitle": "プラットフォーム詳細",
+          "statusProcessing": "処理中...",
+          "statusRunning": "インポート中...",
+          "statusSkipped": "スキップ",
+          "statusPending": "インポート待ち"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "トレイに表示",
     "hiddenBadge": "非表示",
     "openFromMore": "プラットフォームレイアウトを管理",
-    "dragHandleLabel": "ドラッグして並び替え"
+    "dragHandleLabel": "ドラッグして並び替え",
+    "tipWithGroups": "ドラッグで並び替えできます。サイドバーに表示できるのは最大2エントリです。グループ子項目にはサイドバー/ダッシュボード表示の切り替えはなく、メニューバー表示と既定プラットフォーム切替のみに使用されます。",
+    "addGroup": "グループを追加",
+    "editGroup": "グループを編集",
+    "deleteGroup": "グループを削除",
+    "groupBadge": "グループ",
+    "groupDefault": "既定のプラットフォーム",
+    "groupName": "グループ名",
+    "groupNamePlaceholder": "例: CodeBuddy スイート",
+    "groupIcon": "グループアイコン",
+    "groupIconFromPlatform": "プラットフォームアイコン",
+    "groupIconCustom": "カスタム画像",
+    "groupIconPreview": "アイコンプレビュー",
+    "groupChildren": "子プラットフォーム",
+    "groupNameRequired": "グループ名を入力してください",
+    "groupChildrenRequired": "子プラットフォームを1つ以上選択してください",
+    "groupCustomIconRequired": "カスタムアイコンをアップロードしてください",
+    "groupSwitchLabel": "同じグループのプラットフォームを切り替え",
+    "collapseAllChildren": "すべての子プラットフォームを折りたたむ",
+    "expandAllChildren": "すべての子プラットフォームを展開",
+    "addChildPlatform": "子プラットフォームを追加",
+    "collapseChildren": "子プラットフォームを折りたたむ",
+    "expandChildren": "子プラットフォームを展開",
+    "noAvailableChildren": "追加できるプラットフォームはありません",
+    "customIconDeleteConfirm": "このカスタムアイコンを削除しますか？",
+    "editChildPlatform": "子プラットフォームを編集",
+    "setAsDefaultInGroup": "このグループのデフォルトプラットフォームに設定",
+    "removeFromGroup": "グループから削除"
   },
   "privacy": {
     "hideSensitive": "メールを隠す",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "クォータエラー",
       "generic": "クォータの更新に失敗しました。後でもう一度お試しください",
-      "deactivatedWorkspace": "ワークスペースが無効です。アカウントを切り替えるか再認証してください"
+      "deactivatedWorkspace": "ワークスペースが無効です。アカウントを切り替えるか再認証してください",
+      "requestFailedManualRetry": "リクエストに失敗しました。手動で再試行してください: {{error}}"
     },
     "plan": {
       "free": "FREE",

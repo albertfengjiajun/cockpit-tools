@@ -719,7 +719,7 @@ pub fn upsert_account(payload: KiroOAuthCompletePayload) -> Result<KiroAccount, 
     Ok(account)
 }
 
-pub async fn refresh_account_token(account_id: &str) -> Result<KiroAccount, String> {
+async fn refresh_account_token_once(account_id: &str) -> Result<KiroAccount, String> {
     let started_at = Instant::now();
     let mut account = load_account(account_id).ok_or_else(|| "账号不存在".to_string())?;
     logger::log_info(&format!(
@@ -744,6 +744,13 @@ pub async fn refresh_account_token(account_id: &str) -> Result<KiroAccount, Stri
         started_at.elapsed().as_millis()
     ));
     Ok(updated)
+}
+
+pub async fn refresh_account_token(account_id: &str) -> Result<KiroAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay("Kiro Refresh", account_id, || async {
+        refresh_account_token_once(account_id).await
+    })
+    .await
 }
 
 pub async fn refresh_all_tokens() -> Result<Vec<(String, Result<KiroAccount, String>)>, String> {

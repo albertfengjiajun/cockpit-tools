@@ -555,8 +555,8 @@ pub fn save_general_config(
         Some(_) | None => current.minimize_behavior.clone(),
     };
     let hide_dock_icon_value = hide_dock_icon.unwrap_or(current.hide_dock_icon);
-    let next_codex_quota_alert_threshold = codex_quota_alert_threshold
-        .unwrap_or(current.codex_quota_alert_threshold);
+    let next_codex_quota_alert_threshold =
+        codex_quota_alert_threshold.unwrap_or(current.codex_quota_alert_threshold);
     #[cfg(target_os = "macos")]
     let hide_dock_icon_changed = current.hide_dock_icon != hide_dock_icon_value;
 
@@ -699,8 +699,16 @@ pub fn save_tray_platform_layout(
     sort_mode: String,
     ordered_platform_ids: Vec<String>,
     tray_platform_ids: Vec<String>,
+    ordered_entry_ids: Option<Vec<String>>,
+    platform_groups: Option<Vec<modules::tray_layout::TrayLayoutGroup>>,
 ) -> Result<(), String> {
-    modules::tray_layout::save_tray_layout(sort_mode, ordered_platform_ids, tray_platform_ids)?;
+    modules::tray_layout::save_tray_layout(
+        sort_mode,
+        ordered_platform_ids,
+        tray_platform_ids,
+        ordered_entry_ids,
+        platform_groups,
+    )?;
     modules::tray::update_tray_menu(&app)?;
     Ok(())
 }

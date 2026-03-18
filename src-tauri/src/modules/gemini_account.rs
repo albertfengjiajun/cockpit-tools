@@ -1166,7 +1166,7 @@ async fn force_refresh_access_token(account: &mut GeminiAccount) -> Result<(), S
     Ok(())
 }
 
-pub async fn refresh_account_token(account_id: &str) -> Result<GeminiAccount, String> {
+async fn refresh_account_token_once(account_id: &str) -> Result<GeminiAccount, String> {
     let mut account =
         load_account_file(account_id).ok_or_else(|| "Gemini 账号不存在".to_string())?;
 
@@ -1244,6 +1244,13 @@ pub async fn refresh_account_token(account_id: &str) -> Result<GeminiAccount, St
     let updated = account.clone();
     upsert_account_record(account)?;
     Ok(updated)
+}
+
+pub async fn refresh_account_token(account_id: &str) -> Result<GeminiAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay("Gemini Refresh", account_id, || async {
+        refresh_account_token_once(account_id).await
+    })
+    .await
 }
 
 pub async fn refresh_all_tokens() -> Result<Vec<(String, Result<GeminiAccount, String>)>, String> {

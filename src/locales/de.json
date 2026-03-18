@@ -53,7 +53,17 @@
         "label": "Importieren",
         "importing": "Lokales Konto wird importiert...",
         "pickFile": "JSON-Datei zum Import auswählen",
-        "orJson": "Oder aus einer JSON-Datei importieren"
+        "orJson": "Oder aus einer JSON-Datei importieren",
+        "progress": {
+          "overallLine": "Gesamtfortschritt {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} Plattformen, {{processedAccounts}}/{{totalAccounts}} Konten verarbeitet)",
+          "currentPlatformLine": "Wird importiert: {{platform}} ({{count}} Konten)",
+          "currentStatusLine": "Aktueller Plattformstatus: {{status}}",
+          "platformDetailsTitle": "Plattformdetails",
+          "statusProcessing": "Wird verarbeitet...",
+          "statusRunning": "Wird importiert...",
+          "statusSkipped": "Übersprungen",
+          "statusPending": "Wartet auf Import"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "Im Tray anzeigen",
     "hiddenBadge": "Ausgeblendet",
     "openFromMore": "Plattformlayout verwalten",
-    "dragHandleLabel": "Zum Neuanordnen ziehen"
+    "dragHandleLabel": "Zum Neuanordnen ziehen",
+    "tipWithGroups": "Zum Sortieren ziehen. In der Seitenleiste können höchstens zwei Einträge angezeigt werden. Unterplattformen einer Gruppe haben keine Seitenleisten-/Dashboard-Schalter und dienen nur für Menüleiste und Standardplattform-Wechsel.",
+    "addGroup": "Gruppe hinzufügen",
+    "editGroup": "Gruppe bearbeiten",
+    "deleteGroup": "Gruppe löschen",
+    "groupBadge": "Gruppe",
+    "groupDefault": "Standardplattform",
+    "groupName": "Gruppenname",
+    "groupNamePlaceholder": "Beispiel: CodeBuddy-Suite",
+    "groupIcon": "Gruppensymbol",
+    "groupIconFromPlatform": "Plattformsymbol",
+    "groupIconCustom": "Eigenes Bild",
+    "groupIconPreview": "Symbolvorschau",
+    "groupChildren": "Unterplattformen",
+    "groupNameRequired": "Bitte Gruppennamen eingeben",
+    "groupChildrenRequired": "Mindestens eine Unterplattform auswählen",
+    "groupCustomIconRequired": "Bitte eigenes Symbol hochladen",
+    "groupSwitchLabel": "Plattform in dieser Gruppe wechseln",
+    "collapseAllChildren": "Alle Unterplattformen einklappen",
+    "expandAllChildren": "Alle Unterplattformen ausklappen",
+    "addChildPlatform": "Unterplattform hinzufügen",
+    "collapseChildren": "Unterplattformen einklappen",
+    "expandChildren": "Unterplattformen ausklappen",
+    "noAvailableChildren": "Keine Plattformen zum Hinzufügen verfügbar",
+    "customIconDeleteConfirm": "Dieses benutzerdefinierte Symbol wirklich löschen?",
+    "editChildPlatform": "Unterplattform bearbeiten",
+    "setAsDefaultInGroup": "Als Standardplattform in dieser Gruppe festlegen",
+    "removeFromGroup": "Aus Gruppe entfernen"
   },
   "privacy": {
     "hideSensitive": "E-Mails ausblenden",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "Kontingentfehler",
       "generic": "Kontingent-Aktualisierung fehlgeschlagen, bitte später erneut versuchen",
-      "deactivatedWorkspace": "Workspace ist deaktiviert, bitte Konto wechseln oder neu autorisieren"
+      "deactivatedWorkspace": "Workspace ist deaktiviert, bitte Konto wechseln oder neu autorisieren",
+      "requestFailedManualRetry": "Anfrage fehlgeschlagen, bitte manuell erneut versuchen: {{error}}"
     },
     "plan": {
       "free": "FREE",

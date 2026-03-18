@@ -305,7 +305,7 @@ fn sync_plan_type_from_token(account: &mut CodexAccount, plan_type: Option<Strin
 }
 
 /// 刷新账号配额并保存（包含 token 自动刷新）
-pub async fn refresh_account_quota(account_id: &str) -> Result<CodexQuota, String> {
+async fn refresh_account_quota_once(account_id: &str) -> Result<CodexQuota, String> {
     let mut account = codex_account::load_account(account_id)
         .ok_or_else(|| format!("账号不存在: {}", account_id))?;
 
@@ -358,10 +358,7 @@ pub async fn refresh_account_quota(account_id: &str) -> Result<CodexQuota, Strin
                         Err(retry_err) => {
                             write_quota_error(&mut account, retry_err.clone());
                             if let Err(save_err) = codex_account::save_account(&account) {
-                                logger::log_warn(&format!(
-                                    "写入 Codex 配额错误失败: {}",
-                                    save_err
-                                ));
+                                logger::log_warn(&format!("写入 Codex 配额错误失败: {}", save_err));
                             }
                             return Err(retry_err);
                         }
@@ -395,6 +392,13 @@ pub async fn refresh_account_quota(account_id: &str) -> Result<CodexQuota, Strin
     codex_account::save_account(&account)?;
 
     Ok(result.quota)
+}
+
+pub async fn refresh_account_quota(account_id: &str) -> Result<CodexQuota, String> {
+    crate::modules::refresh_retry::retry_once_with_delay("Codex Refresh", account_id, || async {
+        refresh_account_quota_once(account_id).await
+    })
+    .await
 }
 
 /// 刷新所有账号配额

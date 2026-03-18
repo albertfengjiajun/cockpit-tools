@@ -53,7 +53,17 @@
         "label": "İçe aktar",
         "importing": "Yerel hesap içe aktarılıyor...",
         "pickFile": "İçe aktarılacak JSON dosyasını seçin",
-        "orJson": "Veya JSON dosyasından içe aktarın"
+        "orJson": "Veya JSON dosyasından içe aktarın",
+        "progress": {
+          "overallLine": "Genel ilerleme {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} platform, {{processedAccounts}}/{{totalAccounts}} hesap işlendi)",
+          "currentPlatformLine": "İçe aktarılıyor: {{platform}} ({{count}} hesap)",
+          "currentStatusLine": "Geçerli platform durumu: {{status}}",
+          "platformDetailsTitle": "Platform detayları",
+          "statusProcessing": "İşleniyor...",
+          "statusRunning": "İçe aktarılıyor...",
+          "statusSkipped": "Atlandı",
+          "statusPending": "İçe aktarım bekleniyor"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "Tepside göster",
     "hiddenBadge": "Gizli",
     "openFromMore": "Platform düzenini yönet",
-    "dragHandleLabel": "Sürükleyerek sırala"
+    "dragHandleLabel": "Sürükleyerek sırala",
+    "tipWithGroups": "Sürükleyerek sıralayın. Kenar çubuğunda en fazla iki giriş gösterilebilir. Grup alt platformlarında kenar çubuğu/pano anahtarı yoktur; yalnızca menü çubuğu görünürlüğü ve varsayılan platform geçişi için kullanılır.",
+    "addGroup": "Grup ekle",
+    "editGroup": "Grubu düzenle",
+    "deleteGroup": "Grubu sil",
+    "groupBadge": "Grup",
+    "groupDefault": "Varsayılan platform",
+    "groupName": "Grup adı",
+    "groupNamePlaceholder": "Örnek: CodeBuddy Paketi",
+    "groupIcon": "Grup simgesi",
+    "groupIconFromPlatform": "Platform simgesi",
+    "groupIconCustom": "Özel görsel",
+    "groupIconPreview": "Simge önizleme",
+    "groupChildren": "Alt platformlar",
+    "groupNameRequired": "Lütfen grup adı girin",
+    "groupChildrenRequired": "En az bir alt platform seçin",
+    "groupCustomIconRequired": "Lütfen özel simge yükleyin",
+    "groupSwitchLabel": "Gruptaki platformu değiştir",
+    "collapseAllChildren": "Tüm alt platformları daralt",
+    "expandAllChildren": "Tüm alt platformları genişlet",
+    "addChildPlatform": "Alt platform ekle",
+    "collapseChildren": "Alt platformları daralt",
+    "expandChildren": "Alt platformları genişlet",
+    "noAvailableChildren": "Eklenecek uygun platform yok",
+    "customIconDeleteConfirm": "Bu özel simge silinsin mi?",
+    "editChildPlatform": "Alt platformu düzenle",
+    "setAsDefaultInGroup": "Bu grupta varsayılan platform olarak ayarla",
+    "removeFromGroup": "Gruptan kaldır"
   },
   "privacy": {
     "hideSensitive": "E-postaları gizle",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "Kota hatası",
       "generic": "Kota yenileme başarısız, lütfen daha sonra tekrar deneyin",
-      "deactivatedWorkspace": "Çalışma alanı devre dışı, hesap değiştirin veya yeniden yetkilendirin"
+      "deactivatedWorkspace": "Çalışma alanı devre dışı, hesap değiştirin veya yeniden yetkilendirin",
+      "requestFailedManualRetry": "İstek başarısız oldu, lütfen manuel olarak yeniden deneyin: {{error}}"
     },
     "plan": {
       "free": "FREE",

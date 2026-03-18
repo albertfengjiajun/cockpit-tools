@@ -53,7 +53,17 @@
         "label": "Импорт",
         "importing": "Импорт локального аккаунта...",
         "pickFile": "Выберите JSON-файл для импорта",
-        "orJson": "Или импортируйте из файла JSON."
+        "orJson": "Или импортируйте из файла JSON.",
+        "progress": {
+          "overallLine": "Общий прогресс {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} платформ, {{processedAccounts}}/{{totalAccounts}} аккаунтов обработано)",
+          "currentPlatformLine": "Импортируется: {{platform}} ({{count}} аккаунтов)",
+          "currentStatusLine": "Текущий статус платформы: {{status}}",
+          "platformDetailsTitle": "Детали платформ",
+          "statusProcessing": "Обработка...",
+          "statusRunning": "Импорт...",
+          "statusSkipped": "Пропущено",
+          "statusPending": "Ожидает импорта"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "Показывать в трее",
     "hiddenBadge": "Скрыто",
     "openFromMore": "Управление макетом платформ",
-    "dragHandleLabel": "Перетащите для изменения порядка"
+    "dragHandleLabel": "Перетащите для изменения порядка",
+    "tipWithGroups": "Перетаскивайте для сортировки. В боковой панели можно показывать не более двух пунктов. Дочерние платформы группы не имеют переключателей боковой панели/дашборда и используются только для меню в строке и смены платформы по умолчанию.",
+    "addGroup": "Добавить группу",
+    "editGroup": "Редактировать группу",
+    "deleteGroup": "Удалить группу",
+    "groupBadge": "Группа",
+    "groupDefault": "Платформа по умолчанию",
+    "groupName": "Название группы",
+    "groupNamePlaceholder": "Например: Набор CodeBuddy",
+    "groupIcon": "Иконка группы",
+    "groupIconFromPlatform": "Иконка платформы",
+    "groupIconCustom": "Пользовательское изображение",
+    "groupIconPreview": "Предпросмотр иконки",
+    "groupChildren": "Дочерние платформы",
+    "groupNameRequired": "Введите название группы",
+    "groupChildrenRequired": "Выберите хотя бы одну дочернюю платформу",
+    "groupCustomIconRequired": "Загрузите пользовательскую иконку",
+    "groupSwitchLabel": "Переключить платформу в группе",
+    "collapseAllChildren": "Свернуть все дочерние платформы",
+    "expandAllChildren": "Развернуть все дочерние платформы",
+    "addChildPlatform": "Добавить дочернюю платформу",
+    "collapseChildren": "Свернуть дочерние платформы",
+    "expandChildren": "Развернуть дочерние платформы",
+    "noAvailableChildren": "Нет платформ для добавления",
+    "customIconDeleteConfirm": "Удалить этот пользовательский значок?",
+    "editChildPlatform": "Редактировать дочернюю платформу",
+    "setAsDefaultInGroup": "Сделать платформой по умолчанию в этой группе",
+    "removeFromGroup": "Удалить из группы"
   },
   "privacy": {
     "hideSensitive": "Скрыть e-mail",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "Ошибка квоты",
       "generic": "Не удалось обновить квоту, попробуйте позже",
-      "deactivatedWorkspace": "Рабочее пространство деактивировано, переключите аккаунт или авторизуйтесь заново"
+      "deactivatedWorkspace": "Рабочее пространство деактивировано, переключите аккаунт или авторизуйтесь заново",
+      "requestFailedManualRetry": "Не удалось выполнить запрос, повторите вручную: {{error}}"
     },
     "plan": {
       "free": "FREE",

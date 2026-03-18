@@ -1152,11 +1152,6 @@ fn resolve_macos_app_root_from_launch_path(launch_path: &std::path::Path) -> Opt
 }
 
 #[cfg(target_os = "macos")]
-fn spawn_open_app(app_root: &str, args: &[String]) -> Result<u32, String> {
-    spawn_open_app_with_options(app_root, args, false)
-}
-
-#[cfg(target_os = "macos")]
 fn spawn_open_app_with_options(
     app_root: &str,
     args: &[String],
@@ -1846,7 +1841,11 @@ fn detect_workbuddy_exec_path() -> Option<std::path::PathBuf> {
 
     #[cfg(target_os = "linux")]
     {
-        let candidates = ["/usr/bin/workbuddy", "/usr/local/bin/workbuddy", "/opt/workbuddy/workbuddy"];
+        let candidates = [
+            "/usr/bin/workbuddy",
+            "/usr/local/bin/workbuddy",
+            "/opt/workbuddy/workbuddy",
+        ];
         for candidate in candidates {
             let path = std::path::PathBuf::from(candidate);
             if path.exists() {
@@ -3671,6 +3670,100 @@ fn resolve_workbuddy_target_and_fallback(user_data_dir: Option<&str>) -> Option<
     )
 }
 
+#[cfg(target_os = "macos")]
+fn collect_qoder_process_entries_macos() -> Vec<(u32, Option<String>)> {
+    let mut entries = Vec::new();
+    let output = Command::new("ps").args(["-axo", "pid,command"]).output();
+    if let Ok(output) = output {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines().skip(1) {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            let mut parts = line.splitn(2, |ch: char| ch.is_whitespace());
+            let pid_str = parts.next().unwrap_or("").trim();
+            let cmdline = parts.next().unwrap_or("").trim();
+            let pid = match pid_str.parse::<u32>() {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            let lower = cmdline.to_lowercase();
+            let is_qoder = lower.contains("qoder.app/contents/macos/");
+            if !is_qoder {
+                continue;
+            }
+            if lower.contains("crashpad_handler") || is_helper_command_line(&lower) {
+                continue;
+            }
+            let dir = extract_user_data_dir_from_command_line(cmdline);
+            entries.push((pid, dir));
+        }
+    }
+    entries
+}
+
+#[cfg(target_os = "macos")]
+fn collect_trae_process_entries_macos() -> Vec<(u32, Option<String>)> {
+    let mut entries = Vec::new();
+    let output = Command::new("ps").args(["-axo", "pid,command"]).output();
+    if let Ok(output) = output {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines().skip(1) {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            let mut parts = line.splitn(2, |ch: char| ch.is_whitespace());
+            let pid_str = parts.next().unwrap_or("").trim();
+            let cmdline = parts.next().unwrap_or("").trim();
+            let pid = match pid_str.parse::<u32>() {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            let lower = cmdline.to_lowercase();
+            let is_trae = lower.contains("trae.app/contents/macos/");
+            if !is_trae {
+                continue;
+            }
+            if lower.contains("crashpad_handler") || is_helper_command_line(&lower) {
+                continue;
+            }
+            let dir = extract_user_data_dir_from_command_line(cmdline);
+            entries.push((pid, dir));
+        }
+    }
+    entries
+}
+
+#[cfg(target_os = "macos")]
+fn resolve_qoder_pid(last_pid: Option<u32>, user_data_dir: Option<&str>) -> Option<u32> {
+    let default_user_data_dir = crate::modules::qoder_instance::get_default_qoder_user_data_dir()
+        .ok()
+        .map(|value| value.to_string_lossy().to_string());
+    let (target, allow_none_for_target) = build_user_data_dir_match_target(
+        user_data_dir,
+        default_user_data_dir,
+        !strict_process_detect_enabled(),
+    )?;
+    let entries = collect_qoder_process_entries_macos();
+    resolve_pid_from_entries_by_user_data_dir(last_pid, &target, allow_none_for_target, &entries)
+}
+
+#[cfg(target_os = "macos")]
+fn resolve_trae_pid(last_pid: Option<u32>, user_data_dir: Option<&str>) -> Option<u32> {
+    let default_user_data_dir = crate::modules::trae_instance::get_default_trae_user_data_dir()
+        .ok()
+        .map(|value| value.to_string_lossy().to_string());
+    let (target, allow_none_for_target) = build_user_data_dir_match_target(
+        user_data_dir,
+        default_user_data_dir,
+        !strict_process_detect_enabled(),
+    )?;
+    let entries = collect_trae_process_entries_macos();
+    resolve_pid_from_entries_by_user_data_dir(last_pid, &target, allow_none_for_target, &entries)
+}
+
 pub fn resolve_antigravity_pid_from_entries(
     last_pid: Option<u32>,
     user_data_dir: Option<&str>,
@@ -4619,7 +4712,6 @@ pub fn collect_codebuddy_process_entries() -> Vec<(u32, Option<String>)> {
         }
         return entries;
     }
-
 }
 
 pub fn collect_codebuddy_cn_process_entries() -> Vec<(u32, Option<String>)> {
@@ -5540,24 +5632,20 @@ pub fn start_antigravity_with_args(
         let app_root = app_root.ok_or_else(|| app_path_missing_error("antigravity"))?;
 
         let user_data_dir_trimmed = user_data_dir.trim();
-        let force_new_instance = !user_data_dir_trimmed.is_empty();
         let mut args: Vec<String> = Vec::new();
-        if force_new_instance {
+        if !user_data_dir_trimmed.is_empty() {
             args.push("--user-data-dir".to_string());
             args.push(user_data_dir_trimmed.to_string());
-        }
-        if !force_new_instance {
-            args.push("--reuse-window".to_string());
         }
         for arg in extra_args {
             if !arg.trim().is_empty() {
                 args.push(arg.to_string());
             }
         }
-        let pid = spawn_open_app_with_options(&app_root, &args, force_new_instance)
+        let pid = spawn_open_app_with_options(&app_root, &args, true)
             .map_err(|e| format!("启动 Antigravity 失败: {}", e))?;
-        crate::modules::logger::log_info("Antigravity 启动命令已发送");
-        if force_new_instance {
+        crate::modules::logger::log_info("Antigravity 启动命令已发送（open -n -a）");
+        if !user_data_dir_trimmed.is_empty() {
             let probe_started = Instant::now();
             let timeout = Duration::from_secs(6);
             while probe_started.elapsed() < timeout {
@@ -5838,9 +5926,9 @@ pub fn start_codex_with_args(codex_home: &str, extra_args: &[String]) -> Result<
             return Err(app_path_missing_error("codex"));
         }
 
-        let open_pid =
-            spawn_open_app(&app_root, &args).map_err(|e| format!("启动 Codex 失败: {}", e))?;
-        crate::modules::logger::log_info("Codex 启动命令已发送（open -a）");
+        let open_pid = spawn_open_app_with_options(&app_root, &args, true)
+            .map_err(|e| format!("启动 Codex 失败: {}", e))?;
+        crate::modules::logger::log_info("Codex 启动命令已发送（open -n -a）");
         // 轮询获取真实 PID
         let probe_started = Instant::now();
         let timeout = Duration::from_secs(6);
@@ -6598,7 +6686,7 @@ pub fn start_vscode_with_args_with_new_window(
 
         let open_pid = spawn_open_app_with_options(&app_root, &args, true)
             .map_err(|e| format!("启动 VS Code 失败: {}", e))?;
-        crate::modules::logger::log_info("VS Code 启动命令已发送（open -a）");
+        crate::modules::logger::log_info("VS Code 启动命令已发送（open -n -a）");
         // 轮询获取真实 PID
         let probe_started = Instant::now();
         let timeout = Duration::from_secs(6);
@@ -6729,7 +6817,7 @@ pub fn start_codebuddy_with_args_with_new_window(
 
         let open_pid = spawn_open_app_with_options(&app_root, &args, true)
             .map_err(|e| format!("启动 CodeBuddy 失败: {}", e))?;
-        crate::modules::logger::log_info("CodeBuddy 启动命令已发送（open -a）");
+        crate::modules::logger::log_info("CodeBuddy 启动命令已发送（open -n -a）");
         // 轮询获取真实 PID
         let probe_started = Instant::now();
         let timeout = Duration::from_secs(6);
@@ -6851,9 +6939,9 @@ pub fn start_codebuddy_default_with_args_with_new_window(
             }
         }
 
-        let open_pid =
-            spawn_open_app(&app_root, &args).map_err(|e| format!("启动 CodeBuddy 失败: {}", e))?;
-        crate::modules::logger::log_info("CodeBuddy 默认实例启动命令已发送（open -a）");
+        let open_pid = spawn_open_app_with_options(&app_root, &args, true)
+            .map_err(|e| format!("启动 CodeBuddy 失败: {}", e))?;
+        crate::modules::logger::log_info("CodeBuddy 默认实例启动命令已发送（open -n -a）");
         // 轮询获取真实 PID
         let probe_started = Instant::now();
         let timeout = Duration::from_secs(6);
@@ -6970,7 +7058,7 @@ pub fn start_codebuddy_cn_with_args_with_new_window(
 
         let open_pid = spawn_open_app_with_options(&app_root, &args, true)
             .map_err(|e| format!("启动 CodeBuddy CN 失败: {}", e))?;
-        crate::modules::logger::log_info("CodeBuddy CN 启动命令已发送（open -a）");
+        crate::modules::logger::log_info("CodeBuddy CN 启动命令已发送（open -n -a）");
         // 轮询获取真实 PID
         let probe_started = Instant::now();
         let timeout = Duration::from_secs(6);
@@ -7092,9 +7180,9 @@ pub fn start_codebuddy_cn_default_with_args_with_new_window(
             }
         }
 
-        let open_pid = spawn_open_app(&app_root, &args)
+        let open_pid = spawn_open_app_with_options(&app_root, &args, true)
             .map_err(|e| format!("启动 CodeBuddy CN 失败: {}", e))?;
-        crate::modules::logger::log_info("CodeBuddy CN 默认实例启动命令已发送（open -a）");
+        crate::modules::logger::log_info("CodeBuddy CN 默认实例启动命令已发送（open -n -a）");
         // 轮询获取真实 PID
         let probe_started = Instant::now();
         let timeout = Duration::from_secs(6);
@@ -7210,7 +7298,7 @@ pub fn start_workbuddy_with_args_with_new_window(
 
         let open_pid = spawn_open_app_with_options(&app_root, &args, true)
             .map_err(|e| format!("启动 WorkBuddy 失败：{}", e))?;
-        crate::modules::logger::log_info("WorkBuddy 启动命令已发送（open -a）");
+        crate::modules::logger::log_info("WorkBuddy 启动命令已发送（open -n -a）");
         let probe_started = Instant::now();
         let timeout = Duration::from_secs(6);
         while probe_started.elapsed() < timeout {
@@ -7330,9 +7418,9 @@ pub fn start_workbuddy_default_with_args_with_new_window(
             }
         }
 
-        let open_pid = spawn_open_app(&app_root, &args)
+        let open_pid = spawn_open_app_with_options(&app_root, &args, true)
             .map_err(|e| format!("启动 WorkBuddy 失败：{}", e))?;
-        crate::modules::logger::log_info("WorkBuddy 默认实例启动命令已发送（open -a）");
+        crate::modules::logger::log_info("WorkBuddy 默认实例启动命令已发送（open -n -a）");
         let probe_started = Instant::now();
         let timeout = Duration::from_secs(6);
         while probe_started.elapsed() < timeout {
@@ -7424,25 +7512,40 @@ pub fn start_qoder_with_args_with_new_window(
             return Err("实例目录为空，无法启动".to_string());
         }
         let launch_path = resolve_qoder_launch_path()?;
+        let app_root = resolve_macos_app_root_from_launch_path(&launch_path)
+            .ok_or_else(|| app_path_missing_error("qoder"))?;
 
-        let mut cmd = Command::new(&launch_path);
-        sanitize_macos_gui_launch_env(&mut cmd);
-        cmd.arg("--user-data-dir").arg(target);
+        let mut args: Vec<String> = Vec::new();
+        args.push("--user-data-dir".to_string());
+        args.push(target.to_string());
         if use_new_window {
-            cmd.arg("--new-window");
+            args.push("--new-window".to_string());
         } else {
-            cmd.arg("--reuse-window");
+            args.push("--reuse-window".to_string());
         }
         for arg in extra_args {
             let trimmed = arg.trim();
             if !trimmed.is_empty() {
-                cmd.arg(trimmed);
+                args.push(trimmed.to_string());
             }
         }
 
-        let child = spawn_detached_unix(&mut cmd).map_err(|e| format!("启动 Qoder 失败: {}", e))?;
-        crate::modules::logger::log_info("Qoder 启动命令已发送");
-        return Ok(child.id());
+        let open_pid = spawn_open_app_with_options(&app_root, &args, true)
+            .map_err(|e| format!("启动 Qoder 失败: {}", e))?;
+        crate::modules::logger::log_info("Qoder 启动命令已发送（open -n -a）");
+        let probe_started = Instant::now();
+        let timeout = Duration::from_secs(6);
+        while probe_started.elapsed() < timeout {
+            if let Some(resolved_pid) = resolve_qoder_pid(None, Some(target)) {
+                return Ok(resolved_pid);
+            }
+            thread::sleep(Duration::from_millis(200));
+        }
+        crate::modules::logger::log_warn(&format!(
+            "[Qoder Start] 启动后 6s 内未匹配到实例 PID，回退 open pid={}",
+            open_pid
+        ));
+        return Ok(open_pid);
     }
 
     #[cfg(target_os = "windows")]
@@ -7529,22 +7632,38 @@ pub fn start_qoder_default_with_args_with_new_window(
     #[cfg(target_os = "macos")]
     {
         let launch_path = resolve_qoder_launch_path()?;
-        let mut cmd = Command::new(&launch_path);
-        sanitize_macos_gui_launch_env(&mut cmd);
+        let app_root = resolve_macos_app_root_from_launch_path(&launch_path)
+            .ok_or_else(|| app_path_missing_error("qoder"))?;
+
+        let mut args: Vec<String> = Vec::new();
         if use_new_window {
-            cmd.arg("--new-window");
+            args.push("--new-window".to_string());
         } else {
-            cmd.arg("--reuse-window");
+            args.push("--reuse-window".to_string());
         }
         for arg in extra_args {
             let trimmed = arg.trim();
             if !trimmed.is_empty() {
-                cmd.arg(trimmed);
+                args.push(trimmed.to_string());
             }
         }
-        let child = spawn_detached_unix(&mut cmd).map_err(|e| format!("启动 Qoder 失败: {}", e))?;
-        crate::modules::logger::log_info("Qoder 默认实例启动命令已发送");
-        return Ok(child.id());
+
+        let open_pid = spawn_open_app_with_options(&app_root, &args, true)
+            .map_err(|e| format!("启动 Qoder 失败: {}", e))?;
+        crate::modules::logger::log_info("Qoder 默认实例启动命令已发送（open -n -a）");
+        let probe_started = Instant::now();
+        let timeout = Duration::from_secs(6);
+        while probe_started.elapsed() < timeout {
+            if let Some(resolved_pid) = resolve_qoder_pid(None, None) {
+                return Ok(resolved_pid);
+            }
+            thread::sleep(Duration::from_millis(200));
+        }
+        crate::modules::logger::log_warn(&format!(
+            "[Qoder Start] 启动后 6s 内未匹配到默认实例 PID，回退 open pid={}",
+            open_pid
+        ));
+        return Ok(open_pid);
     }
 
     #[cfg(target_os = "windows")]
@@ -7622,25 +7741,40 @@ pub fn start_trae_with_args_with_new_window(
             return Err("实例目录为空，无法启动".to_string());
         }
         let launch_path = resolve_trae_launch_path()?;
+        let app_root = resolve_macos_app_root_from_launch_path(&launch_path)
+            .ok_or_else(|| app_path_missing_error("trae"))?;
 
-        let mut cmd = Command::new(&launch_path);
-        sanitize_macos_gui_launch_env(&mut cmd);
-        cmd.arg("--user-data-dir").arg(target);
+        let mut args: Vec<String> = Vec::new();
+        args.push("--user-data-dir".to_string());
+        args.push(target.to_string());
         if use_new_window {
-            cmd.arg("--new-window");
+            args.push("--new-window".to_string());
         } else {
-            cmd.arg("--reuse-window");
+            args.push("--reuse-window".to_string());
         }
         for arg in extra_args {
             let trimmed = arg.trim();
             if !trimmed.is_empty() {
-                cmd.arg(trimmed);
+                args.push(trimmed.to_string());
             }
         }
 
-        let child = spawn_detached_unix(&mut cmd).map_err(|e| format!("启动 Trae 失败: {}", e))?;
-        crate::modules::logger::log_info("Trae 启动命令已发送");
-        return Ok(child.id());
+        let open_pid = spawn_open_app_with_options(&app_root, &args, true)
+            .map_err(|e| format!("启动 Trae 失败: {}", e))?;
+        crate::modules::logger::log_info("Trae 启动命令已发送（open -n -a）");
+        let probe_started = Instant::now();
+        let timeout = Duration::from_secs(6);
+        while probe_started.elapsed() < timeout {
+            if let Some(resolved_pid) = resolve_trae_pid(None, Some(target)) {
+                return Ok(resolved_pid);
+            }
+            thread::sleep(Duration::from_millis(200));
+        }
+        crate::modules::logger::log_warn(&format!(
+            "[Trae Start] 启动后 6s 内未匹配到实例 PID，回退 open pid={}",
+            open_pid
+        ));
+        return Ok(open_pid);
     }
 
     #[cfg(target_os = "windows")]
@@ -7727,22 +7861,38 @@ pub fn start_trae_default_with_args_with_new_window(
     #[cfg(target_os = "macos")]
     {
         let launch_path = resolve_trae_launch_path()?;
-        let mut cmd = Command::new(&launch_path);
-        sanitize_macos_gui_launch_env(&mut cmd);
+        let app_root = resolve_macos_app_root_from_launch_path(&launch_path)
+            .ok_or_else(|| app_path_missing_error("trae"))?;
+
+        let mut args: Vec<String> = Vec::new();
         if use_new_window {
-            cmd.arg("--new-window");
+            args.push("--new-window".to_string());
         } else {
-            cmd.arg("--reuse-window");
+            args.push("--reuse-window".to_string());
         }
         for arg in extra_args {
             let trimmed = arg.trim();
             if !trimmed.is_empty() {
-                cmd.arg(trimmed);
+                args.push(trimmed.to_string());
             }
         }
-        let child = spawn_detached_unix(&mut cmd).map_err(|e| format!("启动 Trae 失败: {}", e))?;
-        crate::modules::logger::log_info("Trae 默认实例启动命令已发送");
-        return Ok(child.id());
+
+        let open_pid = spawn_open_app_with_options(&app_root, &args, true)
+            .map_err(|e| format!("启动 Trae 失败: {}", e))?;
+        crate::modules::logger::log_info("Trae 默认实例启动命令已发送（open -n -a）");
+        let probe_started = Instant::now();
+        let timeout = Duration::from_secs(6);
+        while probe_started.elapsed() < timeout {
+            if let Some(resolved_pid) = resolve_trae_pid(None, None) {
+                return Ok(resolved_pid);
+            }
+            thread::sleep(Duration::from_millis(200));
+        }
+        crate::modules::logger::log_warn(&format!(
+            "[Trae Start] 启动后 6s 内未匹配到默认实例 PID，回退 open pid={}",
+            open_pid
+        ));
+        return Ok(open_pid);
     }
 
     #[cfg(target_os = "windows")]
@@ -7835,9 +7985,9 @@ pub fn start_vscode_default_with_args_with_new_window(
             }
         }
 
-        let open_pid =
-            spawn_open_app(&app_root, &args).map_err(|e| format!("启动 VS Code 失败: {}", e))?;
-        crate::modules::logger::log_info("VS Code 默认实例启动命令已发送（open -a）");
+        let open_pid = spawn_open_app_with_options(&app_root, &args, true)
+            .map_err(|e| format!("启动 VS Code 失败: {}", e))?;
+        crate::modules::logger::log_info("VS Code 默认实例启动命令已发送（open -n -a）");
         // 轮询获取真实 PID
         let probe_started = Instant::now();
         let timeout = Duration::from_secs(6);

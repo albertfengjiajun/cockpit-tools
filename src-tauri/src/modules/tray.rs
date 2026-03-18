@@ -31,10 +31,11 @@ enum PlatformId {
     CodebuddyCn,
     Qoder,
     Trae,
+    Workbuddy,
 }
 
 impl PlatformId {
-    fn default_order() -> [Self; 11] {
+    fn default_order() -> [Self; 12] {
         [
             Self::Antigravity,
             Self::Codex,
@@ -47,6 +48,7 @@ impl PlatformId {
             Self::CodebuddyCn,
             Self::Qoder,
             Self::Trae,
+            Self::Workbuddy,
         ]
     }
 
@@ -63,6 +65,7 @@ impl PlatformId {
             crate::modules::tray_layout::PLATFORM_CODEBUDDY_CN => Some(Self::CodebuddyCn),
             crate::modules::tray_layout::PLATFORM_QODER => Some(Self::Qoder),
             crate::modules::tray_layout::PLATFORM_TRAE => Some(Self::Trae),
+            crate::modules::tray_layout::PLATFORM_WORKBUDDY => Some(Self::Workbuddy),
             _ => None,
         }
     }
@@ -80,6 +83,7 @@ impl PlatformId {
             Self::CodebuddyCn => crate::modules::tray_layout::PLATFORM_CODEBUDDY_CN,
             Self::Qoder => crate::modules::tray_layout::PLATFORM_QODER,
             Self::Trae => crate::modules::tray_layout::PLATFORM_TRAE,
+            Self::Workbuddy => crate::modules::tray_layout::PLATFORM_WORKBUDDY,
         }
     }
 
@@ -96,6 +100,7 @@ impl PlatformId {
             Self::CodebuddyCn => "CodeBuddy CN",
             Self::Qoder => "Qoder",
             Self::Trae => "Trae",
+            Self::Workbuddy => "WorkBuddy",
         }
     }
 
@@ -112,6 +117,7 @@ impl PlatformId {
             Self::CodebuddyCn => "codebuddy-cn",
             Self::Qoder => "qoder",
             Self::Trae => "trae",
+            Self::Workbuddy => "workbuddy",
         }
     }
 }
@@ -128,6 +134,16 @@ pub mod menu_ids {
 struct AccountDisplayInfo {
     account: String,
     quota_lines: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+enum TrayMenuEntry {
+    Platform(PlatformId),
+    Group {
+        id: String,
+        name: String,
+        platforms: Vec<PlatformId>,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -247,18 +263,18 @@ fn build_tray_menu<R: Runtime>(app: &tauri::AppHandle<R>) -> Result<Menu<R>, tau
         None::<&str>,
     )?;
 
-    let ordered_platforms = resolve_tray_platforms();
-    let split_index = ordered_platforms.len().min(TRAY_PLATFORM_MAX_VISIBLE);
-    let (visible_platforms, overflow_platforms) = ordered_platforms.split_at(split_index);
+    let ordered_entries = resolve_tray_entries();
+    let split_index = ordered_entries.len().min(TRAY_PLATFORM_MAX_VISIBLE);
+    let (visible_entries, overflow_entries) = ordered_entries.split_at(split_index);
 
-    let mut platform_submenus: Vec<Submenu<R>> = Vec::new();
-    for platform in visible_platforms {
-        platform_submenus.push(build_platform_submenu(app, *platform, lang)?);
+    let mut visible_submenus: Vec<Submenu<R>> = Vec::new();
+    for entry in visible_entries {
+        visible_submenus.push(build_tray_entry_submenu(app, entry, lang)?);
     }
 
     let mut overflow_submenus: Vec<Submenu<R>> = Vec::new();
-    for platform in overflow_platforms {
-        overflow_submenus.push(build_platform_submenu(app, *platform, lang)?);
+    for entry in overflow_entries {
+        overflow_submenus.push(build_tray_entry_submenu(app, entry, lang)?);
     }
 
     let overflow_refs: Vec<&dyn IsMenuItem<R>> = overflow_submenus
@@ -277,7 +293,7 @@ fn build_tray_menu<R: Runtime>(app: &tauri::AppHandle<R>) -> Result<Menu<R>, tau
         )?)
     };
 
-    let no_platform_item = if platform_submenus.is_empty() && overflow_submenus.is_empty() {
+    let no_platform_item = if visible_submenus.is_empty() && overflow_submenus.is_empty() {
         Some(MenuItem::with_id(
             app,
             "tray_no_platform_selected",
@@ -296,7 +312,7 @@ fn build_tray_menu<R: Runtime>(app: &tauri::AppHandle<R>) -> Result<Menu<R>, tau
     if let Some(item) = &no_platform_item {
         menu.append(item)?;
     } else {
-        for submenu in &platform_submenus {
+        for submenu in &visible_submenus {
             menu.append(submenu)?;
         }
         if let Some(submenu) = &more_platforms_submenu {
@@ -312,7 +328,48 @@ fn build_tray_menu<R: Runtime>(app: &tauri::AppHandle<R>) -> Result<Menu<R>, tau
     Ok(menu)
 }
 
-fn resolve_tray_platforms() -> Vec<PlatformId> {
+fn build_tray_entry_submenu<R: Runtime>(
+    app: &tauri::AppHandle<R>,
+    entry: &TrayMenuEntry,
+    lang: &str,
+) -> Result<Submenu<R>, tauri::Error> {
+    match entry {
+        TrayMenuEntry::Platform(platform) => build_platform_submenu(app, *platform, lang),
+        TrayMenuEntry::Group {
+            id,
+            name,
+            platforms,
+        } => build_platform_group_submenu(app, id, name, platforms, lang),
+    }
+}
+
+fn build_platform_group_submenu<R: Runtime>(
+    app: &tauri::AppHandle<R>,
+    group_id: &str,
+    group_name: &str,
+    platforms: &[PlatformId],
+    lang: &str,
+) -> Result<Submenu<R>, tauri::Error> {
+    let mut submenus: Vec<Submenu<R>> = Vec::new();
+    for platform in platforms {
+        submenus.push(build_platform_submenu(app, *platform, lang)?);
+    }
+
+    let refs: Vec<&dyn IsMenuItem<R>> = submenus
+        .iter()
+        .map(|submenu| submenu as &dyn IsMenuItem<R>)
+        .collect();
+
+    Submenu::with_id_and_items(
+        app,
+        format!("group:{}:submenu", group_id),
+        group_name,
+        true,
+        &refs,
+    )
+}
+
+fn resolve_tray_entries() -> Vec<TrayMenuEntry> {
     let layout = crate::modules::tray_layout::load_tray_layout();
     let visible = sanitize_platform_list(&layout.tray_platform_ids);
     let visible_set: HashSet<PlatformId> = visible.iter().copied().collect();
@@ -321,12 +378,67 @@ fn resolve_tray_platforms() -> Vec<PlatformId> {
         return Vec::new();
     }
 
-    let ordered = normalize_platform_order(&layout.ordered_platform_ids);
+    let mut groups_by_id: HashMap<String, crate::modules::tray_layout::TrayLayoutGroup> =
+        HashMap::new();
+    for group in layout.platform_groups {
+        groups_by_id.insert(group.id.clone(), group);
+    }
 
-    ordered
-        .into_iter()
-        .filter(|platform| visible_set.contains(platform))
-        .collect()
+    let mut entries = Vec::new();
+    let mut used_platforms: HashSet<PlatformId> = HashSet::new();
+
+    for raw_entry in &layout.ordered_entry_ids {
+        if let Some(platform) = parse_platform_entry_id(raw_entry) {
+            if !visible_set.contains(&platform) || !used_platforms.insert(platform) {
+                continue;
+            }
+            entries.push(TrayMenuEntry::Platform(platform));
+            continue;
+        }
+
+        let Some(group_id) = parse_group_entry_id(raw_entry) else {
+            continue;
+        };
+        let Some(group) = groups_by_id.get(&group_id) else {
+            continue;
+        };
+
+        let mut group_platforms: Vec<PlatformId> = Vec::new();
+        for raw_platform in &group.platform_ids {
+            let Some(platform) = PlatformId::from_str(raw_platform.trim()) else {
+                continue;
+            };
+            if !visible_set.contains(&platform) || !used_platforms.insert(platform) {
+                continue;
+            }
+            group_platforms.push(platform);
+        }
+
+        if group_platforms.is_empty() {
+            continue;
+        }
+
+        let group_name = if group.name.trim().is_empty() {
+            group.id.clone()
+        } else {
+            group.name.clone()
+        };
+
+        entries.push(TrayMenuEntry::Group {
+            id: group.id.clone(),
+            name: group_name,
+            platforms: group_platforms,
+        });
+    }
+
+    for platform in normalize_platform_order(&layout.ordered_platform_ids) {
+        if !visible_set.contains(&platform) || !used_platforms.insert(platform) {
+            continue;
+        }
+        entries.push(TrayMenuEntry::Platform(platform));
+    }
+
+    entries
 }
 
 fn sanitize_platform_list(ids: &[String]) -> Vec<PlatformId> {
@@ -356,6 +468,19 @@ fn normalize_platform_order(ids: &[String]) -> Vec<PlatformId> {
     }
 
     result
+}
+
+fn parse_platform_entry_id(raw: &str) -> Option<PlatformId> {
+    let value = raw.strip_prefix("platform:")?;
+    PlatformId::from_str(value.trim())
+}
+
+fn parse_group_entry_id(raw: &str) -> Option<String> {
+    let value = raw.strip_prefix("group:")?.trim();
+    if value.is_empty() {
+        return None;
+    }
+    Some(value.to_string())
 }
 
 fn build_platform_submenu<R: Runtime>(
@@ -411,6 +536,7 @@ fn get_account_display_info(platform: PlatformId, lang: &str) -> AccountDisplayI
         PlatformId::CodebuddyCn => build_codebuddy_cn_display_info(lang),
         PlatformId::Qoder => build_qoder_display_info(lang),
         PlatformId::Trae => build_trae_display_info(lang),
+        PlatformId::Workbuddy => build_workbuddy_display_info(lang),
     }
 }
 
@@ -987,6 +1113,11 @@ fn build_codebuddy_cn_display_info(lang: &str) -> AccountDisplayInfo {
     build_codebuddy_family_display_info(lang, resolve_codebuddy_cn_current_account(&accounts))
 }
 
+fn build_workbuddy_display_info(lang: &str) -> AccountDisplayInfo {
+    let accounts = crate::modules::workbuddy_account::list_accounts();
+    build_workbuddy_family_display_info(lang, resolve_workbuddy_current_account(&accounts))
+}
+
 fn build_codebuddy_family_display_info(
     lang: &str,
     account: Option<crate::models::codebuddy::CodebuddyAccount>,
@@ -1012,12 +1143,63 @@ fn build_codebuddy_family_display_info(
     }
 }
 
+fn build_workbuddy_family_display_info(
+    lang: &str,
+    account: Option<crate::models::workbuddy::WorkbuddyAccount>,
+) -> AccountDisplayInfo {
+    let Some(account) = account else {
+        return AccountDisplayInfo {
+            account: format!("📧 {}", get_text("not_logged_in", lang)),
+            quota_lines: vec!["—".to_string()],
+        };
+    };
+
+    let display_email = first_non_empty(&[
+        Some(account.email.as_str()),
+        account.nickname.as_deref(),
+        account.uid.as_deref(),
+        Some(account.id.as_str()),
+    ])
+    .unwrap_or("—");
+
+    AccountDisplayInfo {
+        account: format!("📧 {}", display_email),
+        quota_lines: vec![build_workbuddy_usage_status_line(lang, &account)],
+    }
+}
+
 fn build_codebuddy_usage_status_line(
     lang: &str,
     account: &crate::models::codebuddy::CodebuddyAccount,
 ) -> String {
+    build_usage_status_line(
+        lang,
+        account.dosage_notify_code.as_deref(),
+        account.dosage_notify_zh.as_deref(),
+        account.dosage_notify_en.as_deref(),
+    )
+}
+
+fn build_workbuddy_usage_status_line(
+    lang: &str,
+    account: &crate::models::workbuddy::WorkbuddyAccount,
+) -> String {
+    build_usage_status_line(
+        lang,
+        account.dosage_notify_code.as_deref(),
+        account.dosage_notify_zh.as_deref(),
+        account.dosage_notify_en.as_deref(),
+    )
+}
+
+fn build_usage_status_line(
+    lang: &str,
+    dosage_notify_code: Option<&str>,
+    dosage_notify_zh: Option<&str>,
+    dosage_notify_en: Option<&str>,
+) -> String {
     let label = get_text("usage_status", lang);
-    let code = account.dosage_notify_code.as_deref().unwrap_or("").trim();
+    let code = dosage_notify_code.unwrap_or("").trim();
 
     if code.is_empty() {
         return format!("{}: --", label);
@@ -1028,17 +1210,9 @@ fn build_codebuddy_usage_status_line(
     }
 
     let raw = if is_chinese_lang(lang) {
-        account
-            .dosage_notify_zh
-            .as_deref()
-            .or(account.dosage_notify_en.as_deref())
-            .unwrap_or(code)
+        dosage_notify_zh.or(dosage_notify_en).unwrap_or(code)
     } else {
-        account
-            .dosage_notify_en
-            .as_deref()
-            .or(account.dosage_notify_zh.as_deref())
-            .unwrap_or(code)
+        dosage_notify_en.or(dosage_notify_zh).unwrap_or(code)
     };
 
     format!("{}: {}", label, strip_codebuddy_status_prefix(raw))
@@ -1094,6 +1268,26 @@ fn resolve_codebuddy_cn_current_account(
     accounts: &[crate::models::codebuddy::CodebuddyAccount],
 ) -> Option<crate::models::codebuddy::CodebuddyAccount> {
     if let Ok(settings) = crate::modules::codebuddy_cn_instance::load_default_settings() {
+        if let Some(bind_id) = settings.bind_account_id {
+            let bind_id = bind_id.trim();
+            if !bind_id.is_empty() {
+                if let Some(account) = accounts.iter().find(|account| account.id == bind_id) {
+                    return Some(account.clone());
+                }
+            }
+        }
+    }
+
+    accounts
+        .iter()
+        .max_by_key(|account| account.last_used)
+        .cloned()
+}
+
+fn resolve_workbuddy_current_account(
+    accounts: &[crate::models::workbuddy::WorkbuddyAccount],
+) -> Option<crate::models::workbuddy::WorkbuddyAccount> {
+    if let Ok(settings) = crate::modules::workbuddy_instance::load_default_settings() {
         if let Some(bind_id) = settings.bind_account_id {
             let bind_id = bind_id.trim();
             if !bind_id.is_empty() {

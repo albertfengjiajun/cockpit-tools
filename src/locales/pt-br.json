@@ -53,7 +53,17 @@
         "label": "Importar",
         "importing": "Importando...",
         "pickFile": "Selecionar arquivo JSON para importar",
-        "orJson": "Ou importe do arquivo JSON"
+        "orJson": "Ou importe do arquivo JSON",
+        "progress": {
+          "overallLine": "Progresso geral {{percent}}% ({{completedPlatforms}}/{{totalPlatforms}} plataformas, {{processedAccounts}}/{{totalAccounts}} contas processadas)",
+          "currentPlatformLine": "Importando: {{platform}} ({{count}} contas)",
+          "currentStatusLine": "Status atual da plataforma: {{status}}",
+          "platformDetailsTitle": "Detalhes das plataformas",
+          "statusProcessing": "Processando...",
+          "statusRunning": "Importando...",
+          "statusSkipped": "Ignorado",
+          "statusPending": "Importação pendente"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "Mostrar na bandeja",
     "hiddenBadge": "Oculto",
     "openFromMore": "Gerenciar layout de plataformas",
-    "dragHandleLabel": "Arrastar para reordenar"
+    "dragHandleLabel": "Arrastar para reordenar",
+    "tipWithGroups": "Arraste para reordenar. No máximo duas entradas podem aparecer na barra lateral. Itens filhos do grupo não têm alternância de barra lateral/painel e são usados apenas para a barra de menu e troca da plataforma padrão.",
+    "addGroup": "Adicionar grupo",
+    "editGroup": "Editar grupo",
+    "deleteGroup": "Excluir grupo",
+    "groupBadge": "Grupo",
+    "groupDefault": "Plataforma padrão",
+    "groupName": "Nome do grupo",
+    "groupNamePlaceholder": "Exemplo: Suíte CodeBuddy",
+    "groupIcon": "Ícone do grupo",
+    "groupIconFromPlatform": "Ícone da plataforma",
+    "groupIconCustom": "Imagem personalizada",
+    "groupIconPreview": "Pré-visualização do ícone",
+    "groupChildren": "Plataformas filhas",
+    "groupNameRequired": "Informe o nome do grupo",
+    "groupChildrenRequired": "Selecione ao menos uma plataforma filha",
+    "groupCustomIconRequired": "Envie um ícone personalizado",
+    "groupSwitchLabel": "Trocar plataforma do grupo",
+    "collapseAllChildren": "Recolher todas as subplataformas",
+    "expandAllChildren": "Expandir todas as subplataformas",
+    "addChildPlatform": "Adicionar subplataforma",
+    "collapseChildren": "Recolher subplataformas",
+    "expandChildren": "Expandir subplataformas",
+    "noAvailableChildren": "Nenhuma plataforma disponível para adicionar",
+    "customIconDeleteConfirm": "Excluir este ícone personalizado?",
+    "editChildPlatform": "Editar subplataforma",
+    "setAsDefaultInGroup": "Definir como plataforma padrão deste grupo",
+    "removeFromGroup": "Remover do grupo"
   },
   "privacy": {
     "hideSensitive": "Ocultar e-mails",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "Erro de cota",
       "generic": "Falha ao atualizar a cota, tente novamente mais tarde",
-      "deactivatedWorkspace": "Workspace desativado, troque de conta ou reautorize"
+      "deactivatedWorkspace": "Workspace desativado, troque de conta ou reautorize",
+      "requestFailedManualRetry": "Falha na solicitação, tente novamente manualmente: {{error}}"
     },
     "plan": {
       "free": "FREE",

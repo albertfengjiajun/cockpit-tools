@@ -202,7 +202,7 @@ pub fn upsert_account(
     Ok(account)
 }
 
-pub async fn refresh_account_token(account_id: &str) -> Result<GitHubCopilotAccount, String> {
+async fn refresh_account_token_once(account_id: &str) -> Result<GitHubCopilotAccount, String> {
     let mut account = load_account_file(account_id).ok_or_else(|| "账号不存在".to_string())?;
     let bundle = github_copilot_oauth::refresh_copilot_token(&account.github_access_token).await?;
 
@@ -220,6 +220,15 @@ pub async fn refresh_account_token(account_id: &str) -> Result<GitHubCopilotAcco
     let updated = account.clone();
     upsert_account_record(account)?;
     Ok(updated)
+}
+
+pub async fn refresh_account_token(account_id: &str) -> Result<GitHubCopilotAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay(
+        "GitHub Copilot Refresh",
+        account_id,
+        || async { refresh_account_token_once(account_id).await },
+    )
+    .await
 }
 
 pub async fn refresh_all_tokens(

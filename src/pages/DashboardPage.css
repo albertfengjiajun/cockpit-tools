@@ -52,6 +52,7 @@
   appearance: none;
   font: inherit;
   color: inherit;
+  position: relative;
 }
 
 .stat-card:hover {
@@ -87,11 +88,17 @@
 .stat-icon-bg.info { background: rgba(14, 165, 198, 0.1); color: #0ea5c6; }
 .stat-icon-bg.github { background: var(--bg-tertiary); color: var(--text-primary); }
 .stat-icon-bg.windsurf { background: rgba(14, 165, 198, 0.12); color: #0ea5c6; }
+.dashboard-group-icon {
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+}
 
 .stat-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .stat-value {
@@ -105,6 +112,37 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-group-more-badge {
+  flex: 0 0 auto;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+
+.stat-group-more-badge:hover {
+  background: rgba(59, 130, 246, 0.16);
+}
+
+.stat-group-more-badge-corner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
 }
 
 /* Cards Split Row */

@@ -715,7 +715,7 @@ pub fn upsert_account(payload: WindsurfOAuthCompletePayload) -> Result<WindsurfA
     Ok(account)
 }
 
-pub async fn refresh_account_token(account_id: &str) -> Result<WindsurfAccount, String> {
+async fn refresh_account_token_once(account_id: &str) -> Result<WindsurfAccount, String> {
     let started_at = Instant::now();
     let mut account = load_account(account_id).ok_or_else(|| "账号不存在".to_string())?;
     logger::log_info(&format!(
@@ -757,6 +757,13 @@ pub async fn refresh_account_token(account_id: &str) -> Result<WindsurfAccount, 
         started_at.elapsed().as_millis()
     ));
     Ok(updated)
+}
+
+pub async fn refresh_account_token(account_id: &str) -> Result<WindsurfAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay("Windsurf Refresh", account_id, || async {
+        refresh_account_token_once(account_id).await
+    })
+    .await
 }
 
 pub async fn refresh_all_tokens() -> Result<Vec<(String, Result<WindsurfAccount, String>)>, String>

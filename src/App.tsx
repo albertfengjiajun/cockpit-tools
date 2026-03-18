@@ -360,6 +360,7 @@ function App() {
   const [updateCheckSource, setUpdateCheckSource] = useState<UpdateCheckSource>('auto');
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showPlatformLayoutModal, setShowPlatformLayoutModal] = useState(false);
+  const [platformLayoutRequestedGroupId, setPlatformLayoutRequestedGroupId] = useState<string | null>(null);
   const [showBreakout, setShowBreakout] = useState(false);
   const [hasBreakoutSession, setHasBreakoutSession] = useState(false);
   const [appPathMissing, setAppPathMissing] = useState<AppPathMissingDetail | null>(null);
@@ -2034,6 +2035,23 @@ function App() {
       window.removeEventListener('app-request-navigate', handleRequestNavigate as EventListener);
     };
   }, []);
+
+  useEffect(() => {
+    const handleOpenPlatformLayout = (e: Event) => {
+      const custom = e as CustomEvent<{ groupId?: string | null }>;
+      const groupId =
+        custom.detail && typeof custom.detail.groupId === 'string' && custom.detail.groupId.trim()
+          ? custom.detail.groupId.trim()
+          : null;
+      setPlatformLayoutRequestedGroupId(groupId);
+      setShowPlatformLayoutModal(true);
+    };
+
+    window.addEventListener('app-open-platform-layout', handleOpenPlatformLayout as EventListener);
+    return () => {
+      window.removeEventListener('app-open-platform-layout', handleOpenPlatformLayout as EventListener);
+    };
+  }, []);
   const suspenseFallback = (
     <div className="loading-state">
       {t('common.loading', '加载中...')}
@@ -2300,7 +2318,10 @@ function App() {
       <SideNav
         page={page}
         setPage={setPage}
-        onOpenPlatformLayout={() => setShowPlatformLayoutModal(true)}
+        onOpenPlatformLayout={() => {
+          setPlatformLayoutRequestedGroupId(null);
+          setShowPlatformLayoutModal(true);
+        }}
         easterEggClickCount={easterEggClickCount}
         onEasterEggTriggerClick={handleBreakoutEntryTriggerClick}
         hasBreakoutSession={hasBreakoutSession}
@@ -2310,7 +2331,14 @@ function App() {
       />
 
       <Suspense fallback={null}>
-        <PlatformLayoutModal open={showPlatformLayoutModal} onClose={() => setShowPlatformLayoutModal(false)} />
+        <PlatformLayoutModal
+          open={showPlatformLayoutModal}
+          requestedEditGroupId={platformLayoutRequestedGroupId}
+          onClose={() => {
+            setShowPlatformLayoutModal(false);
+            setPlatformLayoutRequestedGroupId(null);
+          }}
+        />
       </Suspense>
 
       <div className="main-wrapper">
@@ -2319,7 +2347,10 @@ function App() {
           {page === 'dashboard' && (
             <DashboardPage
               onNavigate={setPage}
-              onOpenPlatformLayout={() => setShowPlatformLayoutModal(true)}
+              onOpenPlatformLayout={() => {
+                setPlatformLayoutRequestedGroupId(null);
+                setShowPlatformLayoutModal(true);
+              }}
               onEasterEggTriggerClick={handleBreakoutEntryTriggerClick}
             />
           )}
@@ -2342,7 +2373,10 @@ function App() {
           {page === 'manual' && (
             <ManualPage
               onNavigate={setPage}
-              onOpenPlatformLayout={() => setShowPlatformLayoutModal(true)}
+              onOpenPlatformLayout={() => {
+                setPlatformLayoutRequestedGroupId(null);
+                setShowPlatformLayoutModal(true);
+              }}
             />
           )}
           {page === 'settings' && <SettingsPage />}

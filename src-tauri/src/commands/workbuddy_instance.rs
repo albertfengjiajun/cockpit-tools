@@ -183,7 +183,8 @@ fn resolve_running_pid(last_pid: Option<u32>, user_data_dir: Option<&str>) -> Op
 }
 
 #[tauri::command]
-pub async fn workbuddy_get_instance_defaults() -> Result<modules::instance::InstanceDefaults, String> {
+pub async fn workbuddy_get_instance_defaults() -> Result<modules::instance::InstanceDefaults, String>
+{
     modules::workbuddy_instance::get_instance_defaults()
 }
 
@@ -314,9 +315,7 @@ pub async fn workbuddy_delete_instance(instance_id: String) -> Result<(), String
 }
 
 #[tauri::command]
-pub async fn workbuddy_start_instance(
-    instance_id: String,
-) -> Result<InstanceProfileView, String> {
+pub async fn workbuddy_start_instance(instance_id: String) -> Result<InstanceProfileView, String> {
     modules::process::ensure_workbuddy_launch_path_configured()?;
 
     if instance_id == DEFAULT_INSTANCE_ID {
@@ -335,10 +334,8 @@ pub async fn workbuddy_start_instance(
         )?;
 
         let extra_args = modules::process::parse_extra_args(&default_settings.extra_args);
-        let pid = modules::process::start_workbuddy_default_with_args_with_new_window(
-            &extra_args,
-            true,
-        )?;
+        let pid =
+            modules::process::start_workbuddy_default_with_args_with_new_window(&extra_args, true)?;
         let _ = modules::workbuddy_instance::update_default_pid(Some(pid))?;
         let running_pid = resolve_running_pid(Some(pid), None);
 
@@ -391,9 +388,7 @@ pub async fn workbuddy_start_instance(
 }
 
 #[tauri::command]
-pub async fn workbuddy_stop_instance(
-    instance_id: String,
-) -> Result<InstanceProfileView, String> {
+pub async fn workbuddy_stop_instance(instance_id: String) -> Result<InstanceProfileView, String> {
     if instance_id == DEFAULT_INSTANCE_ID {
         let default_dir = modules::workbuddy_instance::get_default_workbuddy_user_data_dir()?;
         let default_dir_str = default_dir.to_string_lossy().to_string();

@@ -145,6 +145,7 @@ export function CodexAccountsPage() {
   const [oauthCallbackInput, setOauthCallbackInput] = useState('');
   const [oauthCallbackSubmitting, setOauthCallbackSubmitting] = useState(false);
   const [oauthCallbackError, setOauthCallbackError] = useState<string | null>(null);
+  const [oauthTokenExchangeRetryVisible, setOauthTokenExchangeRetryVisible] = useState(false);
   const [switching, setSwitching] = useState<string | null>(null);
   const [showCodeReviewQuota, setShowCodeReviewQuota] = useState<boolean>(
     isCodexCodeReviewQuotaVisibleByDefault,
@@ -200,6 +201,7 @@ export function CodexAccountsPage() {
     setOauthTimeoutInfo(null);
     setOauthCallbackSubmitting(false);
     setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
     const match = String(e).match(/CODEX_OAUTH_PORT_IN_USE:(\d+)/);
     if (match) {
       const port = Number(match[1]);
@@ -227,18 +229,23 @@ export function CodexAccountsPage() {
     setOauthCallbackInput('');
     setOauthCallbackSubmitting(false);
     setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
     setTimeout(() => {
       setShowAddModal(false);
       resetAddModalState();
     }, 1200);
   }, [fetchAccounts, fetchCurrentAccount, t, oauthLog, setAddStatus, setAddMessage, setShowAddModal, resetAddModalState]);
 
-  const completeOauthError = useCallback((e: unknown) => {
+  const completeOauthError = useCallback((e: unknown, allowTokenExchangeRetry = false) => {
     setAddStatus('error');
     setAddMessage(t('common.shared.oauth.failed', '授权失败') + ': ' + String(e));
+    setOauthTokenExchangeRetryVisible(allowTokenExchangeRetry);
   }, [t, setAddStatus, setAddMessage]);
 
   const isOauthTimeoutState = useMemo(() => !!oauthTimeoutInfo, [oauthTimeoutInfo]);
+  const isOauthTokenExchangeErrorState = useMemo(() => {
+    return addStatus === 'error' && oauthTokenExchangeRetryVisible;
+  }, [addStatus, oauthTokenExchangeRetryVisible]);
 
   useEffect(() => {
     let unlistenExtension: UnlistenFn | undefined;
@@ -259,7 +266,7 @@ export function CodexAccountsPage() {
         await codexService.completeCodexOAuthLogin(loginId);
         await completeOauthSuccess();
       } catch (e) {
-        completeOauthError(e);
+        completeOauthError(e, true);
       } finally {
         oauthCompletingRef.current = false;
       }
@@ -277,6 +284,7 @@ export function CodexAccountsPage() {
       setOauthPrepareError(null);
       setOauthCallbackSubmitting(false);
       setOauthCallbackError(null);
+      setOauthTokenExchangeRetryVisible(false);
       setAddStatus('idle');
       setAddMessage('');
     }).then((fn) => { if (disposed) fn(); else unlistenTimeout = fn; });
@@ -295,6 +303,7 @@ export function CodexAccountsPage() {
     setOauthCallbackInput('');
     setOauthCallbackSubmitting(false);
     setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
 
     codexService.startCodexOAuthLogin()
       .then(({ loginId, authUrl }) => {
@@ -354,6 +363,7 @@ export function CodexAccountsPage() {
     setOauthCallbackInput('');
     setOauthCallbackSubmitting(false);
     setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
   }, [
     showAddModal,
     addTab,
@@ -365,6 +375,7 @@ export function CodexAccountsPage() {
     oauthPrepareError,
     oauthPortInUse,
     oauthUrlCopied,
+    oauthTokenExchangeRetryVisible,
   ]);
 
   useEffect(
@@ -408,6 +419,7 @@ export function CodexAccountsPage() {
     setOauthCallbackInput('');
     setOauthCallbackSubmitting(false);
     setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
     prepareOauthUrl();
   };
 
@@ -427,15 +439,39 @@ export function CodexAccountsPage() {
 
     setOauthCallbackSubmitting(true);
     setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
     oauthCompletingRef.current = true;
+    let tokenExchangeStarted = false;
     try {
       await codexService.submitCodexOAuthCallbackUrl(loginId, callbackUrl);
       setAddStatus('loading');
       setAddMessage(t('codex.oauth.exchanging', '正在交换令牌...'));
+      tokenExchangeStarted = true;
       await codexService.completeCodexOAuthLogin(loginId);
       await completeOauthSuccess();
     } catch (e) {
-      completeOauthError(e);
+      completeOauthError(e, tokenExchangeStarted);
+      setOauthCallbackError(String(e).replace(/^Error:\s*/, ''));
+    } finally {
+      oauthCompletingRef.current = false;
+      setOauthCallbackSubmitting(false);
+    }
+  };
+
+  const handleRetryOauthTokenExchange = async () => {
+    const loginId = oauthLoginIdRef.current;
+    if (!loginId || oauthCompletingRef.current) return;
+    setOauthCallbackSubmitting(true);
+    setOauthCallbackError(null);
+    setOauthTokenExchangeRetryVisible(false);
+    setAddStatus('loading');
+    setAddMessage(t('codex.oauth.exchanging', '正在交换令牌...'));
+    oauthCompletingRef.current = true;
+    try {
+      await codexService.completeCodexOAuthLogin(loginId);
+      await completeOauthSuccess();
+    } catch (e) {
+      completeOauthError(e, true);
       setOauthCallbackError(String(e).replace(/^Error:\s*/, ''));
     } finally {
       oauthCompletingRef.current = false;
@@ -563,10 +599,21 @@ export function CodexAccountsPage() {
   const resolveQuotaErrorMeta = useCallback((quotaError?: CodexQuotaErrorInfo) => {
     if (!quotaError?.message) return { statusCode: '', errorCode: '', displayText: '', rawMessage: '' };
     const rawMessage = quotaError.message;
+    const normalizedRawMessage = rawMessage.trim();
+    const lowerRawMessage = normalizedRawMessage.toLowerCase();
+    const requestErrorIndex = lowerRawMessage.indexOf('error sending request');
+    const requestErrorMessage =
+      requestErrorIndex >= 0
+        ? normalizedRawMessage.slice(requestErrorIndex).trim()
+        : normalizedRawMessage;
     const statusCode = rawMessage.match(/API 返回错误\s+(\d{3})/i)?.[1] || rawMessage.match(/status[=: ]+(\d{3})/i)?.[1] || '';
     const errorCode = quotaError.code || rawMessage.match(/\[error_code:([^\]]+)\]/)?.[1] || '';
-    return { statusCode, errorCode, displayText: errorCode || rawMessage, rawMessage };
-  }, []);
+    const displayText = errorCode
+      || (requestErrorIndex >= 0
+        ? t('codex.quotaError.requestFailedManualRetry', { error: requestErrorMessage })
+        : normalizedRawMessage);
+    return { statusCode, errorCode, displayText, rawMessage };
+  }, [t]);
 
   const accountPresentations = useMemo(() => {
     const map = new Map<string, ReturnType<typeof buildCodexAccountPresentation>>();
@@ -1047,7 +1094,28 @@ export function CodexAccountsPage() {
               <p className="section-desc">{t('modals.import.fromFilesDesc')}</p>
               <button className="btn btn-secondary btn-full" onClick={handleImportFromFiles} disabled={importing}>
                 {importing ? <RefreshCw size={16} className="loading-spinner" /> : <FileUp size={16} />}{t('modals.import.fromFiles')}</button></div>)}
-            {addStatus !== 'idle' && (<div className={`add-status ${addStatus}`}>{addStatus === 'success' ? <Check size={16} /> : addStatus === 'loading' ? <RefreshCw size={16} className="loading-spinner" /> : <CircleAlert size={16} />}<span>{addMessage}</span></div>)}
+            {addStatus !== 'idle' && (
+              <div className={`add-status ${addStatus}`}>
+                {addStatus === 'success'
+                  ? <Check size={16} />
+                  : addStatus === 'loading'
+                    ? <RefreshCw size={16} className="loading-spinner" />
+                    : <CircleAlert size={16} />}
+                <span>{addMessage}</span>
+                {addTab === 'oauth' && addStatus === 'error' && isOauthTokenExchangeErrorState && oauthLoginIdRef.current && (
+                  <button
+                    className="btn btn-sm btn-outline"
+                    onClick={() => void handleRetryOauthTokenExchange()}
+                    disabled={oauthCallbackSubmitting}
+                  >
+                    {oauthCallbackSubmitting
+                      ? <RefreshCw size={14} className="loading-spinner" />
+                      : <RotateCw size={14} />}
+                    {t('accounts.oauth.continue')}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div></div>)}
 

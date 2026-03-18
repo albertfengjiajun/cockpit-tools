@@ -53,7 +53,17 @@
         "label": "Importar",
         "importing": "Importando...",
         "pickFile": "Selecciona un archivo JSON para importar",
-        "orJson": "O importar desde un archivo JSON"
+        "orJson": "O importar desde un archivo JSON",
+        "progress": {
+          "overallLine": "Progreso general {{percent}} % ({{completedPlatforms}}/{{totalPlatforms}} plataformas, {{processedAccounts}}/{{totalAccounts}} cuentas procesadas)",
+          "currentPlatformLine": "Importando: {{platform}} ({{count}} cuentas)",
+          "currentStatusLine": "Estado actual de la plataforma: {{status}}",
+          "platformDetailsTitle": "Detalles de plataformas",
+          "statusProcessing": "Procesando...",
+          "statusRunning": "Importando...",
+          "statusSkipped": "Omitido",
+          "statusPending": "Pendiente de importación"
+        }
       },
       "instances": {
         "unsupported": {
@@ -187,7 +197,34 @@
     "trayToggle": "Mostrar en la bandeja",
     "hiddenBadge": "Oculto",
     "openFromMore": "Gestionar diseño de plataformas",
-    "dragHandleLabel": "Arrastrar para reordenar"
+    "dragHandleLabel": "Arrastrar para reordenar",
+    "tipWithGroups": "Arrastra para ordenar. Se pueden mostrar como máximo dos entradas en la barra lateral. Los subelementos del grupo no tienen interruptores de barra lateral/panel y solo se usan para la barra de menú y el cambio de plataforma predeterminada.",
+    "addGroup": "Agregar grupo",
+    "editGroup": "Editar grupo",
+    "deleteGroup": "Eliminar grupo",
+    "groupBadge": "Grupo",
+    "groupDefault": "Plataforma predeterminada",
+    "groupName": "Nombre del grupo",
+    "groupNamePlaceholder": "Ejemplo: Suite de CodeBuddy",
+    "groupIcon": "Icono del grupo",
+    "groupIconFromPlatform": "Icono de plataforma",
+    "groupIconCustom": "Imagen personalizada",
+    "groupIconPreview": "Vista previa del icono",
+    "groupChildren": "Plataformas hijas",
+    "groupNameRequired": "Ingresa un nombre de grupo",
+    "groupChildrenRequired": "Selecciona al menos una plataforma hija",
+    "groupCustomIconRequired": "Sube un icono personalizado",
+    "groupSwitchLabel": "Cambiar plataforma del grupo",
+    "collapseAllChildren": "Contraer todas las subplataformas",
+    "expandAllChildren": "Expandir todas las subplataformas",
+    "addChildPlatform": "Añadir subplataforma",
+    "collapseChildren": "Contraer subplataformas",
+    "expandChildren": "Expandir subplataformas",
+    "noAvailableChildren": "No hay plataformas disponibles para añadir",
+    "customIconDeleteConfirm": "¿Eliminar este icono personalizado?",
+    "editChildPlatform": "Editar subplataforma",
+    "setAsDefaultInGroup": "Establecer como plataforma predeterminada de este grupo",
+    "removeFromGroup": "Quitar del grupo"
   },
   "privacy": {
     "hideSensitive": "Ocultar correos",
@@ -1223,7 +1260,8 @@
     "quotaError": {
       "badge": "Error de cuota",
       "generic": "No se pudo actualizar la cuota, inténtalo más tarde",
-      "deactivatedWorkspace": "El espacio de trabajo está desactivado, cambia de cuenta o vuelve a autorizar"
+      "deactivatedWorkspace": "El espacio de trabajo está desactivado, cambia de cuenta o vuelve a autorizar",
+      "requestFailedManualRetry": "La solicitud falló, inténtalo manualmente: {{error}}"
     },
     "plan": {
       "free": "FREE",

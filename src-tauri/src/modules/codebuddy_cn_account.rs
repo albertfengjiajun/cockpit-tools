@@ -161,7 +161,6 @@ fn normalize_email_identity(value: Option<&str>) -> Option<String> {
     })
 }
 
-
 fn account_matches_payload_identity(
     existing_uid: Option<&String>,
     existing_email: Option<&String>,
@@ -528,7 +527,7 @@ pub fn upsert_account(payload: CodebuddyOAuthCompletePayload) -> Result<Codebudd
     Ok(account)
 }
 
-pub async fn refresh_account_token(account_id: &str) -> Result<CodebuddyAccount, String> {
+async fn refresh_account_token_once(account_id: &str) -> Result<CodebuddyAccount, String> {
     let started_at = Instant::now();
     let mut account = load_account(account_id).ok_or_else(|| "账号不存在".to_string())?;
     logger::log_info(&format!(
@@ -536,7 +535,8 @@ pub async fn refresh_account_token(account_id: &str) -> Result<CodebuddyAccount,
         account.id, account.email
     ));
 
-    let (payload, quota_refresh_error) = codebuddy_cn_oauth::refresh_payload_for_account(&account).await?;
+    let (payload, quota_refresh_error) =
+        codebuddy_cn_oauth::refresh_payload_for_account(&account).await?;
     let tags = account.tags.clone();
     let created_at = account.created_at;
     apply_payload(&mut account, payload);
@@ -560,6 +560,15 @@ pub async fn refresh_account_token(account_id: &str) -> Result<CodebuddyAccount,
         started_at.elapsed().as_millis()
     ));
     Ok(updated)
+}
+
+pub async fn refresh_account_token(account_id: &str) -> Result<CodebuddyAccount, String> {
+    crate::modules::refresh_retry::retry_once_with_delay(
+        "CodeBuddy CN Refresh",
+        account_id,
+        || async { refresh_account_token_once(account_id).await },
+    )
+    .await
 }
 
 pub async fn refresh_all_tokens() -> Result<Vec<(String, Result<CodebuddyAccount, String>)>, String>
