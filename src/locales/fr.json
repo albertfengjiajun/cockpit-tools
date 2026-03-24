@@ -556,7 +556,11 @@
       "zedAppPathDesc": "Laisser vide pour utiliser le chemin par défaut",
       "zedAppPathPlaceholder": "Chemin par défaut",
       "zedPathSelect": "Sélectionner",
-      "zedPathReset": "Réinitialiser par défaut"
+      "zedPathReset": "Réinitialiser par défaut",
+      "updateReminder": "Rappels de mise à jour",
+      "updateReminderDesc": "Lorsqu'une nouvelle version est détectée, afficher les invites de mise à jour et l'accès rapide dans la barre latérale.",
+      "updateReminderOff": "Désactivé (sans rappels)",
+      "updateReminderOn": "Activé (afficher les rappels)"
     },
     "network": {
       "apiTitle": "API du cockpit antigravité",
@@ -1211,7 +1215,9 @@
     "installing": "Installation en cours...",
     "authorizing": "En attente de l'autorisation système...",
     "installFailed": "L'installation système a échoué. Réessayez plus tard ou téléchargez le paquet manuellement.",
-    "restartRequiredAfterInstall": "La mise à jour est installée. Redémarrez l'application manuellement pour terminer le basculement."
+    "restartRequiredAfterInstall": "La mise à jour est installée. Redémarrez l'application manuellement pour terminer le basculement.",
+    "skipThisVersion": "Ignorer cette version",
+    "skipFailed": "Impossible d'ignorer cette mise à jour : {{error}}"
   },
   "closeDialog": {
     "title": "Fermer la fenêtre",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "Quotidien",
         "weekly": "Hebdomadaire",
-        "interval": "Intervalle"
+        "interval": "Intervalle",
+        "quota_reset": "Après réinitialisation du quota"
       },
       "dailyTimeLabel": "Heure quotidienne d’exécution",
       "weeklyDaysLabel": "Exécuter le",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "Test terminé. {{success}} réussites et {{failed}} échecs.",
       "deleteConfirm": "Supprimer la tâche « {{name}} » ?",
       "executedCommandLabel": "Commande exécutée",
-      "accountInfoLabel": "Infos du compte"
+      "accountInfoLabel": "Infos du compte",
+      "managePresets": "Préréglages de modèle",
+      "presetManagerTitle": "Gérer les préréglages de modèle",
+      "presetListLabel": "Liste des préréglages",
+      "addPreset": "Ajouter un préréglage",
+      "presetEmpty": "Aucun préréglage de modèle pour le moment. Ajoutez-en un pour commencer à choisir des modèles pour les tâches de réveil.",
+      "presetNameLabel": "Nom du préréglage",
+      "presetNamePlaceholder": "Par exemple : réveil standard GPT-5.4",
+      "presetNameRequired": "Veuillez saisir un nom de préréglage.",
+      "presetModelLabel": "Valeur du modèle",
+      "presetModelPlaceholder": "Par exemple : gpt-5.4",
+      "presetModelRequired": "Veuillez saisir la valeur du modèle.",
+      "presetModelDuplicate": "Cette valeur de modèle existe déjà dans un autre préréglage.",
+      "presetAllowedReasoningLabel": "Niveaux de raisonnement autorisés",
+      "presetDefaultReasoningLabel": "Niveau de raisonnement par défaut",
+      "presetReasoningEffortsRequired": "Sélectionnez au moins un niveau de raisonnement.",
+      "presetDefaultReasoningRequired": "Choisissez un niveau de raisonnement par défaut dans la liste autorisée.",
+      "presetDeleteConfirm": "Supprimer le préréglage de modèle « {{name}} » ?",
+      "noticePresetCreated": "Préréglage de modèle créé.",
+      "noticePresetUpdated": "Préréglage de modèle mis à jour.",
+      "noticePresetDeleted": "Préréglage de modèle supprimé.",
+      "taskModelLabel": "Préréglage de modèle",
+      "taskModelHint": "Choisissez d’abord le préréglage, puis le niveau de raisonnement utilisé par cette tâche de réveil.",
+      "taskModelRequired": "Veuillez choisir un préréglage de modèle pour cette tâche.",
+      "testModelLabel": "Préréglage de modèle de test",
+      "testModelHint": "Choisissez le préréglage et le niveau de raisonnement pour ce test manuel.",
+      "testModelRequired": "Veuillez choisir un préréglage de modèle pour ce test.",
+      "reasoningEffortLabel": "Niveau de raisonnement",
+      "reasoningEffortEmpty": "Choisissez d’abord un préréglage de modèle pour voir les niveaux de raisonnement disponibles.",
+      "taskReasoningEffortRequired": "Veuillez choisir un niveau de raisonnement pour cette tâche.",
+      "testReasoningEffortRequired": "Veuillez choisir un niveau de raisonnement pour ce test.",
+      "selectPresetPlaceholder": "Choisir un préréglage",
+      "selectReasoningPlaceholder": "Choisir un niveau de raisonnement",
+      "modelValuePreview": "Valeur réelle du modèle : {{model}}",
+      "modelSummaryLabel": "Modèle : {{model}} · Raisonnement : {{reasoning}}",
+      "modelDefault": "Par défaut",
+      "reasoningEfforts": {
+        "low": "Faible",
+        "medium": "Moyen",
+        "high": "Élevé",
+        "xhigh": "Très élevé"
+      },
+      "scheduleQuotaResetHint": "Lorsque le réveil après réinitialisation du quota est activé, l'actualisation automatique est réglée toutes les 2 minutes.",
+      "scheduleQuotaResetSummary": "Exécuter après réinitialisation du quota",
+      "quotaResetWindowLabel": "Condition de déclenchement de la fenêtre de réinitialisation",
+      "quotaResetWindowHint": "primary_window correspond généralement au quota de 5 heures. Pour les utilisateurs gratuits, primary_window peut correspondre au quota hebdomadaire et varier selon l’abonnement.",
+      "quotaResetWindowOptions": {
+        "either": "Déclencher quand primary_window ou secondary_window est réinitialisé",
+        "primary_window": "Déclencher uniquement lors de la réinitialisation de primary_window",
+        "secondary_window": "Déclencher uniquement lors de la réinitialisation de secondary_window"
+      },
+      "nextRunsQuotaResetHint": "Les déclencheurs de réinitialisation du quota dépendent des données de quota récentes, donc aucun aperçu horaire fixe n'est disponible.",
+      "triggerQuotaReset": "Déclencheur de réinitialisation du quota",
+      "noticeSavedEnabledWithQuotaReset": "Tâches enregistrées. Total : {{count}}. L'actualisation automatique Codex a été réglée sur {{minutes}} minutes."
     }
   },
   "githubCopilot": {

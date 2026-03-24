@@ -1,9 +1,19 @@
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 import { confirm as confirmDialog } from '@tauri-apps/plugin-dialog';
 import {
   Check,
+  ChevronDown,
   CircleAlert,
   Copy,
   Eye,
@@ -26,7 +36,10 @@ import { buildCodexAccountPresentation } from '../../presentation/platformAccoun
 import {
   CodexWakeupBatchResult,
   CodexWakeupHistoryItem,
+  CodexWakeupModelPreset,
   CodexWakeupProgressPayload,
+  CodexWakeupQuotaResetWindow,
+  CodexWakeupReasoningEffort,
   CodexWakeupScheduleKind,
   CodexWakeupTask,
 } from '../../types/codexWakeup';
@@ -38,6 +51,11 @@ import {
   MultiSelectFilterDropdown,
   type MultiSelectFilterOption,
 } from '../MultiSelectFilterDropdown';
+import {
+  isPrivacyModeEnabledByDefault,
+  maskSensitiveValue,
+  PRIVACY_MODE_CHANGED_EVENT,
+} from '../../utils/privacy';
 
 interface CodexWakeupContentProps {
   accounts: CodexAccount[];
@@ -51,17 +69,49 @@ interface TaskDraft {
   enabled: boolean;
   accountIds: string[];
   prompt: string;
+  modelPresetId: string;
+  model: string;
+  modelDisplayName: string;
+  modelReasoningEffort: CodexWakeupReasoningEffort | '';
   scheduleKind: CodexWakeupScheduleKind;
   dailyTime: string;
   weeklyDays: number[];
   weeklyTime: string;
   intervalHours: string;
+  quotaResetWindow: CodexWakeupQuotaResetWindow;
+}
+
+interface WakeupGeneralConfig {
+  language: string;
+  theme: string;
+  auto_refresh_minutes: number;
+  codex_auto_refresh_minutes: number;
+  close_behavior: string;
+  opencode_app_path?: string;
+  antigravity_app_path?: string;
+  codex_app_path?: string;
+  vscode_app_path?: string;
+  opencode_sync_on_switch?: boolean;
+  codex_launch_on_switch?: boolean;
+}
+
+interface PresetDraft {
+  id?: string;
+  name: string;
+  model: string;
+  allowedReasoningEfforts: CodexWakeupReasoningEffort[];
+  defaultReasoningEffort: CodexWakeupReasoningEffort | '';
 }
 
 interface AccountPickerFilters {
   query: string;
   planTypes: string[];
   tags: string[];
+}
+
+interface WakeupSingleSelectOption {
+  value: string;
+  label: string;
 }
 
 type ExecutionRecordStatus = 'pending' | 'running' | 'success' | 'error';
@@ -74,6 +124,9 @@ interface ExecutionRecordState {
   triggerType: string;
   status: ExecutionRecordStatus;
   prompt?: string;
+  model?: string;
+  modelDisplayName?: string;
+  modelReasoningEffort?: CodexWakeupReasoningEffort;
   reply?: string;
   error?: string;
   timestamp?: number;
@@ -127,6 +180,10 @@ const WEEKDAY_OPTIONS = [
 
 const DEFAULT_PROMPT = 'hi';
 const QUICK_TIME_OPTIONS = ['07:00', '08:00', '09:00', '10:00', '14:00', '18:00', '22:00'];
+const REASONING_EFFORT_OPTIONS: CodexWakeupReasoningEffort[] = ['low', 'medium', 'high', 'xhigh'];
+const DEFAULT_WAKEUP_MODEL = 'gpt-5.3-codex';
+const DEFAULT_WAKEUP_REASONING_EFFORT: CodexWakeupReasoningEffort = 'medium';
+const QUOTA_RESET_MIN_REFRESH_MINUTES = 2;
 
 function createEmptyAccountPickerFilters(): AccountPickerFilters {
   return {
@@ -156,21 +213,60 @@ function resolveWakeupPlanBucket(planClass?: string) {
   return 'OTHER';
 }
 
-function createEmptyTaskDraft(): TaskDraft {
+function createEmptyTaskDraft(defaultPreset?: CodexWakeupModelPreset | null): TaskDraft {
+  const defaultReasoningEffort =
+    defaultPreset?.allowed_reasoning_efforts.includes(DEFAULT_WAKEUP_REASONING_EFFORT)
+      ? DEFAULT_WAKEUP_REASONING_EFFORT
+      : (defaultPreset?.default_reasoning_effort ?? '');
   return {
     name: '',
     enabled: true,
     accountIds: [],
     prompt: '',
+    modelPresetId: defaultPreset?.id ?? '',
+    model: defaultPreset?.model ?? '',
+    modelDisplayName: defaultPreset?.name ?? '',
+    modelReasoningEffort: defaultReasoningEffort,
     scheduleKind: 'daily',
     dailyTime: '09:00',
     weeklyDays: [1, 2, 3, 4, 5],
     weeklyTime: '10:00',
     intervalHours: '6',
+    quotaResetWindow: 'either',
   };
 }
 
-function buildTaskDraft(task: CodexWakeupTask): TaskDraft {
+function createEmptyPresetDraft(): PresetDraft {
+  return {
+    name: '',
+    model: '',
+    allowedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
+    defaultReasoningEffort: 'medium',
+  };
+}
+
+function buildPresetDraft(preset: CodexWakeupModelPreset): PresetDraft {
+  return {
+    id: preset.id,
+    name: preset.name,
+    model: preset.model,
+    allowedReasoningEfforts: preset.allowed_reasoning_efforts,
+    defaultReasoningEffort: preset.default_reasoning_effort,
+  };
+}
+
+function resolveTaskPreset(task: CodexWakeupTask, presets: CodexWakeupModelPreset[]) {
+  if (!task.model) return undefined;
+  return (
+    presets.find(
+      (preset) => preset.model === task.model && preset.name === (task.model_display_name || preset.name),
+    ) ||
+    presets.find((preset) => preset.model === task.model)
+  );
+}
+
+function buildTaskDraft(task: CodexWakeupTask, presets: CodexWakeupModelPreset[]): TaskDraft {
+  const matchedPreset = resolveTaskPreset(task, presets);
   return {
     id: task.id,
     createdAt: task.created_at,
@@ -178,12 +274,24 @@ function buildTaskDraft(task: CodexWakeupTask): TaskDraft {
     enabled: task.enabled,
     accountIds: task.account_ids,
     prompt: task.prompt ?? '',
+    modelPresetId: matchedPreset?.id ?? '',
+    model: task.model ?? matchedPreset?.model ?? '',
+    modelDisplayName: task.model_display_name ?? matchedPreset?.name ?? '',
+    modelReasoningEffort:
+      task.model_reasoning_effort ?? matchedPreset?.default_reasoning_effort ?? '',
     scheduleKind: task.schedule.kind,
     dailyTime: task.schedule.daily_time ?? '09:00',
     weeklyDays: task.schedule.weekly_days.length > 0 ? task.schedule.weekly_days : [1, 2, 3, 4, 5],
     weeklyTime: task.schedule.weekly_time ?? '10:00',
     intervalHours: String(task.schedule.interval_hours ?? 6),
+    quotaResetWindow: task.schedule.quota_reset_window ?? 'either',
   };
+}
+
+function formatWakeupModelLabel(model?: string, modelDisplayName?: string) {
+  if (modelDisplayName?.trim()) return modelDisplayName.trim();
+  if (model?.trim()) return model.trim();
+  return '';
 }
 
 function formatDateTime(value?: number) {
@@ -200,6 +308,14 @@ function formatDuration(value?: number) {
   if (!value && value !== 0) return '—';
   if (value < 1000) return `${value}ms`;
   return `${(value / 1000).toFixed(1)}s`;
+}
+
+function reasoningEffortLabel(
+  value: CodexWakeupReasoningEffort | '',
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  if (!value) return '—';
+  return t(`codex.wakeup.reasoningEfforts.${value}`);
 }
 
 function formatTaskLastResult(
@@ -233,6 +349,14 @@ function executionStatusFromRecord(record: CodexWakeupHistoryItem): ExecutionRec
   return record.success ? 'success' : 'error';
 }
 
+function quotaResetWindowLabel(
+  value: CodexWakeupQuotaResetWindow | undefined,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  const normalized = value ?? 'either';
+  return t(`codex.wakeup.quotaResetWindowOptions.${normalized}`);
+}
+
 function scheduleSummary(task: CodexWakeupTask, t: ReturnType<typeof useTranslation>['t']) {
   const schedule = task.schedule;
   if (schedule.kind === 'daily') {
@@ -247,6 +371,11 @@ function scheduleSummary(task: CodexWakeupTask, t: ReturnType<typeof useTranslat
       time: schedule.weekly_time || '10:00',
     });
   }
+  if (schedule.kind === 'quota_reset') {
+    return t('codex.wakeup.scheduleQuotaResetSummary', {
+      window: quotaResetWindowLabel(schedule.quota_reset_window, t),
+    });
+  }
   return t('codex.wakeup.scheduleIntervalSummary', {
     hours: schedule.interval_hours ?? 6,
   });
@@ -254,6 +383,7 @@ function scheduleSummary(task: CodexWakeupTask, t: ReturnType<typeof useTranslat
 
 function triggerLabel(triggerType: string, t: ReturnType<typeof useTranslation>['t']) {
   if (triggerType === 'scheduled') return t('codex.wakeup.triggerScheduled');
+  if (triggerType === 'quota_reset') return t('codex.wakeup.triggerQuotaReset');
   if (triggerType === 'manual_task') return t('codex.wakeup.triggerManualTask');
   return t('codex.wakeup.triggerTest');
 }
@@ -280,6 +410,116 @@ function formatSelectionPreview(values: string[], limit: number = 2) {
   if (values.length === 0) return '—';
   if (values.length <= limit) return values.join(' / ');
   return `${values.slice(0, limit).join(' / ')} +${values.length - limit}`;
+}
+
+function resolveDefaultWakeupPreset(presets: CodexWakeupModelPreset[]) {
+  return (
+    presets.find((preset) => preset.model.trim().toLowerCase() === DEFAULT_WAKEUP_MODEL) ||
+    presets[0] ||
+    null
+  );
+}
+
+function resolveDefaultWakeupReasoningEffort(defaultPreset?: CodexWakeupModelPreset | null) {
+  if (!defaultPreset) return '';
+  if (defaultPreset.allowed_reasoning_efforts.includes(DEFAULT_WAKEUP_REASONING_EFFORT)) {
+    return DEFAULT_WAKEUP_REASONING_EFFORT;
+  }
+  return (
+    defaultPreset.default_reasoning_effort ||
+    defaultPreset.allowed_reasoning_efforts[0] ||
+    ''
+  );
+}
+
+function WakeupSingleSelectDropdown({
+  value,
+  options,
+  placeholder,
+  onSelect,
+  disabled = false,
+}: {
+  value: string;
+  options: WakeupSingleSelectOption[];
+  placeholder: string;
+  onSelect: (value: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const selectedOption = options.find((option) => option.value === value);
+
+  useEffect(() => {
+    if (!open || disabled) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (rootRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [disabled, open]);
+
+  useEffect(() => {
+    if (!disabled) return;
+    setOpen(false);
+  }, [disabled]);
+
+  return (
+    <div
+      className={`codex-wakeup-single-select ${open ? 'open' : ''} ${disabled ? 'disabled' : ''}`}
+      ref={rootRef}
+    >
+      <button
+        type="button"
+        className={`codex-wakeup-single-select-trigger ${selectedOption ? 'selected' : ''}`}
+        onClick={() => {
+          if (disabled) return;
+          setOpen((current) => !current);
+        }}
+        aria-expanded={open}
+        disabled={disabled}
+      >
+        <span className="codex-wakeup-single-select-value">
+          <span
+            className={
+              selectedOption ? 'codex-wakeup-single-select-text' : 'codex-wakeup-single-select-placeholder'
+            }
+          >
+            {selectedOption?.label || placeholder}
+          </span>
+        </span>
+        <ChevronDown
+          size={16}
+          className={`codex-wakeup-single-select-chevron ${open ? 'open' : ''}`}
+        />
+      </button>
+      {open && (
+        <div className="codex-wakeup-single-select-panel">
+          {options.map((option) => {
+            const active = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={`codex-wakeup-single-select-option ${active ? 'active' : ''}`}
+                onClick={() => {
+                  onSelect(option.value);
+                  setOpen(false);
+                }}
+              >
+                <span className="codex-wakeup-single-select-option-main">
+                  <span>{option.label}</span>
+                </span>
+                {active ? <Check size={16} /> : null}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function resolveAccountContextText(
@@ -353,6 +593,10 @@ function calculatePreviewRuns(taskDraft: TaskDraft, count: number = 5) {
     return runs;
   }
 
+  if (taskDraft.scheduleKind === 'quota_reset') {
+    return runs;
+  }
+
   const intervalHours = Math.max(1, Number(taskDraft.intervalHours) || 1);
   for (let index = 1; index <= count; index += 1) {
     runs.push(new Date(now.getTime() + intervalHours * index * 60 * 60 * 1000));
@@ -382,6 +626,18 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
   const oauthAccounts = useMemo(
     () => accounts.filter((account) => !isCodexApiKeyAccount(account)),
     [accounts],
+  );
+  const modelPresetMap = useMemo(
+    () => new Map(state.model_presets.map((preset) => [preset.id, preset])),
+    [state.model_presets],
+  );
+  const defaultModelPreset = useMemo(
+    () => resolveDefaultWakeupPreset(state.model_presets),
+    [state.model_presets],
+  );
+  const defaultModelReasoningEffort = useMemo(
+    () => resolveDefaultWakeupReasoningEffort(defaultModelPreset),
+    [defaultModelPreset],
   );
   const accountMap = useMemo(
     () => new Map(accounts.map((account) => [account.id, account])),
@@ -454,17 +710,29 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
 
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [taskDraft, setTaskDraft] = useState<TaskDraft>(createEmptyTaskDraft());
+  const [taskDraft, setTaskDraft] = useState<TaskDraft>(createEmptyTaskDraft(defaultModelPreset));
   const {
     message: taskModalError,
     scrollKey: taskModalErrorScrollKey,
     set: setTaskModalError,
   } = useModalErrorState();
   const [taskAccountFilters, setTaskAccountFilters] = useState<AccountPickerFilters>(createEmptyAccountPickerFilters());
+  const [showPresetModal, setShowPresetModal] = useState(false);
+  const [presetDraft, setPresetDraft] = useState<PresetDraft>(createEmptyPresetDraft());
+  const {
+    message: presetModalError,
+    scrollKey: presetModalErrorScrollKey,
+    set: setPresetModalError,
+  } = useModalErrorState();
   const [showTestModal, setShowTestModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [testAccountIds, setTestAccountIds] = useState<string[]>([]);
   const [testPrompt, setTestPrompt] = useState('');
+  const [testModelPresetId, setTestModelPresetId] = useState(defaultModelPreset?.id ?? '');
+  const [testModel, setTestModel] = useState(defaultModelPreset?.model ?? '');
+  const [testModelReasoningEffort, setTestModelReasoningEffort] = useState<
+    CodexWakeupReasoningEffort | ''
+  >(defaultModelReasoningEffort);
   const {
     message: testModalError,
     scrollKey: testModalErrorScrollKey,
@@ -477,17 +745,39 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
   const [showRuntimeGuideModal, setShowRuntimeGuideModal] = useState(false);
   const [runtimeGuideRefreshing, setRuntimeGuideRefreshing] = useState(false);
   const [runtimeGuideAutoShown, setRuntimeGuideAutoShown] = useState(false);
+  const [privacyModeEnabled, setPrivacyModeEnabled] = useState<boolean>(() =>
+    isPrivacyModeEnabledByDefault(),
+  );
+  const maskAccountText = useCallback(
+    (value?: string | null) => maskSensitiveValue(value, privacyModeEnabled),
+    [privacyModeEnabled],
+  );
 
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      void loadAll();
-    }, 15000);
-    return () => window.clearInterval(timer);
-  }, [loadAll]);
+    const syncPrivacyMode = () => {
+      setPrivacyModeEnabled(isPrivacyModeEnabledByDefault());
+    };
+
+    const handlePrivacyModeChanged = (event: Event) => {
+      const detail = (event as CustomEvent<boolean>).detail;
+      if (typeof detail === 'boolean') {
+        setPrivacyModeEnabled(detail);
+      } else {
+        syncPrivacyMode();
+      }
+    };
+
+    window.addEventListener(PRIVACY_MODE_CHANGED_EVENT, handlePrivacyModeChanged as EventListener);
+    window.addEventListener('focus', syncPrivacyMode);
+    return () => {
+      window.removeEventListener(PRIVACY_MODE_CHANGED_EVENT, handlePrivacyModeChanged as EventListener);
+      window.removeEventListener('focus', syncPrivacyMode);
+    };
+  }, []);
 
   useEffect(() => {
     if (error) {
@@ -519,6 +809,62 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
       setRuntimeGuideAutoShown(true);
     }
   }, [loading, runtime, runtimeGuideAutoShown]);
+
+  useEffect(() => {
+    if (!defaultModelPreset) {
+      return;
+    }
+    setTaskDraft((current) => {
+      if (current.model || current.modelPresetId) {
+        return current;
+      }
+      return {
+        ...current,
+        modelPresetId: defaultModelPreset.id,
+        model: defaultModelPreset.model,
+        modelDisplayName: defaultModelPreset.name,
+        modelReasoningEffort: defaultModelReasoningEffort,
+      };
+    });
+    setTestModelPresetId((current) => current || defaultModelPreset.id);
+    setTestModel((current) => current || defaultModelPreset.model);
+    setTestModelReasoningEffort((current) => current || defaultModelReasoningEffort);
+  }, [defaultModelPreset, defaultModelReasoningEffort]);
+
+  const selectedTaskPreset = useMemo(
+    () => (taskDraft.modelPresetId ? modelPresetMap.get(taskDraft.modelPresetId) : undefined),
+    [modelPresetMap, taskDraft.modelPresetId],
+  );
+  const selectedTestPreset = useMemo(
+    () => (testModelPresetId ? modelPresetMap.get(testModelPresetId) : undefined),
+    [modelPresetMap, testModelPresetId],
+  );
+  const taskAllowedReasoningEfforts = selectedTaskPreset?.allowed_reasoning_efforts ?? [];
+  const testAllowedReasoningEfforts = selectedTestPreset?.allowed_reasoning_efforts ?? [];
+  const modelPresetOptions = useMemo<WakeupSingleSelectOption[]>(
+    () =>
+      state.model_presets.map((preset) => ({
+        value: preset.id,
+        label: preset.name,
+      })),
+    [state.model_presets],
+  );
+  const taskReasoningOptions = useMemo<WakeupSingleSelectOption[]>(
+    () =>
+      taskAllowedReasoningEfforts.map((effort) => ({
+        value: effort,
+        label: reasoningEffortLabel(effort, t),
+      })),
+    [t, taskAllowedReasoningEfforts],
+  );
+  const testReasoningOptions = useMemo<WakeupSingleSelectOption[]>(
+    () =>
+      testAllowedReasoningEfforts.map((effort) => ({
+        value: effort,
+        label: reasoningEffortLabel(effort, t),
+      })),
+    [t, testAllowedReasoningEfforts],
+  );
 
   const sortedTasks = useMemo(() => {
     const tasks = [...state.tasks];
@@ -579,6 +925,9 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
       prompt?: string,
       taskId?: string,
       taskName?: string,
+      model?: string,
+      modelDisplayName?: string,
+      modelReasoningEffort?: CodexWakeupReasoningEffort,
     ): ExecutionSessionState => ({
       runId,
       taskId,
@@ -609,6 +958,9 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
           triggerType,
           status: 'pending',
           prompt,
+          model,
+          modelDisplayName,
+          modelReasoningEffort,
         };
       }),
     }),
@@ -651,6 +1003,9 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
         triggerType: item.trigger_type,
         status: executionStatusFromRecord(item),
         prompt: item.prompt,
+        model: item.model,
+        modelDisplayName: item.model_display_name,
+        modelReasoningEffort: item.model_reasoning_effort,
         reply: item.reply,
         error: item.error,
         timestamp: item.timestamp,
@@ -689,6 +1044,9 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
           triggerType: 'scheduled',
           status: 'pending' as const,
           prompt: task.prompt,
+          model: task.model,
+          modelDisplayName: task.model_display_name,
+          modelReasoningEffort: task.model_reasoning_effort,
         };
       }),
     }),
@@ -737,6 +1095,10 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
               accountContextText: payload.item.account_context_text || record.accountContextText,
               status: executionStatusFromRecord(payload.item),
               prompt: payload.item.prompt || record.prompt,
+              model: payload.item.model || record.model,
+              modelDisplayName: payload.item.model_display_name || record.modelDisplayName,
+              modelReasoningEffort:
+                payload.item.model_reasoning_effort || record.modelReasoningEffort,
               reply: payload.item.reply,
               error: payload.item.error,
               timestamp: payload.item.timestamp,
@@ -899,6 +1261,34 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
     [filteredTestAccounts, testAccountIds],
   );
 
+  const hasEnabledQuotaResetTask = useCallback(
+    (tasks: CodexWakeupTask[]) =>
+      tasks.some((task) => task.enabled && task.schedule.kind === 'quota_reset'),
+    [],
+  );
+
+  const ensureCodexRefreshIntervalForQuotaReset = useCallback(async () => {
+    const config = await invoke<WakeupGeneralConfig>('get_general_config');
+    if (config.codex_auto_refresh_minutes === QUOTA_RESET_MIN_REFRESH_MINUTES) {
+      return false;
+    }
+    await invoke('save_general_config', {
+      language: config.language,
+      theme: config.theme,
+      autoRefreshMinutes: config.auto_refresh_minutes,
+      codexAutoRefreshMinutes: QUOTA_RESET_MIN_REFRESH_MINUTES,
+      closeBehavior: config.close_behavior || 'ask',
+      opencodeAppPath: config.opencode_app_path ?? '',
+      antigravityAppPath: config.antigravity_app_path ?? '',
+      codexAppPath: config.codex_app_path ?? '',
+      vscodeAppPath: config.vscode_app_path ?? '',
+      opencodeSyncOnSwitch: config.opencode_sync_on_switch ?? true,
+      codexLaunchOnSwitch: config.codex_launch_on_switch ?? true,
+    });
+    window.dispatchEvent(new Event('config-updated'));
+    return true;
+  }, []);
+
   const copyCommand = useCallback(async (command: string) => {
     await navigator.clipboard.writeText(command);
     setCopiedCommand(command);
@@ -939,16 +1329,17 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
         planClass: buildCodexAccountPresentation(account, t).planClass || 'unknown',
         planBucket: resolveWakeupPlanBucket(buildCodexAccountPresentation(account, t).planClass),
       };
+      const maskedEmail = maskAccountText(meta.email);
       return (
         <button
           key={account.id}
           type="button"
           className={`wakeup-chip codex-wakeup-account-chip ${checked ? 'selected' : ''}`}
           onClick={onToggle}
-          title={[meta.email, meta.planLabel, meta.contextText].filter(Boolean).join(' · ')}
+          title={[maskedEmail, meta.planLabel, meta.contextText].filter(Boolean).join(' · ')}
         >
           <div className="codex-wakeup-account-chip-head">
-            <span className="codex-wakeup-account-chip-email">{meta.email}</span>
+            <span className="codex-wakeup-account-chip-email">{maskedEmail}</span>
             <span className={`tier-badge ${meta.planClass}`}>{meta.planLabel}</span>
           </div>
           {meta.contextText && (
@@ -957,7 +1348,7 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
         </button>
       );
     },
-    [t, wakeupAccountMetaMap],
+    [maskAccountText, t, wakeupAccountMetaMap],
   );
 
   const renderAccountPickerFilters = useCallback(
@@ -1061,23 +1452,161 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
     }
   }, [loadAll]);
 
+  const openPresetModal = useCallback(() => {
+    setPresetDraft(createEmptyPresetDraft());
+    setPresetModalError(null);
+    setShowPresetModal(true);
+  }, [setPresetModalError]);
+
+  const closePresetModal = useCallback(() => {
+    if (saving) return;
+    setShowPresetModal(false);
+    setPresetDraft(createEmptyPresetDraft());
+    setPresetModalError(null);
+  }, [saving, setPresetModalError]);
+
+  const handleSelectTaskPreset = useCallback(
+    (presetId: string) => {
+      const preset = modelPresetMap.get(presetId);
+      if (!preset) {
+        setTaskDraft((current) => ({
+          ...current,
+          modelPresetId: '',
+          model: '',
+          modelDisplayName: '',
+          modelReasoningEffort: '',
+        }));
+        return;
+      }
+      setTaskDraft((current) => ({
+        ...current,
+        modelPresetId: preset.id,
+        model: preset.model,
+        modelDisplayName: preset.name,
+        modelReasoningEffort: preset.allowed_reasoning_efforts.includes(
+          current.modelReasoningEffort as CodexWakeupReasoningEffort,
+        )
+          ? current.modelReasoningEffort
+          : preset.default_reasoning_effort,
+      }));
+    },
+    [modelPresetMap],
+  );
+
+  const handleSelectTestPreset = useCallback(
+    (presetId: string) => {
+      const preset = modelPresetMap.get(presetId);
+      if (!preset) {
+        setTestModelPresetId('');
+        setTestModel('');
+        setTestModelReasoningEffort('');
+        return;
+      }
+      setTestModelPresetId(preset.id);
+      setTestModel(preset.model);
+      setTestModelReasoningEffort((current) =>
+        preset.allowed_reasoning_efforts.includes(current as CodexWakeupReasoningEffort)
+          ? current
+          : preset.default_reasoning_effort,
+      );
+    },
+    [modelPresetMap],
+  );
+
+  const handleSavePreset = useCallback(async () => {
+    const trimmedName = presetDraft.name.trim();
+    const trimmedModel = presetDraft.model.trim();
+    if (!trimmedName) {
+      setPresetModalError(t('codex.wakeup.presetNameRequired'));
+      return;
+    }
+    if (!trimmedModel) {
+      setPresetModalError(t('codex.wakeup.presetModelRequired'));
+      return;
+    }
+    if (presetDraft.allowedReasoningEfforts.length === 0) {
+      setPresetModalError(t('codex.wakeup.presetReasoningEffortsRequired'));
+      return;
+    }
+    if (
+      !presetDraft.defaultReasoningEffort ||
+      !presetDraft.allowedReasoningEfforts.includes(presetDraft.defaultReasoningEffort)
+    ) {
+      setPresetModalError(t('codex.wakeup.presetDefaultReasoningRequired'));
+      return;
+    }
+    const duplicatedModel = state.model_presets.find(
+      (item) => item.model.trim() === trimmedModel && item.id !== presetDraft.id,
+    );
+    if (duplicatedModel) {
+      setPresetModalError(t('codex.wakeup.presetModelDuplicate'));
+      return;
+    }
+
+    const nextPreset: CodexWakeupModelPreset = {
+      id: presetDraft.id ?? crypto.randomUUID(),
+      name: trimmedName,
+      model: trimmedModel,
+      allowed_reasoning_efforts: presetDraft.allowedReasoningEfforts,
+      default_reasoning_effort: presetDraft.defaultReasoningEffort,
+    };
+    const nextPresets = presetDraft.id
+      ? state.model_presets.map((item) => (item.id === presetDraft.id ? nextPreset : item))
+      : [nextPreset, ...state.model_presets];
+
+    try {
+      await saveState(state.enabled, state.tasks, nextPresets);
+      setNotice({
+        tone: 'success',
+        text: presetDraft.id
+          ? t('codex.wakeup.noticePresetUpdated')
+          : t('codex.wakeup.noticePresetCreated'),
+      });
+      setPresetModalError(null);
+      setPresetDraft(buildPresetDraft(nextPreset));
+    } catch (error) {
+      setPresetModalError(String(error));
+    }
+  }, [presetDraft, saveState, setPresetModalError, state.enabled, state.model_presets, state.tasks, t]);
+
+  const handleDeletePreset = useCallback(
+    async (preset: CodexWakeupModelPreset) => {
+      const confirmed = await confirmDialog(t('codex.wakeup.presetDeleteConfirm', { name: preset.name }), {
+        title: t('common.confirm', '确认'),
+        kind: 'warning',
+      });
+      if (!confirmed) return;
+      const nextPresets = state.model_presets.filter((item) => item.id !== preset.id);
+      try {
+        await saveState(state.enabled, state.tasks, nextPresets);
+        setNotice({ tone: 'success', text: t('codex.wakeup.noticePresetDeleted') });
+        if (presetDraft.id === preset.id) {
+          setPresetDraft(createEmptyPresetDraft());
+        }
+      } catch (error) {
+        setPresetModalError(String(error));
+      }
+    },
+    [presetDraft.id, saveState, state.enabled, state.model_presets, state.tasks, t],
+  );
+
   const openNewTaskModal = useCallback(async () => {
     if (runtime && !runtime.available) {
       openRuntimeGuideModal();
       return;
     }
-    setTaskDraft(createEmptyTaskDraft());
+    setTaskDraft(createEmptyTaskDraft(defaultModelPreset));
     setTaskModalError(null);
     setTaskAccountFilters(createEmptyAccountPickerFilters());
     setShowTaskModal(true);
-  }, [openRuntimeGuideModal, runtime]);
+  }, [defaultModelPreset, openRuntimeGuideModal, runtime]);
 
   const openEditTaskModal = useCallback((task: CodexWakeupTask) => {
-    setTaskDraft(buildTaskDraft(task));
+    setTaskDraft(buildTaskDraft(task, state.model_presets));
     setTaskModalError(null);
     setTaskAccountFilters(createEmptyAccountPickerFilters());
     setShowTaskModal(true);
-  }, []);
+  }, [state.model_presets]);
 
   const openTestModal = useCallback(async () => {
     if (runtime && !runtime.available) {
@@ -1086,34 +1615,55 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
     }
     setTestModalError(null);
     setTestAccountFilters(createEmptyAccountPickerFilters());
+    setTestModelPresetId(defaultModelPreset?.id ?? '');
+    setTestModel(defaultModelPreset?.model ?? '');
+    setTestModelReasoningEffort(defaultModelReasoningEffort);
     setShowTestModal(true);
-  }, [openRuntimeGuideModal, runtime]);
+  }, [defaultModelPreset, defaultModelReasoningEffort, openRuntimeGuideModal, runtime]);
 
   const closeTaskModal = useCallback(() => {
     if (saving) return;
     setShowTaskModal(false);
     setTaskModalError(null);
-    setTaskDraft(createEmptyTaskDraft());
-  }, [saving]);
+    setTaskDraft(createEmptyTaskDraft(defaultModelPreset));
+  }, [defaultModelPreset, saving]);
 
   const closeTestModal = useCallback(() => {
     if (testing) return;
     setShowTestModal(false);
     setTestModalError(null);
-  }, [testing]);
+    setTestAccountIds([]);
+    setTestPrompt('');
+    setTestModelPresetId(defaultModelPreset?.id ?? '');
+    setTestModel(defaultModelPreset?.model ?? '');
+    setTestModelReasoningEffort(defaultModelReasoningEffort);
+  }, [defaultModelPreset, defaultModelReasoningEffort, testing]);
 
   const persistTasks = useCallback(
-    async (enabled: boolean, tasks: CodexWakeupTask[]) => {
-      const next = await saveState(enabled, tasks);
+    async (
+      enabled: boolean,
+      tasks: CodexWakeupTask[],
+      modelPresets: CodexWakeupModelPreset[] = state.model_presets,
+    ) => {
+      const refreshAdjusted =
+        enabled && hasEnabledQuotaResetTask(tasks)
+          ? await ensureCodexRefreshIntervalForQuotaReset()
+          : false;
+      const next = await saveState(enabled, tasks, modelPresets);
       setNotice({
         tone: 'success',
         text: enabled
-          ? t('codex.wakeup.noticeSavedEnabled', { count: next.tasks.length })
+          ? refreshAdjusted
+            ? t('codex.wakeup.noticeSavedEnabledWithQuotaReset', {
+                count: next.tasks.length,
+                minutes: QUOTA_RESET_MIN_REFRESH_MINUTES,
+              })
+            : t('codex.wakeup.noticeSavedEnabled', { count: next.tasks.length })
           : t('codex.wakeup.noticeSavedDisabled', { count: next.tasks.length }),
       });
       return next;
     },
-    [saveState, t],
+    [ensureCodexRefreshIntervalForQuotaReset, hasEnabledQuotaResetTask, saveState, state.model_presets, t],
   );
 
   const toggleAllTasks = useCallback(async () => {
@@ -1159,6 +1709,17 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
       setTaskModalError(t('codex.wakeup.taskAccountsRequired'));
       return;
     }
+    if (!selectedTaskPreset) {
+      setTaskModalError(t('codex.wakeup.taskModelRequired'));
+      return;
+    }
+    if (
+      !taskDraft.modelReasoningEffort ||
+      !selectedTaskPreset.allowed_reasoning_efforts.includes(taskDraft.modelReasoningEffort)
+    ) {
+      setTaskModalError(t('codex.wakeup.taskReasoningEffortRequired'));
+      return;
+    }
     if (taskDraft.scheduleKind === 'weekly' && taskDraft.weeklyDays.length === 0) {
       setTaskModalError(t('codex.wakeup.weeklyDaysRequired'));
       return;
@@ -1175,6 +1736,9 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
       enabled: taskDraft.enabled,
       account_ids: taskDraft.accountIds,
       prompt: taskDraft.prompt.trim() || undefined,
+      model: selectedTaskPreset.model,
+      model_display_name: selectedTaskPreset.name,
+      model_reasoning_effort: taskDraft.modelReasoningEffort || undefined,
       schedule: {
         kind: taskDraft.scheduleKind,
         daily_time: taskDraft.scheduleKind === 'daily' ? taskDraft.dailyTime : undefined,
@@ -1184,6 +1748,8 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
           taskDraft.scheduleKind === 'interval'
             ? Math.max(1, Number(taskDraft.intervalHours) || 1)
             : undefined,
+        quota_reset_window:
+          taskDraft.scheduleKind === 'quota_reset' ? taskDraft.quotaResetWindow : undefined,
       },
       created_at: existingTask?.created_at ?? taskDraft.createdAt ?? now,
       updated_at: now,
@@ -1206,7 +1772,7 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
     } catch (error) {
       setTaskModalError(String(error));
     }
-  }, [persistTasks, state.tasks, t, taskDraft]);
+  }, [persistTasks, selectedTaskPreset, state.tasks, t, taskDraft]);
 
   const handleRunTask = useCallback(
     async (task: CodexWakeupTask) => {
@@ -1228,7 +1794,17 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
 
       const runId = crypto.randomUUID();
       setExecutionSession(
-        buildExecutionSession(runId, 'manual_task', task.account_ids, task.prompt, task.id, task.name),
+        buildExecutionSession(
+          runId,
+          'manual_task',
+          task.account_ids,
+          task.prompt,
+          task.id,
+          task.name,
+          task.model,
+          task.model_display_name,
+          task.model_reasoning_effort,
+        ),
       );
       try {
         const result = await runTask(task.id, runId);
@@ -1255,6 +1831,10 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
                     accountContextText: matched.account_context_text || record.accountContextText,
                     status: executionStatusFromRecord(matched),
                     prompt: matched.prompt || record.prompt,
+                    model: matched.model || record.model,
+                    modelDisplayName: matched.model_display_name || record.modelDisplayName,
+                    modelReasoningEffort:
+                      matched.model_reasoning_effort || record.modelReasoningEffort,
                     reply: matched.reply,
                     error: matched.error,
                     timestamp: matched.timestamp,
@@ -1291,13 +1871,43 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
       setTestModalError(t('codex.wakeup.testAccountsRequired'));
       return;
     }
+    if (!selectedTestPreset) {
+      setTestModalError(t('codex.wakeup.testModelRequired'));
+      return;
+    }
+    if (
+      !testModelReasoningEffort ||
+      !selectedTestPreset.allowed_reasoning_efforts.includes(testModelReasoningEffort)
+    ) {
+      setTestModalError(t('codex.wakeup.testReasoningEffortRequired'));
+      return;
+    }
     setTestModalError(null);
     const runId = crypto.randomUUID();
     const promptValue = testPrompt.trim() || undefined;
-    setExecutionSession(buildExecutionSession(runId, 'test', testAccountIds, promptValue));
+    setExecutionSession(
+      buildExecutionSession(
+        runId,
+        'test',
+        testAccountIds,
+        promptValue,
+        undefined,
+        undefined,
+        selectedTestPreset.model,
+        selectedTestPreset.name,
+        testModelReasoningEffort,
+      ),
+    );
     setShowTestModal(false);
     try {
-      const result = await runTest(testAccountIds, runId, promptValue);
+      const result = await runTest(
+        testAccountIds,
+        runId,
+        promptValue,
+        selectedTestPreset.model,
+        selectedTestPreset.name,
+        testModelReasoningEffort,
+      );
       await onRefreshAccounts();
       setExecutionSession((current) =>
         current && current.runId === runId
@@ -1315,15 +1925,19 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
                 if (!matched) {
                   return record;
                 }
-                return {
-                  ...record,
-                  accountEmail: matched.account_email || record.accountEmail,
-                  accountContextText: matched.account_context_text || record.accountContextText,
-                  status: executionStatusFromRecord(matched),
-                  prompt: matched.prompt || record.prompt,
-                  reply: matched.reply,
-                  error: matched.error,
-                  timestamp: matched.timestamp,
+                  return {
+                    ...record,
+                    accountEmail: matched.account_email || record.accountEmail,
+                    accountContextText: matched.account_context_text || record.accountContextText,
+                    status: executionStatusFromRecord(matched),
+                    prompt: matched.prompt || record.prompt,
+                    model: matched.model || record.model,
+                    modelDisplayName: matched.model_display_name || record.modelDisplayName,
+                    modelReasoningEffort:
+                      matched.model_reasoning_effort || record.modelReasoningEffort,
+                    reply: matched.reply,
+                    error: matched.error,
+                    timestamp: matched.timestamp,
                   durationMs: matched.duration_ms,
                   triggerType: matched.trigger_type || record.triggerType,
                 };
@@ -1333,6 +1947,9 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
       );
       setTestAccountIds([]);
       setTestPrompt('');
+      setTestModelPresetId(defaultModelPreset?.id ?? '');
+      setTestModel(defaultModelPreset?.model ?? '');
+      setTestModelReasoningEffort(defaultModelReasoningEffort);
       setNotice({
         tone: result.failure_count > 0 ? 'error' : 'success',
         text:
@@ -1350,7 +1967,18 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
           : current,
       );
     }
-  }, [buildExecutionSession, onRefreshAccounts, runTest, t, testAccountIds, testPrompt]);
+  }, [
+    buildExecutionSession,
+    defaultModelPreset,
+    defaultModelReasoningEffort,
+    onRefreshAccounts,
+    runTest,
+    selectedTestPreset,
+    t,
+    testAccountIds,
+    testModelReasoningEffort,
+    testPrompt,
+  ]);
 
   const handleClearHistory = useCallback(async () => {
     const confirmed = await confirmDialog(t('codex.wakeup.clearHistoryConfirm'), {
@@ -1396,6 +2024,9 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
           <button className="btn btn-primary" onClick={() => void openNewTaskModal()} disabled={oauthAccounts.length === 0}>
             <Plus size={16} /> {t('codex.wakeup.addTask')}
           </button>
+          <button className="btn btn-secondary" onClick={openPresetModal}>
+            {t('codex.wakeup.managePresets')}
+          </button>
           <button className="btn btn-secondary" onClick={() => void openTestModal()} disabled={oauthAccounts.length === 0}>
             {t('codex.wakeup.testNow')}
           </button>
@@ -1429,7 +2060,11 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
       ) : (
         <div className="wakeup-task-grid">
           {sortedTasks.map((task) => {
-            const accountLabels = task.account_ids.map((accountId) => accountMap.get(accountId)?.email || accountId);
+            const accountLabels = task.account_ids.map((accountId) => {
+              const meta = wakeupAccountMetaMap.get(accountId);
+              const value = meta?.email || accountMap.get(accountId)?.email || accountId;
+              return maskAccountText(value);
+            });
             return (
               <div key={task.id} className={`wakeup-task-card ${task.enabled ? 'is-enabled' : 'is-disabled'}`}>
                 <div className="wakeup-task-header">
@@ -1489,6 +2124,18 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
                   <div className="wakeup-task-meta wakeup-task-meta-accounts">
                     <span>{t('codex.wakeup.taskAccountsLabel')}: {formatSelectionPreview(accountLabels)}</span>
                   </div>
+                  {(task.model || task.model_reasoning_effort) && (
+                    <div className="wakeup-task-meta wakeup-task-meta-prompt">
+                      <span>
+                        {t('codex.wakeup.modelSummaryLabel', {
+                          model: formatWakeupModelLabel(task.model, task.model_display_name) || t('codex.wakeup.modelDefault'),
+                          reasoning: task.model_reasoning_effort
+                            ? reasoningEffortLabel(task.model_reasoning_effort, t)
+                            : t('codex.wakeup.modelDefault'),
+                        })}
+                      </span>
+                    </div>
+                  )}
                   {task.prompt && (
                     <div className="wakeup-task-meta wakeup-task-meta-prompt">
                       <span>{t('codex.wakeup.promptLabel')}: {task.prompt}</span>
@@ -1547,6 +2194,152 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
               <button className="btn btn-primary" onClick={() => void handleRefreshRuntimeGuide()} disabled={runtimeGuideRefreshing}>
                 <RefreshCw size={16} className={runtimeGuideRefreshing ? 'loading-spinner' : ''} />
                 {t('codex.wakeup.refreshRuntime')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPresetModal && (
+        <div className="modal-overlay" onClick={closePresetModal}>
+          <div className="modal modal-lg wakeup-modal codex-wakeup-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{t('codex.wakeup.presetManagerTitle')}</h2>
+              <button className="modal-close" onClick={closePresetModal} disabled={saving}>
+                <X />
+              </button>
+            </div>
+            <div className="modal-body codex-wakeup-modal-body">
+              <ModalErrorMessage message={presetModalError} scrollKey={presetModalErrorScrollKey} />
+              <div className="wakeup-form-group">
+                <div className="codex-wakeup-inline-header">
+                  <label>{t('codex.wakeup.presetListLabel')}</label>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setPresetDraft(createEmptyPresetDraft());
+                      setPresetModalError(null);
+                    }}
+                  >
+                    <Plus size={14} /> {t('codex.wakeup.addPreset')}
+                  </button>
+                </div>
+                {state.model_presets.length === 0 ? (
+                  <p className="wakeup-hint">{t('codex.wakeup.presetEmpty')}</p>
+                ) : (
+                  <div className="wakeup-chip-grid">
+                    {state.model_presets.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        className={`wakeup-chip ${presetDraft.id === preset.id ? 'selected' : ''}`}
+                        onClick={() => {
+                          setPresetDraft(buildPresetDraft(preset));
+                          setPresetModalError(null);
+                        }}
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="wakeup-form-group">
+                <label>{t('codex.wakeup.presetNameLabel')}</label>
+                <input
+                  className="wakeup-input"
+                  value={presetDraft.name}
+                  onChange={(event) => setPresetDraft((current) => ({ ...current, name: event.target.value }))}
+                  placeholder={t('codex.wakeup.presetNamePlaceholder')}
+                />
+              </div>
+
+              <div className="wakeup-form-group">
+                <label>{t('codex.wakeup.presetModelLabel')}</label>
+                <input
+                  className="wakeup-input"
+                  value={presetDraft.model}
+                  onChange={(event) => setPresetDraft((current) => ({ ...current, model: event.target.value }))}
+                  placeholder={t('codex.wakeup.presetModelPlaceholder')}
+                />
+              </div>
+
+              <div className="wakeup-form-group">
+                <label>{t('codex.wakeup.presetAllowedReasoningLabel')}</label>
+                <div className="wakeup-chip-grid">
+                  {REASONING_EFFORT_OPTIONS.map((effort) => {
+                    const active = presetDraft.allowedReasoningEfforts.includes(effort);
+                    return (
+                      <button
+                        key={effort}
+                        type="button"
+                        className={`wakeup-chip ${active ? 'selected' : ''}`}
+                        onClick={() =>
+                          setPresetDraft((current) => {
+                            const nextAllowed = active
+                              ? current.allowedReasoningEfforts.filter((item) => item !== effort)
+                              : [...current.allowedReasoningEfforts, effort];
+                            const nextDefault = nextAllowed.includes(current.defaultReasoningEffort as CodexWakeupReasoningEffort)
+                              ? current.defaultReasoningEffort
+                              : nextAllowed[0] ?? '';
+                            return {
+                              ...current,
+                              allowedReasoningEfforts: nextAllowed,
+                              defaultReasoningEffort: nextDefault,
+                            };
+                          })
+                        }
+                      >
+                        {reasoningEffortLabel(effort, t)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="wakeup-form-group">
+                <label>{t('codex.wakeup.presetDefaultReasoningLabel')}</label>
+                <select
+                  className="wakeup-input"
+                  value={presetDraft.defaultReasoningEffort}
+                  onChange={(event) =>
+                    setPresetDraft((current) => ({
+                      ...current,
+                      defaultReasoningEffort: event.target.value as CodexWakeupReasoningEffort,
+                    }))
+                  }
+                >
+                  <option value="">{t('codex.wakeup.selectReasoningPlaceholder')}</option>
+                  {presetDraft.allowedReasoningEfforts.map((effort) => (
+                    <option key={effort} value={effort}>
+                      {reasoningEffortLabel(effort, t)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              {presetDraft.id && (
+                <button
+                  className="btn btn-danger"
+                  onClick={() => {
+                    const preset = state.model_presets.find((item) => item.id === presetDraft.id);
+                    if (preset) {
+                      void handleDeletePreset(preset);
+                    }
+                  }}
+                  disabled={saving}
+                >
+                  {t('common.delete')}
+                </button>
+              )}
+              <button className="btn btn-secondary" onClick={closePresetModal} disabled={saving}>
+                {t('common.close')}
+              </button>
+              <button className="btn btn-primary" onClick={() => void handleSavePreset()} disabled={saving}>
+                {presetDraft.id ? t('common.save') : t('codex.wakeup.addPreset')}
               </button>
             </div>
           </div>
@@ -1638,9 +2431,51 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
               </div>
 
               <div className="wakeup-form-group">
+                <div className="codex-wakeup-inline-header">
+                  <label>{t('codex.wakeup.taskModelLabel')}</label>
+                  <button type="button" className="btn btn-secondary" onClick={openPresetModal}>
+                    {t('codex.wakeup.managePresets')}
+                  </button>
+                </div>
+                <p className="wakeup-hint">{t('codex.wakeup.taskModelHint')}</p>
+                <div className="codex-wakeup-dual-select">
+                  <div className="codex-wakeup-dual-select-field">
+                    <WakeupSingleSelectDropdown
+                      value={taskDraft.modelPresetId}
+                      options={modelPresetOptions}
+                      placeholder={t('codex.wakeup.selectPresetPlaceholder')}
+                      onSelect={handleSelectTaskPreset}
+                    />
+                  </div>
+                  <div className="codex-wakeup-dual-select-field codex-wakeup-dual-select-field-compact">
+                    <WakeupSingleSelectDropdown
+                      value={taskDraft.modelReasoningEffort}
+                      options={taskReasoningOptions}
+                      placeholder={t('codex.wakeup.selectReasoningPlaceholder')}
+                      onSelect={(value) =>
+                        setTaskDraft((current) => ({
+                          ...current,
+                          modelReasoningEffort: value as CodexWakeupReasoningEffort,
+                        }))
+                      }
+                      disabled={taskReasoningOptions.length === 0}
+                    />
+                  </div>
+                </div>
+                {taskDraft.model && (
+                  <p className="wakeup-hint">
+                    {t('codex.wakeup.modelValuePreview', { model: taskDraft.model })}
+                  </p>
+                )}
+                {taskReasoningOptions.length === 0 ? (
+                  <p className="wakeup-hint">{t('codex.wakeup.reasoningEffortEmpty')}</p>
+                ) : null}
+              </div>
+
+              <div className="wakeup-form-group">
                 <label>{t('codex.wakeup.scheduleLabel')}</label>
                 <div className="wakeup-segmented">
-                  {(['daily', 'weekly', 'interval'] as CodexWakeupScheduleKind[]).map((kind) => (
+                  {(['daily', 'weekly', 'interval', 'quota_reset'] as CodexWakeupScheduleKind[]).map((kind) => (
                     <button
                       type="button"
                       key={kind}
@@ -1651,6 +2486,39 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
                     </button>
                   ))}
                 </div>
+                {taskDraft.scheduleKind === 'quota_reset' && (
+                  <>
+                    <p className="codex-wakeup-quota-reset-tip">
+                      <CircleAlert size={14} />
+                      <span>{t('codex.wakeup.scheduleQuotaResetHint')}</span>
+                    </p>
+                    <div className="codex-wakeup-quota-reset-window-selector">
+                      <label>{t('codex.wakeup.quotaResetWindowLabel')}</label>
+                      <div className="wakeup-segmented codex-wakeup-quota-reset-window-buttons">
+                        {(['either', 'primary_window', 'secondary_window'] as CodexWakeupQuotaResetWindow[]).map(
+                          (windowType) => (
+                            <button
+                              type="button"
+                              key={windowType}
+                              className={`wakeup-segment-btn ${
+                                taskDraft.quotaResetWindow === windowType ? 'active' : ''
+                              }`}
+                              onClick={() =>
+                                setTaskDraft((current) => ({
+                                  ...current,
+                                  quotaResetWindow: windowType,
+                                }))
+                              }
+                            >
+                              {t(`codex.wakeup.quotaResetWindowOptions.${windowType}`)}
+                            </button>
+                          ),
+                        )}
+                      </div>
+                      <p className="wakeup-hint">{t('codex.wakeup.quotaResetWindowHint')}</p>
+                    </div>
+                  </>
+                )}
               </div>
 
               {taskDraft.scheduleKind === 'daily' && (
@@ -1757,7 +2625,13 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
               <div className="wakeup-form-group">
                 <label>{t('wakeup.form.nextRuns', '接下来执行')}</label>
                 <ul className="wakeup-preview-list">
-                  {previewRuns.length === 0 && <li>{t('wakeup.form.nextRunsEmpty', '暂无预览')}</li>}
+                  {previewRuns.length === 0 && (
+                    <li>
+                      {taskDraft.scheduleKind === 'quota_reset'
+                        ? t('codex.wakeup.nextRunsQuotaResetHint')
+                        : t('wakeup.form.nextRunsEmpty', '暂无预览')}
+                    </li>
+                  )}
                   {previewRuns.map((date, index) => (
                     <li key={`${date.toISOString()}-${index}`}>
                       {index + 1}. {date.toLocaleString()}
@@ -1826,6 +2700,40 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
                 )}
               </div>
               <div className="wakeup-form-group">
+                <div className="codex-wakeup-inline-header">
+                  <label>{t('codex.wakeup.testModelLabel')}</label>
+                  <button type="button" className="btn btn-secondary" onClick={openPresetModal}>
+                    {t('codex.wakeup.managePresets')}
+                  </button>
+                </div>
+                <p className="wakeup-hint">{t('codex.wakeup.testModelHint')}</p>
+                <div className="codex-wakeup-dual-select">
+                  <div className="codex-wakeup-dual-select-field">
+                    <WakeupSingleSelectDropdown
+                      value={testModelPresetId}
+                      options={modelPresetOptions}
+                      placeholder={t('codex.wakeup.selectPresetPlaceholder')}
+                      onSelect={handleSelectTestPreset}
+                    />
+                  </div>
+                  <div className="codex-wakeup-dual-select-field codex-wakeup-dual-select-field-compact">
+                    <WakeupSingleSelectDropdown
+                      value={testModelReasoningEffort}
+                      options={testReasoningOptions}
+                      placeholder={t('codex.wakeup.selectReasoningPlaceholder')}
+                      onSelect={(value) => setTestModelReasoningEffort(value as CodexWakeupReasoningEffort)}
+                      disabled={testReasoningOptions.length === 0}
+                    />
+                  </div>
+                </div>
+                {testModel && (
+                  <p className="wakeup-hint">{t('codex.wakeup.modelValuePreview', { model: testModel })}</p>
+                )}
+                {testReasoningOptions.length === 0 ? (
+                  <p className="wakeup-hint">{t('codex.wakeup.reasoningEffortEmpty')}</p>
+                ) : null}
+              </div>
+              <div className="wakeup-form-group">
                 <label>{t('codex.wakeup.promptLabel')}</label>
                 <textarea
                   className="token-input codex-wakeup-prompt-input"
@@ -1863,7 +2771,10 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
               ) : (
                 <ul className="codex-wakeup-history-run-list">
                   {historyBatches.map((batch) => {
-                    const badgeClass = batch.triggerType === 'scheduled' ? 'auto' : 'manual';
+                    const badgeClass =
+                      batch.triggerType === 'scheduled' || batch.triggerType === 'quota_reset'
+                        ? 'auto'
+                        : 'manual';
                     return (
                       <li key={batch.runId} className="codex-wakeup-history-run-card">
                         <div className="codex-wakeup-history-run-head">
@@ -2062,47 +2973,60 @@ export function CodexWakeupContent({ accounts, onRefreshAccounts }: CodexWakeupC
                 </div>
               )}
               <div className="codex-wakeup-results-list">
-                {filteredExecutionRecords.map((record) => (
-                  <article
-                    key={record.id}
-                    className={`codex-wakeup-execution-row is-${record.status}`}
-                  >
-                    <div className="codex-wakeup-execution-row-head">
-                      <div>
-                        <h4 className="codex-wakeup-execution-row-title">
-                          {record.accountContextText
-                            ? `${record.accountEmail} · ${record.accountContextText}`
-                            : record.accountEmail}
-                        </h4>
-                        <span className="codex-wakeup-execution-row-subtitle">
-                          {triggerLabel(record.triggerType, t)}
+                {filteredExecutionRecords.map((record) => {
+                  const maskedEmail = maskAccountText(record.accountEmail);
+                  return (
+                    <article
+                      key={record.id}
+                      className={`codex-wakeup-execution-row is-${record.status}`}
+                    >
+                      <div className="codex-wakeup-execution-row-head">
+                        <div>
+                          <h4 className="codex-wakeup-execution-row-title">
+                            {record.accountContextText
+                              ? `${maskedEmail} · ${record.accountContextText}`
+                              : maskedEmail}
+                          </h4>
+                          <span className="codex-wakeup-execution-row-subtitle">
+                            {triggerLabel(record.triggerType, t)}
+                          </span>
+                        </div>
+                        <span className={`codex-wakeup-execution-badge is-${record.status}`}>
+                          {record.status === 'running' && <RefreshCw size={14} className="loading-spinner" />}
+                          {executionStatusLabel(record.status, t)}
                         </span>
                       </div>
-                      <span className={`codex-wakeup-execution-badge is-${record.status}`}>
-                        {record.status === 'running' && <RefreshCw size={14} className="loading-spinner" />}
-                        {executionStatusLabel(record.status, t)}
-                      </span>
-                    </div>
-                    {record.prompt && (
-                      <div className="codex-wakeup-execution-row-prompt">
-                        {t('codex.wakeup.promptLabel')}: {record.prompt}
+                      {(record.model || record.modelReasoningEffort) && (
+                        <div className="codex-wakeup-execution-row-prompt">
+                          {t('codex.wakeup.modelSummaryLabel', {
+                            model: formatWakeupModelLabel(record.model, record.modelDisplayName) || t('codex.wakeup.modelDefault'),
+                            reasoning: record.modelReasoningEffort
+                              ? reasoningEffortLabel(record.modelReasoningEffort, t)
+                              : t('codex.wakeup.modelDefault'),
+                          })}
+                        </div>
+                      )}
+                      {record.prompt && (
+                        <div className="codex-wakeup-execution-row-prompt">
+                          {t('codex.wakeup.promptLabel')}: {record.prompt}
+                        </div>
+                      )}
+                      <p className="codex-wakeup-execution-row-message">
+                        {record.status === 'pending'
+                          ? t('codex.wakeup.executionPendingDesc')
+                          : record.status === 'running'
+                            ? t('codex.wakeup.executionRunningDesc')
+                            : record.status === 'success'
+                              ? record.reply || t('codex.wakeup.historyNoReply')
+                              : record.error || t('codex.wakeup.historyUnknownError')}
+                      </p>
+                      <div className="codex-wakeup-execution-row-meta">
+                        {record.timestamp && <span>{formatHistoryTimestamp(record.timestamp)}</span>}
+                        {record.durationMs !== undefined && <span>{formatDuration(record.durationMs)}</span>}
                       </div>
-                    )}
-                    <p className="codex-wakeup-execution-row-message">
-                      {record.status === 'pending'
-                        ? t('codex.wakeup.executionPendingDesc')
-                        : record.status === 'running'
-                          ? t('codex.wakeup.executionRunningDesc')
-                          : record.status === 'success'
-                            ? record.reply || t('codex.wakeup.historyNoReply')
-                            : record.error || t('codex.wakeup.historyUnknownError')}
-                    </p>
-                    <div className="codex-wakeup-execution-row-meta">
-                      {record.timestamp && <span>{formatHistoryTimestamp(record.timestamp)}</span>}
-                      {record.durationMs !== undefined && <span>{formatDuration(record.durationMs)}</span>}
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
                 {filteredExecutionRecords.length === 0 && (
                   <p className="wakeup-hint">{t('common.none', '暂无')}</p>
                 )}

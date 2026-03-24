@@ -556,7 +556,11 @@
       "zedAppPathDesc": "空欄の場合は既定のパスを使用",
       "zedAppPathPlaceholder": "既定のパス",
       "zedPathSelect": "選択",
-      "zedPathReset": "既定に戻す"
+      "zedPathReset": "既定に戻す",
+      "updateReminder": "アップデート通知",
+      "updateReminderDesc": "新しいバージョンが検出されたとき、更新通知とサイドバーのクイック入口を表示します。",
+      "updateReminderOff": "オフ（通知しない）",
+      "updateReminderOn": "オン（通知する）"
     },
     "network": {
       "apiTitle": "反重力コックピット API",
@@ -1211,7 +1215,9 @@
     "installing": "インストール中...",
     "authorizing": "システム認証を待っています...",
     "installFailed": "システムへのインストールに失敗しました。後でもう一度試すか、手動でダウンロードしてください。",
-    "restartRequiredAfterInstall": "更新はインストール済みです。切り替えを完了するにはアプリを手動で再起動してください。"
+    "restartRequiredAfterInstall": "更新はインストール済みです。切り替えを完了するにはアプリを手動で再起動してください。",
+    "skipThisVersion": "このバージョンをスキップ",
+    "skipFailed": "この更新をスキップできませんでした: {{error}}"
   },
   "closeDialog": {
     "title": "ウィンドウを閉じる",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "毎日",
         "weekly": "毎週",
-        "interval": "間隔"
+        "interval": "間隔",
+        "quota_reset": "クォータリセット後"
       },
       "dailyTimeLabel": "毎日の実行時刻",
       "weeklyDaysLabel": "実行曜日",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "テストが完了しました。成功 {{success}}、失敗 {{failed}}。",
       "deleteConfirm": "タスク「{{name}}」を削除しますか？",
       "executedCommandLabel": "実際に実行したコマンド",
-      "accountInfoLabel": "アカウント情報"
+      "accountInfoLabel": "アカウント情報",
+      "managePresets": "モデルプリセット",
+      "presetManagerTitle": "モデルプリセットを管理",
+      "presetListLabel": "プリセット一覧",
+      "addPreset": "プリセットを追加",
+      "presetEmpty": "モデルプリセットはまだありません。追加すると、起動タスク用のモデルを選べるようになります。",
+      "presetNameLabel": "プリセット名",
+      "presetNamePlaceholder": "例: GPT-5.4 標準起動",
+      "presetNameRequired": "プリセット名を入力してください。",
+      "presetModelLabel": "モデル値",
+      "presetModelPlaceholder": "例: gpt-5.4",
+      "presetModelRequired": "モデル値を入力してください。",
+      "presetModelDuplicate": "このモデル値は別のプリセットですでに使われています。",
+      "presetAllowedReasoningLabel": "使用可能な推論強度",
+      "presetDefaultReasoningLabel": "既定の推論強度",
+      "presetReasoningEffortsRequired": "推論強度を 1 つ以上選択してください。",
+      "presetDefaultReasoningRequired": "使用可能な一覧から既定の推論強度を選択してください。",
+      "presetDeleteConfirm": "モデルプリセット「{{name}}」を削除しますか？",
+      "noticePresetCreated": "モデルプリセットを作成しました。",
+      "noticePresetUpdated": "モデルプリセットを更新しました。",
+      "noticePresetDeleted": "モデルプリセットを削除しました。",
+      "taskModelLabel": "モデルプリセット",
+      "taskModelHint": "先にプリセットを選び、その後この起動タスクで使う推論強度を選択してください。",
+      "taskModelRequired": "このタスク用のモデルプリセットを選択してください。",
+      "testModelLabel": "テスト用モデルプリセット",
+      "testModelHint": "この手動テストで使うプリセットと推論強度を選択してください。",
+      "testModelRequired": "このテスト用のモデルプリセットを選択してください。",
+      "reasoningEffortLabel": "推論強度",
+      "reasoningEffortEmpty": "先にモデルプリセットを選択すると、利用可能な推論強度が表示されます。",
+      "taskReasoningEffortRequired": "このタスク用の推論強度を選択してください。",
+      "testReasoningEffortRequired": "このテスト用の推論強度を選択してください。",
+      "selectPresetPlaceholder": "プリセットを選択",
+      "selectReasoningPlaceholder": "推論強度を選択",
+      "modelValuePreview": "実際のモデル値: {{model}}",
+      "modelSummaryLabel": "モデル: {{model}} · 推論: {{reasoning}}",
+      "modelDefault": "既定",
+      "reasoningEfforts": {
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "最高"
+      },
+      "scheduleQuotaResetHint": "クォータリセット後の起動を有効にすると、自動更新は2分ごとに調整されます。",
+      "scheduleQuotaResetSummary": "クォータリセット後に実行",
+      "quotaResetWindowLabel": "リセットウィンドウのトリガー条件",
+      "quotaResetWindowHint": "primary_window は通常 5時間枠の配額を指します。無料ユーザーでは primary_window が週次配額を指す場合があり、サブスクリプションによって異なることがあります。",
+      "quotaResetWindowOptions": {
+        "either": "primary_window または secondary_window のいずれかがリセットされたときに実行",
+        "primary_window": "primary_window がリセットされたときのみ実行",
+        "secondary_window": "secondary_window がリセットされたときのみ実行"
+      },
+      "nextRunsQuotaResetHint": "クォータリセット起動は最新のクォータデータに依存するため、固定時刻のプレビューは利用できません。",
+      "triggerQuotaReset": "クォータリセット起動",
+      "noticeSavedEnabledWithQuotaReset": "タスクを保存しました。合計: {{count}}。Codex の自動更新は {{minutes}} 分間隔に調整されました。"
     }
   },
   "githubCopilot": {

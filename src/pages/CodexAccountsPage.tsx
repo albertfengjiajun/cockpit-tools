@@ -14,6 +14,7 @@ import {
   Play,
   RotateCw,
   CircleAlert,
+  Rows3,
   LayoutGrid,
   List,
   Search,
@@ -81,11 +82,32 @@ const CODEX_TOKEN_BATCH_EXAMPLE = `[
   }
 ]`;
 const CODEX_USAGE_URL = 'https://platform.openai.com/usage';
+const CODEX_OVERVIEW_LAYOUT_MODE_KEY = 'agtools.codex.accounts.overview_layout_mode';
+
+type CodexOverviewLayoutMode = 'compact' | 'list' | 'grid';
+
+function normalizeCodexOverviewLayoutMode(
+  value: string | null,
+): CodexOverviewLayoutMode | null {
+  if (value === 'compact' || value === 'list' || value === 'grid') return value;
+  return null;
+}
 
 export function CodexAccountsPage() {
   const [activeTab, setActiveTab] = useState<CodexTab>('overview');
   const untaggedKey = '__untagged__';
   const [filterTypes, setFilterTypes] = useState<string[]>([]);
+  const [overviewLayoutMode, setOverviewLayoutMode] = useState<CodexOverviewLayoutMode>(() => {
+    try {
+      const saved = normalizeCodexOverviewLayoutMode(localStorage.getItem(CODEX_OVERVIEW_LAYOUT_MODE_KEY));
+      if (saved) return saved;
+      const legacy = normalizeCodexOverviewLayoutMode(localStorage.getItem('agtools.codex.accounts_view_mode'));
+      if (legacy === 'list' || legacy === 'grid') return legacy;
+    } catch {
+      // ignore persistence failures
+    }
+    return 'grid';
+  });
 
   const store = useCodexAccountStore();
 
@@ -133,6 +155,30 @@ export function CodexAccountsPage() {
     importing, openAddModal, closeAddModal,
     formatDate, normalizeTag,
   } = page;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CODEX_OVERVIEW_LAYOUT_MODE_KEY, overviewLayoutMode);
+    } catch {
+      // ignore persistence failures
+    }
+  }, [overviewLayoutMode]);
+
+  const handleChangeOverviewLayoutMode = useCallback(
+    (mode: CodexOverviewLayoutMode) => {
+      setOverviewLayoutMode(mode);
+      if (mode === 'list' || mode === 'grid') {
+        setViewMode(mode);
+      }
+    },
+    [setViewMode],
+  );
+
+  useEffect(() => {
+    if (overviewLayoutMode !== 'compact' && viewMode !== overviewLayoutMode) {
+      setViewMode(overviewLayoutMode);
+    }
+  }, [overviewLayoutMode, setViewMode, viewMode]);
 
   const toggleFilterTypeValue = useCallback((value: string) => {
     setFilterTypes((prev) => {
@@ -1045,7 +1091,83 @@ export function CodexAccountsPage() {
 
   const resolveGroupLabel = (groupKey: string) => groupKey === untaggedKey ? t('accounts.defaultGroup', '默认分组') : groupKey;
 
+  const resolveCompactQuotaItems = useCallback(
+    (presentation: ReturnType<typeof buildCodexAccountPresentation>) => {
+      const standardQuotaItems = presentation.quotaItems.filter((item) => item.key !== 'code_review');
+      const first = standardQuotaItems[0];
+      const primary = standardQuotaItems.find((item) => item.key === 'primary') ?? first;
+      const secondary =
+        standardQuotaItems.find((item) => item.key === 'secondary') ??
+        standardQuotaItems.find((item) => item.key !== primary?.key);
+
+      return [
+        {
+          key: 'primary',
+          valueText: primary?.valueText ?? '--',
+          quotaClass: primary?.quotaClass ?? 'unknown',
+        },
+        {
+          key: 'secondary',
+          valueText: secondary?.valueText ?? '--',
+          quotaClass: secondary?.quotaClass ?? 'unknown',
+        },
+      ];
+    },
+    [],
+  );
+
   // ─── Render helpers ──────────────────────────────────────────────────
+
+  const renderCompactRows = (items: typeof filteredAccounts, groupKey?: string) =>
+    items.map((account) => {
+      const presentation = resolvePresentation(account);
+      const isCurrent = currentAccount?.id === account.id;
+      const isSelected = selected.has(account.id);
+      const compactQuotaItems = resolveCompactQuotaItems(presentation);
+      return (
+        <div
+          key={groupKey ? `${groupKey}-${account.id}` : account.id}
+          className={`codex-compact-row ${isCurrent ? 'current' : ''} ${isSelected ? 'selected' : ''}`}
+        >
+          <div className="codex-compact-select">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => toggleSelect(account.id)}
+            />
+          </div>
+          <span
+            className="codex-compact-email"
+            title={maskAccountText(presentation.displayName)}
+          >
+            {maskAccountText(presentation.displayName)}
+          </span>
+          <div className="codex-compact-quotas">
+            {compactQuotaItems.map((item) => (
+              <span
+                key={`${account.id}-${item.key}`}
+                className={`codex-compact-quota codex-compact-quota-${item.key}`}
+              >
+                <span className="codex-compact-dot" />
+                <span className={`codex-compact-quota-value ${item.quotaClass}`}>{item.valueText}</span>
+              </span>
+            ))}
+          </div>
+          <button
+            className={`codex-compact-switch-btn ${!isCurrent ? 'success' : ''}`}
+            onClick={() => handleSwitch(account.id)}
+            disabled={!!switching}
+            title={t('codex.switch', '切换')}
+          >
+            {switching === account.id ? (
+              <RefreshCw size={14} className="loading-spinner" />
+            ) : (
+              <Play size={14} />
+            )}
+          </button>
+        </div>
+      );
+    });
 
   const renderGridCards = (items: typeof filteredAccounts, groupKey?: string) =>
     items.map((account) => {
@@ -1389,8 +1511,9 @@ export function CodexAccountsPage() {
           <div className="toolbar-left">
             <div className="search-box"><Search size={16} className="search-icon" /><input type="text" placeholder={t('common.shared.search', '搜索账号...')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
             <div className="view-switcher">
-              <button className={`view-btn ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')} title={t('common.shared.view.list', '列表视图')}><List size={16} /></button>
-              <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} title={t('common.shared.view.grid', '卡片视图')}><LayoutGrid size={16} /></button>
+              <button className={`view-btn ${overviewLayoutMode === 'compact' ? 'active' : ''}`} onClick={() => handleChangeOverviewLayoutMode('compact')} title={t('accounts.view.compact', '紧凑视图')}><Rows3 size={16} /></button>
+              <button className={`view-btn ${overviewLayoutMode === 'list' ? 'active' : ''}`} onClick={() => handleChangeOverviewLayoutMode('list')} title={t('common.shared.view.list', '列表视图')}><List size={16} /></button>
+              <button className={`view-btn ${overviewLayoutMode === 'grid' ? 'active' : ''}`} onClick={() => handleChangeOverviewLayoutMode('grid')} title={t('common.shared.view.grid', '卡片视图')}><LayoutGrid size={16} /></button>
             </div>
             <MultiSelectFilterDropdown
               options={tierFilterOptions}
@@ -1463,6 +1586,22 @@ export function CodexAccountsPage() {
           </div>
         ) : filteredAccounts.length === 0 ? (
           <div className="empty-state"><h3>{t('common.shared.noMatch.title', '没有匹配的账号')}</h3><p>{t('common.shared.noMatch.desc', '请尝试调整搜索或筛选条件')}</p></div>
+        ) : overviewLayoutMode === 'compact' ? (
+          groupByTag ? (
+            <div className="tag-group-list">
+              {groupedAccounts.map(([gk, ga]) => (
+                <div key={gk} className="tag-group-section">
+                  <div className="tag-group-header">
+                    <span className="tag-group-title">{resolveGroupLabel(gk)}</span>
+                    <span className="tag-group-count">{ga.length}</span>
+                  </div>
+                  <div className="codex-compact-list">{renderCompactRows(ga, gk)}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="codex-compact-list">{renderCompactRows(filteredAccounts)}</div>
+          )
         ) : viewMode === 'grid' ? (
           groupByTag ? (<div className="tag-group-list">{groupedAccounts.map(([gk, ga]) => (<div key={gk} className="tag-group-section"><div className="tag-group-header"><span className="tag-group-title">{resolveGroupLabel(gk)}</span><span className="tag-group-count">{ga.length}</span></div>
             <div className="tag-group-grid codex-accounts-grid">{renderGridCards(ga, gk)}</div></div>))}</div>

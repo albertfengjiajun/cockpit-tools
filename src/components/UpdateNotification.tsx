@@ -35,8 +35,10 @@ interface UpdateNotificationProps {
   actionRetryStatus?: string;
   actionError?: string;
   actionErrorDetails?: string;
+  skipError?: string;
   onPrimaryAction?: () => Promise<void> | void;
   onCancelUpdate?: () => Promise<void> | void;
+  onSkipUpdate?: () => Promise<void> | void;
 }
 
 export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
@@ -50,12 +52,15 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
   actionRetryStatus = '',
   actionError = '',
   actionErrorDetails = '',
+  skipError = '',
   onPrimaryAction,
   onCancelUpdate,
+  onSkipUpdate,
 }) => {
   const { t, i18n } = useTranslation();
   const [showErrorDetails, setShowErrorDetails] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
 
   const handleTriggerUpdate = useCallback(async () => {
     if (!onPrimaryAction) {
@@ -83,6 +88,18 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
     setShowErrorDetails(false);
     void handleTriggerUpdate();
   }, [handleTriggerUpdate]);
+
+  const handleSkipUpdate = useCallback(async () => {
+    if (!onSkipUpdate || isSkipping) {
+      return;
+    }
+    setIsSkipping(true);
+    try {
+      await onSkipUpdate();
+    } finally {
+      setIsSkipping(false);
+    }
+  }, [isSkipping, onSkipUpdate]);
 
   const handleFallbackDownload = async () => {
     if (updateInfo?.download_url) {
@@ -150,6 +167,13 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
   const mergedRetryStatus = actionRetryStatus;
   const isError =
     Boolean(actionError) && !checking && !isDownloading && !isInstalling && !isDownloaded;
+  const canSkipByState = actionState === 'available' || isDownloaded;
+  const showSkipAction = Boolean(onSkipUpdate)
+    && canSkipByState
+    && !checking
+    && !isDownloading
+    && !isInstalling
+    && !isError;
   const modalTitle = updateInfo
     ? t('update_notification.title')
     : t('settings.about.checkUpdate');
@@ -296,6 +320,12 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
             </div>
           )}
 
+          {skipError && (
+            <div className="update-status update-status-error">
+              <span>{skipError}</span>
+            </div>
+          )}
+
           {formattedNotes && (
             <div className="release-notes">
               <h3 className="release-notes-title">{t('update_notification.whatsNew', "What's New")}</h3>
@@ -317,6 +347,15 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
                 ? t('update_notification.later', 'Later')
                 : t('common.cancel')}
           </button>
+          {showSkipAction && (
+            <button
+              className="btn btn-ghost"
+              onClick={handleSkipUpdate}
+              disabled={isSkipping || isRestarting || isInstalling}
+            >
+              {t('update_notification.skipThisVersion')}
+            </button>
+          )}
           {isError ? (
             <>
               <button className="btn btn-secondary" onClick={handleRetryDownload}>

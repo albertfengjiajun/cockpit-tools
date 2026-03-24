@@ -556,7 +556,11 @@
       "zedAppPathDesc": "Pozostaw puste, aby użyć ścieżki domyślnej",
       "zedAppPathPlaceholder": "Domyślna ścieżka",
       "zedPathSelect": "Wybierz",
-      "zedPathReset": "Przywróć domyślne"
+      "zedPathReset": "Przywróć domyślne",
+      "updateReminder": "Przypomnienia o aktualizacjach",
+      "updateReminderDesc": "Gdy zostanie wykryta nowa wersja, pokazuj monity aktualizacji i szybkie wejście na pasku bocznym.",
+      "updateReminderOff": "Wyłączone (bez przypomnień)",
+      "updateReminderOn": "Włączone (pokazuj przypomnienia)"
     },
     "network": {
       "apiTitle": "API kokpitu antygrawitacyjnego",
@@ -1211,7 +1215,9 @@
     "installing": "Instalowanie...",
     "authorizing": "Oczekiwanie na autoryzację systemu...",
     "installFailed": "Instalacja systemowa nie powiodła się. Spróbuj ponownie później lub pobierz pakiet ręcznie.",
-    "restartRequiredAfterInstall": "Aktualizacja jest zainstalowana. Uruchom aplikację ponownie ręcznie, aby dokończyć przełączenie."
+    "restartRequiredAfterInstall": "Aktualizacja jest zainstalowana. Uruchom aplikację ponownie ręcznie, aby dokończyć przełączenie.",
+    "skipThisVersion": "Pomiń tę wersję",
+    "skipFailed": "Nie udało się pominąć tej aktualizacji: {{error}}"
   },
   "closeDialog": {
     "title": "Zamknij okno",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "Codziennie",
         "weekly": "Co tydzień",
-        "interval": "Interwał"
+        "interval": "Interwał",
+        "quota_reset": "Po resecie limitu"
       },
       "dailyTimeLabel": "Codzienna godzina uruchomienia",
       "weeklyDaysLabel": "Uruchamiaj w",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "Test zakończony. Sukces {{success}}, porażka {{failed}}.",
       "deleteConfirm": "Usunąć zadanie „{{name}}”?",
       "executedCommandLabel": "Rzeczywiście uruchomione polecenie",
-      "accountInfoLabel": "Informacje o koncie"
+      "accountInfoLabel": "Informacje o koncie",
+      "managePresets": "Presety modeli",
+      "presetManagerTitle": "Zarządzaj presetami modeli",
+      "presetListLabel": "Lista presetów",
+      "addPreset": "Dodaj preset",
+      "presetEmpty": "Nie ma jeszcze presetów modeli. Dodaj jeden, aby wybierać modele dla zadań wybudzania.",
+      "presetNameLabel": "Nazwa presetu",
+      "presetNamePlaceholder": "Na przykład: standardowe wybudzanie GPT-5.4",
+      "presetNameRequired": "Wpisz nazwę presetu.",
+      "presetModelLabel": "Wartość modelu",
+      "presetModelPlaceholder": "Na przykład: gpt-5.4",
+      "presetModelRequired": "Wpisz wartość modelu.",
+      "presetModelDuplicate": "Ta wartość modelu istnieje już w innym presecie.",
+      "presetAllowedReasoningLabel": "Dozwolone poziomy rozumowania",
+      "presetDefaultReasoningLabel": "Domyślny poziom rozumowania",
+      "presetReasoningEffortsRequired": "Wybierz co najmniej jeden poziom rozumowania.",
+      "presetDefaultReasoningRequired": "Wybierz domyślny poziom rozumowania z dozwolonej listy.",
+      "presetDeleteConfirm": "Usunąć preset modelu „{{name}}”?",
+      "noticePresetCreated": "Preset modelu został utworzony.",
+      "noticePresetUpdated": "Preset modelu został zaktualizowany.",
+      "noticePresetDeleted": "Preset modelu został usunięty.",
+      "taskModelLabel": "Preset modelu",
+      "taskModelHint": "Najpierw wybierz preset, a potem poziom rozumowania dla tego zadania wybudzania.",
+      "taskModelRequired": "Wybierz preset modelu dla tego zadania.",
+      "testModelLabel": "Preset modelu testowego",
+      "testModelHint": "Wybierz preset i poziom rozumowania dla tego ręcznego testu.",
+      "testModelRequired": "Wybierz preset modelu dla tego testu.",
+      "reasoningEffortLabel": "Poziom rozumowania",
+      "reasoningEffortEmpty": "Najpierw wybierz preset modelu, aby zobaczyć dostępne poziomy rozumowania.",
+      "taskReasoningEffortRequired": "Wybierz poziom rozumowania dla tego zadania.",
+      "testReasoningEffortRequired": "Wybierz poziom rozumowania dla tego testu.",
+      "selectPresetPlaceholder": "Wybierz preset",
+      "selectReasoningPlaceholder": "Wybierz poziom rozumowania",
+      "modelValuePreview": "Rzeczywista wartość modelu: {{model}}",
+      "modelSummaryLabel": "Model: {{model}} · Rozumowanie: {{reasoning}}",
+      "modelDefault": "Domyślny",
+      "reasoningEfforts": {
+        "low": "Niski",
+        "medium": "Średni",
+        "high": "Wysoki",
+        "xhigh": "Bardzo wysoki"
+      },
+      "scheduleQuotaResetHint": "Po włączeniu wybudzania po resecie limitu automatyczne odświeżanie zostanie ustawione co 2 minuty.",
+      "scheduleQuotaResetSummary": "Uruchom po resecie limitu",
+      "quotaResetWindowLabel": "Warunek wyzwalania okna resetu",
+      "quotaResetWindowHint": "primary_window zwykle odpowiada limitowi 5-godzinnemu. U użytkowników darmowych primary_window może odpowiadać limitowi tygodniowemu i różnić się zależnie od subskrypcji.",
+      "quotaResetWindowOptions": {
+        "either": "Uruchom, gdy zresetuje się primary_window lub secondary_window",
+        "primary_window": "Uruchom tylko przy resecie primary_window",
+        "secondary_window": "Uruchom tylko przy resecie secondary_window"
+      },
+      "nextRunsQuotaResetHint": "Wyzwalacze po resecie limitu zależą od najnowszych danych limitu, więc podgląd stałej godziny nie jest dostępny.",
+      "triggerQuotaReset": "Wyzwalacz resetu limitu",
+      "noticeSavedEnabledWithQuotaReset": "Zadania zapisane. Łącznie: {{count}}. Automatyczne odświeżanie Codex ustawiono na co {{minutes}} min."
     }
   },
   "githubCopilot": {

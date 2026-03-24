@@ -285,6 +285,9 @@ export function SettingsPage() {
   const [autoInstall, setAutoInstall] = useState(false);
   const [autoInstallLoaded, setAutoInstallLoaded] = useState(false);
   const autoInstallTouchedRef = useRef(false);
+  const [updateRemindersEnabled, setUpdateRemindersEnabled] = useState(true);
+  const [updateRemindersLoaded, setUpdateRemindersLoaded] = useState(false);
+  const updateRemindersTouchedRef = useRef(false);
 
   useEffect(() => {
     getVersion().then(ver => setAppVersion(`v${ver}`));
@@ -295,10 +298,14 @@ export function SettingsPage() {
       check_interval_hours: number;
       auto_install?: boolean;
       last_run_version?: string;
+      remind_on_update?: boolean;
+      skipped_version?: string;
     }>('get_update_settings')
       .then((s) => {
         setAutoInstall(Boolean(s?.auto_install));
+        setUpdateRemindersEnabled(s?.remind_on_update ?? true);
         setAutoInstallLoaded(true);
+        setUpdateRemindersLoaded(true);
       })
       .catch((err) => {
         console.error('加载自动更新设置失败:', err);
@@ -665,6 +672,8 @@ export function SettingsPage() {
       check_interval_hours: number;
       auto_install?: boolean;
       last_run_version?: string;
+      remind_on_update?: boolean;
+      skipped_version?: string;
     }>('get_update_settings')
       .then((s) => {
         if (Boolean(s?.auto_install) === autoInstall) {
@@ -678,6 +687,38 @@ export function SettingsPage() {
       })
       .catch(() => {});
   }, [autoInstall, autoInstallLoaded]);
+
+  // Save update reminder setting when changed
+  useEffect(() => {
+    if (!updateRemindersLoaded && !updateRemindersTouchedRef.current) {
+      return;
+    }
+
+    invoke<{
+      auto_check: boolean;
+      last_check_time: number;
+      check_interval_hours: number;
+      auto_install?: boolean;
+      last_run_version?: string;
+      remind_on_update?: boolean;
+      skipped_version?: string;
+    }>('get_update_settings')
+      .then((s) => {
+        if ((s?.remind_on_update ?? true) === updateRemindersEnabled) {
+          return;
+        }
+        invoke('save_update_settings', {
+          settings: { ...s, remind_on_update: updateRemindersEnabled },
+        }).then(() => {
+          window.dispatchEvent(
+            new CustomEvent('update-reminder-changed', { detail: { enabled: updateRemindersEnabled } }),
+          );
+        }).catch((err: unknown) =>
+          console.error('Failed to save update reminder setting:', err),
+        );
+      })
+      .catch(() => {});
+  }, [updateRemindersEnabled, updateRemindersLoaded]);
   
   // 检测配额重置任务状态
   useEffect(() => {
@@ -1210,6 +1251,26 @@ export function SettingsPage() {
                   >
                     <option value="false">{t('settings.general.autoUpdateOff')}</option>
                     <option value="true">{t('settings.general.autoUpdateOn')}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="settings-row">
+                <div className="row-label">
+                  <div className="row-title">{t('settings.general.updateReminder')}</div>
+                  <div className="row-desc">{t('settings.general.updateReminderDesc')}</div>
+                </div>
+                <div className="row-control">
+                  <select
+                    className="settings-select"
+                    value={updateRemindersEnabled ? 'true' : 'false'}
+                    onChange={(e) => {
+                      updateRemindersTouchedRef.current = true;
+                      setUpdateRemindersEnabled(e.target.value === 'true');
+                    }}
+                  >
+                    <option value="true">{t('settings.general.updateReminderOn')}</option>
+                    <option value="false">{t('settings.general.updateReminderOff')}</option>
                   </select>
                 </div>
               </div>

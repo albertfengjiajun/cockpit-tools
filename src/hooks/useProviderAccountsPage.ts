@@ -121,17 +121,27 @@ export interface ProviderAccountBase {
 
 const DEFAULT_SORT_BY = 'created_at';
 const DEFAULT_SORT_DIRECTION: SortDirection = 'desc';
+const DEFAULT_VIEW_MODE: ViewMode = 'grid';
 
 const normalizeSortDirection = (value: string | null): SortDirection =>
   value === 'asc' ? 'asc' : DEFAULT_SORT_DIRECTION;
 
+const normalizeViewMode = (value: string | null): ViewMode =>
+  value === 'list' ? 'list' : DEFAULT_VIEW_MODE;
+
+const buildStorageScope = (platformKey: string) =>
+  platformKey.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+
 const buildSortStorageKeys = (platformKey: string) => {
-  const scope = platformKey.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  const scope = buildStorageScope(platformKey);
   return {
     sortByKey: `agtools.${scope}.accounts_sort_by`,
     sortDirectionKey: `agtools.${scope}.accounts_sort_direction`,
   };
 };
+
+const buildViewModeStorageKey = (platformKey: string) =>
+  `agtools.${buildStorageScope(platformKey)}.accounts_view_mode`;
 
 // ---------------------------------------------------------------------------
 // Hook return type
@@ -334,6 +344,7 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
     setCurrentAccountId: setStoreCurrentAccountId,
     updateAccountTags,
   } = store;
+  const viewModeStorageKey = buildViewModeStorageKey(platformKey);
   const { sortByKey, sortDirectionKey } = buildSortStorageKeys(platformKey);
   const managesCurrentAccountId = typeof setStoreCurrentAccountId === 'function';
 
@@ -356,7 +367,13 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
   );
 
   // ─── View Mode ────────────────────────────────────────────────────────
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      return normalizeViewMode(localStorage.getItem(viewModeStorageKey));
+    } catch {
+      return DEFAULT_VIEW_MODE;
+    }
+  });
 
   // ─── Search & Filter ──────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
@@ -370,6 +387,14 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
   const [sortDirection, setSortDirection] = useState<SortDirection>(() =>
     normalizeSortDirection(localStorage.getItem(sortDirectionKey)),
   );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(viewModeStorageKey, viewMode);
+    } catch {
+      // ignore persistence failures
+    }
+  }, [viewMode, viewModeStorageKey]);
 
   useEffect(() => {
     localStorage.setItem(sortByKey, sortBy);

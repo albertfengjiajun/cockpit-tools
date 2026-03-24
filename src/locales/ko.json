@@ -556,7 +556,11 @@
       "zedAppPathDesc": "기본 경로를 사용하려면 비워 두세요",
       "zedAppPathPlaceholder": "기본 경로",
       "zedPathSelect": "선택",
-      "zedPathReset": "기본값으로 재설정"
+      "zedPathReset": "기본값으로 재설정",
+      "updateReminder": "업데이트 알림",
+      "updateReminderDesc": "새 버전이 감지되면 업데이트 안내와 사이드바 빠른 진입 버튼을 표시합니다.",
+      "updateReminderOff": "끔(알림 없음)",
+      "updateReminderOn": "켬(알림 표시)"
     },
     "network": {
       "apiTitle": "반중력 조종석 API",
@@ -1211,7 +1215,9 @@
     "installing": "설치 중...",
     "authorizing": "시스템 권한 승인을 기다리는 중...",
     "installFailed": "시스템 설치에 실패했습니다. 나중에 다시 시도하거나 수동으로 다운로드하세요.",
-    "restartRequiredAfterInstall": "업데이트는 설치되었습니다. 전환을 완료하려면 앱을 수동으로 다시 시작하세요."
+    "restartRequiredAfterInstall": "업데이트는 설치되었습니다. 전환을 완료하려면 앱을 수동으로 다시 시작하세요.",
+    "skipThisVersion": "이 버전 건너뛰기",
+    "skipFailed": "이 업데이트를 건너뛰지 못했습니다: {{error}}"
   },
   "closeDialog": {
     "title": "창 닫기",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "매일",
         "weekly": "매주",
-        "interval": "간격"
+        "interval": "간격",
+        "quota_reset": "할당량 초기화 후"
       },
       "dailyTimeLabel": "매일 실행 시간",
       "weeklyDaysLabel": "실행 요일",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "테스트가 완료되었습니다. 성공 {{success}}, 실패 {{failed}}.",
       "deleteConfirm": "작업 \"{{name}}\"을 삭제할까요?",
       "executedCommandLabel": "실제 실행 명령어",
-      "accountInfoLabel": "계정 정보"
+      "accountInfoLabel": "계정 정보",
+      "managePresets": "모델 프리셋",
+      "presetManagerTitle": "모델 프리셋 관리",
+      "presetListLabel": "프리셋 목록",
+      "addPreset": "프리셋 추가",
+      "presetEmpty": "아직 모델 프리셋이 없습니다. 추가하면 웨이크업 작업에서 모델을 선택할 수 있습니다.",
+      "presetNameLabel": "프리셋 이름",
+      "presetNamePlaceholder": "예: GPT-5.4 기본 웨이크업",
+      "presetNameRequired": "프리셋 이름을 입력하세요.",
+      "presetModelLabel": "모델 값",
+      "presetModelPlaceholder": "예: gpt-5.4",
+      "presetModelRequired": "모델 값을 입력하세요.",
+      "presetModelDuplicate": "이 모델 값은 다른 프리셋에 이미 있습니다.",
+      "presetAllowedReasoningLabel": "허용된 추론 강도",
+      "presetDefaultReasoningLabel": "기본 추론 강도",
+      "presetReasoningEffortsRequired": "추론 강도를 하나 이상 선택하세요.",
+      "presetDefaultReasoningRequired": "허용된 목록에서 기본 추론 강도를 선택하세요.",
+      "presetDeleteConfirm": "모델 프리셋 \"{{name}}\"을 삭제할까요?",
+      "noticePresetCreated": "모델 프리셋을 만들었습니다.",
+      "noticePresetUpdated": "모델 프리셋을 업데이트했습니다.",
+      "noticePresetDeleted": "모델 프리셋을 삭제했습니다.",
+      "taskModelLabel": "모델 프리셋",
+      "taskModelHint": "먼저 프리셋을 고르고, 이 웨이크업 작업에 사용할 추론 강도를 선택하세요.",
+      "taskModelRequired": "이 작업에 사용할 모델 프리셋을 선택하세요.",
+      "testModelLabel": "테스트 모델 프리셋",
+      "testModelHint": "이 수동 테스트에 사용할 프리셋과 추론 강도를 선택하세요.",
+      "testModelRequired": "이 테스트에 사용할 모델 프리셋을 선택하세요.",
+      "reasoningEffortLabel": "추론 강도",
+      "reasoningEffortEmpty": "먼저 모델 프리셋을 선택하면 사용 가능한 추론 강도가 표시됩니다.",
+      "taskReasoningEffortRequired": "이 작업에 사용할 추론 강도를 선택하세요.",
+      "testReasoningEffortRequired": "이 테스트에 사용할 추론 강도를 선택하세요.",
+      "selectPresetPlaceholder": "프리셋 선택",
+      "selectReasoningPlaceholder": "추론 강도 선택",
+      "modelValuePreview": "실제 모델 값: {{model}}",
+      "modelSummaryLabel": "모델: {{model}} · 추론: {{reasoning}}",
+      "modelDefault": "기본값",
+      "reasoningEfforts": {
+        "low": "낮음",
+        "medium": "중간",
+        "high": "높음",
+        "xhigh": "매우 높음"
+      },
+      "scheduleQuotaResetHint": "할당량 초기화 후 깨우기를 켜면 자동 새로고침이 2분 간격으로 조정됩니다.",
+      "scheduleQuotaResetSummary": "할당량 초기화 후 실행",
+      "quotaResetWindowLabel": "리셋 윈도우 트리거 조건",
+      "quotaResetWindowHint": "primary_window는 일반적으로 5시간 할당량을 의미합니다. 무료 사용자에서는 primary_window가 주간 할당량을 의미할 수 있으며, 구독에 따라 달라질 수 있습니다.",
+      "quotaResetWindowOptions": {
+        "either": "primary_window 또는 secondary_window 중 하나가 리셋되면 실행",
+        "primary_window": "primary_window 리셋 시에만 실행",
+        "secondary_window": "secondary_window 리셋 시에만 실행"
+      },
+      "nextRunsQuotaResetHint": "할당량 초기화 트리거는 최신 할당량 데이터에 의존하므로 고정 시간 미리보기를 제공하지 않습니다.",
+      "triggerQuotaReset": "할당량 초기화 트리거",
+      "noticeSavedEnabledWithQuotaReset": "작업이 저장되었습니다. 총 {{count}}개. Codex 자동 새로고침이 {{minutes}}분 간격으로 조정되었습니다."
     }
   },
   "githubCopilot": {

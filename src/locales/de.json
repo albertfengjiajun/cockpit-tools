@@ -556,7 +556,11 @@
       "zedAppPathDesc": "Leer lassen, um den Standardpfad zu verwenden",
       "zedAppPathPlaceholder": "Standardpfad",
       "zedPathSelect": "Auswählen",
-      "zedPathReset": "Auf Standard zurücksetzen"
+      "zedPathReset": "Auf Standard zurücksetzen",
+      "updateReminder": "Update-Erinnerungen",
+      "updateReminderDesc": "Bei neuer Version Update-Hinweise und den Schnellzugriff in der Seitenleiste anzeigen.",
+      "updateReminderOff": "Aus (keine Erinnerungen)",
+      "updateReminderOn": "Ein (Erinnerungen anzeigen)"
     },
     "network": {
       "apiTitle": "Antigravity-Cockpit-API",
@@ -1211,7 +1215,9 @@
     "installing": "Installation läuft...",
     "authorizing": "Warten auf Systemautorisierung...",
     "installFailed": "Die Systeminstallation ist fehlgeschlagen. Versuchen Sie es später erneut oder laden Sie das Paket manuell herunter.",
-    "restartRequiredAfterInstall": "Das Update ist installiert. Starten Sie die App manuell neu, um den Wechsel abzuschließen."
+    "restartRequiredAfterInstall": "Das Update ist installiert. Starten Sie die App manuell neu, um den Wechsel abzuschließen.",
+    "skipThisVersion": "Diese Version überspringen",
+    "skipFailed": "Dieses Update konnte nicht übersprungen werden: {{error}}"
   },
   "closeDialog": {
     "title": "Fenster schließen",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "Täglich",
         "weekly": "Wöchentlich",
-        "interval": "Intervall"
+        "interval": "Intervall",
+        "quota_reset": "Nach Kontingent-Reset"
       },
       "dailyTimeLabel": "Tägliche Ausführungszeit",
       "weeklyDaysLabel": "Ausführen an",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "Test abgeschlossen. {{success}} erfolgreich, {{failed}} fehlgeschlagen.",
       "deleteConfirm": "Aufgabe „{{name}}“ löschen?",
       "executedCommandLabel": "Tatsächlich ausgeführter Befehl",
-      "accountInfoLabel": "Kontoinfo"
+      "accountInfoLabel": "Kontoinfo",
+      "managePresets": "Modellvorgaben",
+      "presetManagerTitle": "Modellvorgaben verwalten",
+      "presetListLabel": "Vorgabenliste",
+      "addPreset": "Vorgabe hinzufügen",
+      "presetEmpty": "Noch keine Modellvorgaben. Füge eine hinzu, um Modelle für Wakeup-Aufgaben auszuwählen.",
+      "presetNameLabel": "Vorgabename",
+      "presetNamePlaceholder": "Zum Beispiel: GPT-5.4 Standard-Wakeup",
+      "presetNameRequired": "Bitte einen Vorgabenamen eingeben.",
+      "presetModelLabel": "Modellwert",
+      "presetModelPlaceholder": "Zum Beispiel: gpt-5.4",
+      "presetModelRequired": "Bitte den Modellwert eingeben.",
+      "presetModelDuplicate": "Dieser Modellwert ist bereits in einer anderen Vorgabe vorhanden.",
+      "presetAllowedReasoningLabel": "Erlaubte Reasoning-Stufen",
+      "presetDefaultReasoningLabel": "Standard-Reasoning-Stufe",
+      "presetReasoningEffortsRequired": "Bitte mindestens eine Reasoning-Stufe auswählen.",
+      "presetDefaultReasoningRequired": "Bitte eine Standard-Reasoning-Stufe aus der erlaubten Liste wählen.",
+      "presetDeleteConfirm": "Modellvorgabe „{{name}}“ löschen?",
+      "noticePresetCreated": "Modellvorgabe erstellt.",
+      "noticePresetUpdated": "Modellvorgabe aktualisiert.",
+      "noticePresetDeleted": "Modellvorgabe gelöscht.",
+      "taskModelLabel": "Modellvorgabe",
+      "taskModelHint": "Wähle zuerst die Vorgabe und danach die Reasoning-Stufe für diese Wakeup-Aufgabe.",
+      "taskModelRequired": "Bitte eine Modellvorgabe für diese Aufgabe auswählen.",
+      "testModelLabel": "Test-Modellvorgabe",
+      "testModelHint": "Wähle Vorgabe und Reasoning-Stufe für diesen manuellen Test.",
+      "testModelRequired": "Bitte eine Modellvorgabe für diesen Test auswählen.",
+      "reasoningEffortLabel": "Reasoning-Stufe",
+      "reasoningEffortEmpty": "Wähle zuerst eine Modellvorgabe, um die verfügbaren Reasoning-Stufen zu sehen.",
+      "taskReasoningEffortRequired": "Bitte eine Reasoning-Stufe für diese Aufgabe auswählen.",
+      "testReasoningEffortRequired": "Bitte eine Reasoning-Stufe für diesen Test auswählen.",
+      "selectPresetPlaceholder": "Vorgabe auswählen",
+      "selectReasoningPlaceholder": "Reasoning-Stufe auswählen",
+      "modelValuePreview": "Tatsächlicher Modellwert: {{model}}",
+      "modelSummaryLabel": "Modell: {{model}} · Reasoning: {{reasoning}}",
+      "modelDefault": "Standard",
+      "reasoningEfforts": {
+        "low": "Niedrig",
+        "medium": "Mittel",
+        "high": "Hoch",
+        "xhigh": "Sehr hoch"
+      },
+      "scheduleQuotaResetHint": "Wenn das Aufwecken nach Kontingent-Reset aktiviert ist, wird die automatische Aktualisierung auf alle 2 Minuten angepasst.",
+      "scheduleQuotaResetSummary": "Nach Kontingent-Reset ausführen",
+      "quotaResetWindowLabel": "Trigger-Bedingung für Reset-Fenster",
+      "quotaResetWindowHint": "primary_window entspricht in der Regel dem 5‑Stunden-Kontingent. Bei kostenlosen Nutzern kann primary_window dem Wochenkontingent entsprechen und je nach Abo variieren.",
+      "quotaResetWindowOptions": {
+        "either": "Auslösen, wenn primary_window oder secondary_window zurückgesetzt wird",
+        "primary_window": "Nur bei Reset von primary_window auslösen",
+        "secondary_window": "Nur bei Reset von secondary_window auslösen"
+      },
+      "nextRunsQuotaResetHint": "Auslöser nach Kontingent-Reset hängen von aktuellen Kontingentdaten ab, daher ist keine feste Zeitvorschau verfügbar.",
+      "triggerQuotaReset": "Kontingent-Reset-Auslöser",
+      "noticeSavedEnabledWithQuotaReset": "Aufgaben gespeichert. Gesamt: {{count}}. Die automatische Codex-Aktualisierung wurde auf alle {{minutes}} Minuten angepasst."
     }
   },
   "githubCopilot": {

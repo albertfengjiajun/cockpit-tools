@@ -556,7 +556,11 @@
       "zedAppPathDesc": "Ponechte prázdné pro výchozí cestu",
       "zedAppPathPlaceholder": "Výchozí cesta",
       "zedPathSelect": "Vybrat",
-      "zedPathReset": "Obnovit výchozí"
+      "zedPathReset": "Obnovit výchozí",
+      "updateReminder": "Připomenutí aktualizací",
+      "updateReminderDesc": "Po zjištění nové verze zobrazit výzvu k aktualizaci a rychlý vstup v postranním panelu.",
+      "updateReminderOff": "Vypnuto (bez připomenutí)",
+      "updateReminderOn": "Zapnuto (zobrazovat připomenutí)"
     },
     "network": {
       "apiTitle": "Antigravity Cockpit API",
@@ -1211,7 +1215,9 @@
     "installing": "Instaluje se...",
     "authorizing": "Čeká se na autorizaci systému...",
     "installFailed": "Instalace do systému selhala. Zkuste to později nebo stáhněte balíček ručně.",
-    "restartRequiredAfterInstall": "Aktualizace je nainstalována. Dokončete přepnutí ručním restartem aplikace."
+    "restartRequiredAfterInstall": "Aktualizace je nainstalována. Dokončete přepnutí ručním restartem aplikace.",
+    "skipThisVersion": "Přeskočit tuto verzi",
+    "skipFailed": "Tuto aktualizaci se nepodařilo přeskočit: {{error}}"
   },
   "closeDialog": {
     "title": "Zavřít okno",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "Denně",
         "weekly": "Týdně",
-        "interval": "Interval"
+        "interval": "Interval",
+        "quota_reset": "Po resetu kvóty"
       },
       "dailyTimeLabel": "Denní čas spuštění",
       "weeklyDaysLabel": "Spustit v",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "Test dokončen. Úspěch {{success}}, neúspěch {{failed}}.",
       "deleteConfirm": "Smazat úlohu „{{name}}“?",
       "executedCommandLabel": "Skutečně spuštěný příkaz",
-      "accountInfoLabel": "Informace o účtu"
+      "accountInfoLabel": "Informace o účtu",
+      "managePresets": "Předvolby modelů",
+      "presetManagerTitle": "Správa předvoleb modelů",
+      "presetListLabel": "Seznam předvoleb",
+      "addPreset": "Přidat předvolbu",
+      "presetEmpty": "Zatím nejsou žádné předvolby modelů. Přidejte jednu a pak můžete vybírat modely pro probouzecí úlohy.",
+      "presetNameLabel": "Název předvolby",
+      "presetNamePlaceholder": "Např.: standardní probuzení GPT-5.4",
+      "presetNameRequired": "Zadejte název předvolby.",
+      "presetModelLabel": "Hodnota modelu",
+      "presetModelPlaceholder": "Např.: gpt-5.4",
+      "presetModelRequired": "Zadejte hodnotu modelu.",
+      "presetModelDuplicate": "Tato hodnota modelu už existuje v jiné předvolbě.",
+      "presetAllowedReasoningLabel": "Povolené úrovně uvažování",
+      "presetDefaultReasoningLabel": "Výchozí úroveň uvažování",
+      "presetReasoningEffortsRequired": "Vyberte alespoň jednu úroveň uvažování.",
+      "presetDefaultReasoningRequired": "Vyberte výchozí úroveň uvažování z povoleného seznamu.",
+      "presetDeleteConfirm": "Odstranit předvolbu modelu „{{name}}“?",
+      "noticePresetCreated": "Předvolba modelu byla vytvořena.",
+      "noticePresetUpdated": "Předvolba modelu byla aktualizována.",
+      "noticePresetDeleted": "Předvolba modelu byla odstraněna.",
+      "taskModelLabel": "Předvolba modelu",
+      "taskModelHint": "Nejprve vyberte předvolbu a potom úroveň uvažování pro tuto probouzecí úlohu.",
+      "taskModelRequired": "Vyberte předvolbu modelu pro tuto úlohu.",
+      "testModelLabel": "Předvolba testovacího modelu",
+      "testModelHint": "Vyberte předvolbu a úroveň uvažování pro tento ruční test.",
+      "testModelRequired": "Vyberte předvolbu modelu pro tento test.",
+      "reasoningEffortLabel": "Úroveň uvažování",
+      "reasoningEffortEmpty": "Nejprve vyberte předvolbu modelu, aby se zobrazily dostupné úrovně uvažování.",
+      "taskReasoningEffortRequired": "Vyberte úroveň uvažování pro tuto úlohu.",
+      "testReasoningEffortRequired": "Vyberte úroveň uvažování pro tento test.",
+      "selectPresetPlaceholder": "Vyberte předvolbu",
+      "selectReasoningPlaceholder": "Vyberte úroveň uvažování",
+      "modelValuePreview": "Skutečná hodnota modelu: {{model}}",
+      "modelSummaryLabel": "Model: {{model}} · Uvažování: {{reasoning}}",
+      "modelDefault": "Výchozí",
+      "reasoningEfforts": {
+        "low": "Nízká",
+        "medium": "Střední",
+        "high": "Vysoká",
+        "xhigh": "Velmi vysoká"
+      },
+      "scheduleQuotaResetHint": "Při zapnutí probuzení po resetu kvóty se automatické obnovování upraví na každé 2 minuty.",
+      "scheduleQuotaResetSummary": "Spustit po resetu kvóty",
+      "quotaResetWindowLabel": "Podmínka spuštění podle resetovacího okna",
+      "quotaResetWindowHint": "primary_window obvykle odpovídá 5hodinové kvótě. U bezplatných uživatelů může primary_window odpovídat týdenní kvótě a lišit se podle předplatného.",
+      "quotaResetWindowOptions": {
+        "either": "Spustit při resetu primary_window nebo secondary_window",
+        "primary_window": "Spustit pouze při resetu primary_window",
+        "secondary_window": "Spustit pouze při resetu secondary_window"
+      },
+      "nextRunsQuotaResetHint": "Spouštění po resetu kvóty závisí na aktuálních datech kvóty, proto není k dispozici pevný časový náhled.",
+      "triggerQuotaReset": "Spouštěč resetu kvóty",
+      "noticeSavedEnabledWithQuotaReset": "Úlohy byly uloženy. Celkem: {{count}}. Automatické obnovování Codex bylo upraveno na každých {{minutes}} minut."
     }
   },
   "githubCopilot": {

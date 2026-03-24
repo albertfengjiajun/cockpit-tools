@@ -26,6 +26,7 @@ interface SideNavProps {
   updateActionState: 'hidden' | 'available' | 'downloading' | 'installing' | 'ready';
   updateProgress: number;
   onUpdateActionClick: () => void;
+  updateRemindersEnabled: boolean;
 }
 
 interface FlyingRocket {
@@ -88,6 +89,7 @@ export function SideNav({
   updateActionState,
   updateProgress,
   onUpdateActionClick,
+  updateRemindersEnabled,
 }: SideNavProps) {
   const { t } = useTranslation();
   const [flyingRockets, setFlyingRockets] = useState<FlyingRocket[]>([]);
@@ -211,10 +213,17 @@ export function SideNav({
     : updateActionState === 'downloading' || updateActionState === 'installing'
       ? 'progress'
       : 'update';
+  const shouldShowUpdateEntry = updateActionState !== 'hidden'
+    && (
+      updateRemindersEnabled
+      || updateActionState === 'downloading'
+      || updateActionState === 'installing'
+      || updateActionState === 'ready'
+    );
 
   return (
     <nav className="side-nav">
-      {updateActionState !== 'hidden' && (
+      {shouldShowUpdateEntry && (
         <div className="side-nav-update-entry">
           <button
             type="button"

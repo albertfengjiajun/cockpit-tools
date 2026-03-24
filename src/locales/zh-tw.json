@@ -556,7 +556,11 @@
       "zedAppPathDesc": "留空則使用預設路徑",
       "zedAppPathPlaceholder": "預設路徑",
       "zedPathSelect": "選擇",
-      "zedPathReset": "重設預設值"
+      "zedPathReset": "重設預設值",
+      "updateReminder": "更新提醒",
+      "updateReminderDesc": "偵測到新版本時，提示更新並在側邊欄顯示快速入口。",
+      "updateReminderOff": "關閉（不提醒）",
+      "updateReminderOn": "開啟（顯示提醒）"
     },
     "network": {
       "apiTitle": "反重力駕駛艙 API",
@@ -1211,7 +1215,9 @@
     "installing": "安裝中...",
     "authorizing": "等待系統授權安裝...",
     "installFailed": "系統安裝失敗，請稍後重試或手動下載安裝。",
-    "restartRequiredAfterInstall": "更新已安裝，請手動重新啟動應用程式完成切換。"
+    "restartRequiredAfterInstall": "更新已安裝，請手動重新啟動應用程式完成切換。",
+    "skipThisVersion": "跳過此版本",
+    "skipFailed": "跳過此更新失敗：{{error}}"
   },
   "closeDialog": {
     "title": "關閉視窗",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "每日",
         "weekly": "每週",
-        "interval": "間隔"
+        "interval": "間隔",
+        "quota_reset": "配額重置後"
       },
       "dailyTimeLabel": "每日執行時間",
       "weeklyDaysLabel": "每週執行日",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "測試完成，成功 {{success}} 個，失敗 {{failed}} 個。",
       "deleteConfirm": "確定刪除任務「{{name}}」嗎？",
       "executedCommandLabel": "實際執行命令",
-      "accountInfoLabel": "帳號資訊"
+      "accountInfoLabel": "帳號資訊",
+      "managePresets": "模型預設",
+      "presetManagerTitle": "管理模型預設",
+      "presetListLabel": "預設列表",
+      "addPreset": "新增預設",
+      "presetEmpty": "還沒有模型預設。先新增一個，之後才能在喚醒任務中選擇模型。",
+      "presetNameLabel": "預設名稱",
+      "presetNamePlaceholder": "例如：GPT-5.4 標準喚醒",
+      "presetNameRequired": "請輸入預設名稱",
+      "presetModelLabel": "模型值",
+      "presetModelPlaceholder": "例如：gpt-5.4",
+      "presetModelRequired": "請輸入模型值",
+      "presetModelDuplicate": "這個模型值已存在於其他預設中",
+      "presetAllowedReasoningLabel": "允許的推理強度",
+      "presetDefaultReasoningLabel": "預設推理強度",
+      "presetReasoningEffortsRequired": "請至少選擇一個推理強度",
+      "presetDefaultReasoningRequired": "請從允許的推理強度中選擇預設值",
+      "presetDeleteConfirm": "確定刪除模型預設「{{name}}」嗎？",
+      "noticePresetCreated": "模型預設已建立",
+      "noticePresetUpdated": "模型預設已更新",
+      "noticePresetDeleted": "模型預設已刪除",
+      "taskModelLabel": "模型預設",
+      "taskModelHint": "先選模型預設，再選這個喚醒任務要使用的推理強度。",
+      "taskModelRequired": "請為任務選擇一個模型預設",
+      "testModelLabel": "測試模型預設",
+      "testModelHint": "選擇這次手動測試要用的模型預設與推理強度。",
+      "testModelRequired": "請為測試選擇一個模型預設",
+      "reasoningEffortLabel": "推理強度",
+      "reasoningEffortEmpty": "請先選擇模型預設，再查看可用的推理強度。",
+      "taskReasoningEffortRequired": "請為任務選擇一個推理強度",
+      "testReasoningEffortRequired": "請為測試選擇一個推理強度",
+      "selectPresetPlaceholder": "請選擇預設",
+      "selectReasoningPlaceholder": "請選擇推理強度",
+      "modelValuePreview": "實際傳入模型值：{{model}}",
+      "modelSummaryLabel": "模型：{{model}} · 推理強度：{{reasoning}}",
+      "modelDefault": "預設",
+      "reasoningEfforts": {
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "超高"
+      },
+      "scheduleQuotaResetHint": "啟用配額重置後喚醒時，系統會將自動刷新調整為每 2 分鐘執行一次。",
+      "scheduleQuotaResetSummary": "配額重置後觸發",
+      "quotaResetWindowLabel": "重置視窗觸發條件",
+      "quotaResetWindowHint": "primary_window 一般指 5 小時配額；免費用戶下 primary_window 可能對應週配額，不同訂閱可能不同。",
+      "quotaResetWindowOptions": {
+        "either": "primary_window 或 secondary_window 任一重置",
+        "primary_window": "僅 primary_window 重置時觸發",
+        "secondary_window": "僅 secondary_window 重置時觸發"
+      },
+      "nextRunsQuotaResetHint": "配額重置觸發依賴最新配額資料，因此不提供固定時間預覽。",
+      "triggerQuotaReset": "配額重置觸發",
+      "noticeSavedEnabledWithQuotaReset": "任務已儲存，共 {{count}} 個。已將 Codex 自動刷新調整為每 {{minutes}} 分鐘。"
     }
   },
   "githubCopilot": {

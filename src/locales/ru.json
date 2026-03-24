@@ -556,7 +556,11 @@
       "zedAppPathDesc": "Оставьте пустым, чтобы использовать путь по умолчанию",
       "zedAppPathPlaceholder": "Путь по умолчанию",
       "zedPathSelect": "Выбрать",
-      "zedPathReset": "Сбросить по умолчанию"
+      "zedPathReset": "Сбросить по умолчанию",
+      "updateReminder": "Напоминания об обновлениях",
+      "updateReminderDesc": "При обнаружении новой версии показывать подсказки обновления и быстрый вход в боковой панели.",
+      "updateReminderOff": "Выключено (без напоминаний)",
+      "updateReminderOn": "Включено (показывать напоминания)"
     },
     "network": {
       "apiTitle": "API антигравитационной кабины",
@@ -1211,7 +1215,9 @@
     "installing": "Установка...",
     "authorizing": "Ожидание системной авторизации...",
     "installFailed": "Системная установка не удалась. Повторите попытку позже или скачайте пакет вручную.",
-    "restartRequiredAfterInstall": "Обновление установлено. Перезапустите приложение вручную, чтобы завершить переключение."
+    "restartRequiredAfterInstall": "Обновление установлено. Перезапустите приложение вручную, чтобы завершить переключение.",
+    "skipThisVersion": "Пропустить эту версию",
+    "skipFailed": "Не удалось пропустить это обновление: {{error}}"
   },
   "closeDialog": {
     "title": "Закрыть окно",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "Ежедневно",
         "weekly": "Еженедельно",
-        "interval": "Интервал"
+        "interval": "Интервал",
+        "quota_reset": "После сброса квоты"
       },
       "dailyTimeLabel": "Ежедневное время запуска",
       "weeklyDaysLabel": "Запускать в",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "Тест завершён. Успех: {{success}}, ошибки: {{failed}}.",
       "deleteConfirm": "Удалить задачу «{{name}}»?",
       "executedCommandLabel": "Фактически выполненная команда",
-      "accountInfoLabel": "Информация об аккаунте"
+      "accountInfoLabel": "Информация об аккаунте",
+      "managePresets": "Пресеты моделей",
+      "presetManagerTitle": "Управление пресетами моделей",
+      "presetListLabel": "Список пресетов",
+      "addPreset": "Добавить пресет",
+      "presetEmpty": "Пока нет пресетов моделей. Добавьте один, чтобы выбирать модели для задач пробуждения.",
+      "presetNameLabel": "Название пресета",
+      "presetNamePlaceholder": "Например: стандартное пробуждение GPT-5.4",
+      "presetNameRequired": "Введите название пресета.",
+      "presetModelLabel": "Значение модели",
+      "presetModelPlaceholder": "Например: gpt-5.4",
+      "presetModelRequired": "Введите значение модели.",
+      "presetModelDuplicate": "Это значение модели уже есть в другом пресете.",
+      "presetAllowedReasoningLabel": "Разрешённые уровни рассуждения",
+      "presetDefaultReasoningLabel": "Уровень рассуждения по умолчанию",
+      "presetReasoningEffortsRequired": "Выберите хотя бы один уровень рассуждения.",
+      "presetDefaultReasoningRequired": "Выберите уровень рассуждения по умолчанию из разрешённого списка.",
+      "presetDeleteConfirm": "Удалить пресет модели «{{name}}»?",
+      "noticePresetCreated": "Пресет модели создан.",
+      "noticePresetUpdated": "Пресет модели обновлён.",
+      "noticePresetDeleted": "Пресет модели удалён.",
+      "taskModelLabel": "Пресет модели",
+      "taskModelHint": "Сначала выберите пресет, затем уровень рассуждения для этой задачи пробуждения.",
+      "taskModelRequired": "Выберите пресет модели для этой задачи.",
+      "testModelLabel": "Тестовый пресет модели",
+      "testModelHint": "Выберите пресет и уровень рассуждения для этого ручного теста.",
+      "testModelRequired": "Выберите пресет модели для этого теста.",
+      "reasoningEffortLabel": "Уровень рассуждения",
+      "reasoningEffortEmpty": "Сначала выберите пресет модели, чтобы увидеть доступные уровни рассуждения.",
+      "taskReasoningEffortRequired": "Выберите уровень рассуждения для этой задачи.",
+      "testReasoningEffortRequired": "Выберите уровень рассуждения для этого теста.",
+      "selectPresetPlaceholder": "Выберите пресет",
+      "selectReasoningPlaceholder": "Выберите уровень рассуждения",
+      "modelValuePreview": "Фактическое значение модели: {{model}}",
+      "modelSummaryLabel": "Модель: {{model}} · Рассуждение: {{reasoning}}",
+      "modelDefault": "По умолчанию",
+      "reasoningEfforts": {
+        "low": "Низкий",
+        "medium": "Средний",
+        "high": "Высокий",
+        "xhigh": "Очень высокий"
+      },
+      "scheduleQuotaResetHint": "При включении пробуждения после сброса квоты автообновление будет настроено на каждые 2 минуты.",
+      "scheduleQuotaResetSummary": "Запуск после сброса квоты",
+      "quotaResetWindowLabel": "Условие срабатывания окна сброса",
+      "quotaResetWindowHint": "primary_window обычно соответствует 5-часовой квоте. У бесплатных пользователей primary_window может соответствовать недельной квоте и отличаться в зависимости от подписки.",
+      "quotaResetWindowOptions": {
+        "either": "Запускать при сбросе primary_window или secondary_window",
+        "primary_window": "Запускать только при сбросе primary_window",
+        "secondary_window": "Запускать только при сбросе secondary_window"
+      },
+      "nextRunsQuotaResetHint": "Триггеры сброса квоты зависят от актуальных данных квоты, поэтому предпросмотр фиксированного времени недоступен.",
+      "triggerQuotaReset": "Триггер сброса квоты",
+      "noticeSavedEnabledWithQuotaReset": "Задачи сохранены. Всего: {{count}}. Автообновление Codex настроено на каждые {{minutes}} минут."
     }
   },
   "githubCopilot": {

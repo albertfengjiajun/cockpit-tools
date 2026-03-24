@@ -418,6 +418,11 @@ pub fn codex_wakeup_get_cli_status() -> Result<codex_wakeup::CodexCliStatus, Str
 }
 
 #[tauri::command]
+pub fn codex_wakeup_get_overview() -> Result<codex_wakeup::CodexWakeupOverview, String> {
+    codex_wakeup::load_overview()
+}
+
+#[tauri::command]
 pub fn codex_wakeup_get_state() -> Result<codex_wakeup::CodexWakeupState, String> {
     codex_wakeup::load_state()
 }
@@ -426,8 +431,13 @@ pub fn codex_wakeup_get_state() -> Result<codex_wakeup::CodexWakeupState, String
 pub fn codex_wakeup_save_state(
     enabled: bool,
     tasks: Vec<codex_wakeup::CodexWakeupTask>,
+    model_presets: Vec<codex_wakeup::CodexWakeupModelPreset>,
 ) -> Result<codex_wakeup::CodexWakeupState, String> {
-    codex_wakeup::save_state(&codex_wakeup::CodexWakeupState { enabled, tasks })
+    codex_wakeup::save_state(&codex_wakeup::CodexWakeupState {
+        enabled,
+        tasks,
+        model_presets,
+    })
 }
 
 #[tauri::command]
@@ -445,12 +455,20 @@ pub async fn codex_wakeup_test(
     app: AppHandle,
     account_ids: Vec<String>,
     prompt: Option<String>,
+    model: Option<String>,
+    model_display_name: Option<String>,
+    model_reasoning_effort: Option<String>,
     run_id: Option<String>,
 ) -> Result<codex_wakeup::CodexWakeupBatchResult, String> {
     codex_wakeup::run_batch(
         Some(&app),
         account_ids,
         prompt,
+        codex_wakeup::CodexWakeupExecutionConfig {
+            model,
+            model_display_name,
+            model_reasoning_effort,
+        },
         codex_wakeup::TaskRunContext {
             trigger_type: "test".to_string(),
             task_id: None,

@@ -556,7 +556,11 @@
       "zedAppPathDesc": "Lascia vuoto per usare il percorso predefinito",
       "zedAppPathPlaceholder": "Percorso predefinito",
       "zedPathSelect": "Seleziona",
-      "zedPathReset": "Ripristina predefinito"
+      "zedPathReset": "Ripristina predefinito",
+      "updateReminder": "Promemoria aggiornamenti",
+      "updateReminderDesc": "Quando viene rilevata una nuova versione, mostra avvisi di aggiornamento e accesso rapido nella barra laterale.",
+      "updateReminderOff": "Disattivato (nessun promemoria)",
+      "updateReminderOn": "Attivato (mostra promemoria)"
     },
     "network": {
       "apiTitle": "API della cabina di pilotaggio antigravità",
@@ -1211,7 +1215,9 @@
     "installing": "Installazione in corso...",
     "authorizing": "In attesa dell'autorizzazione di sistema...",
     "installFailed": "Installazione di sistema non riuscita. Riprova più tardi o scarica manualmente il pacchetto.",
-    "restartRequiredAfterInstall": "L'aggiornamento è installato. Riavvia manualmente l'app per completare il passaggio."
+    "restartRequiredAfterInstall": "L'aggiornamento è installato. Riavvia manualmente l'app per completare il passaggio.",
+    "skipThisVersion": "Salta questa versione",
+    "skipFailed": "Impossibile saltare questo aggiornamento: {{error}}"
   },
   "closeDialog": {
     "title": "Chiudi finestra",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "Giornaliera",
         "weekly": "Settimanale",
-        "interval": "Intervallo"
+        "interval": "Intervallo",
+        "quota_reset": "Dopo il reset della quota"
       },
       "dailyTimeLabel": "Orario giornaliero",
       "weeklyDaysLabel": "Esegui in",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "Test completato. {{success}} riusciti e {{failed}} falliti.",
       "deleteConfirm": "Eliminare l’attività \"{{name}}\"?",
       "executedCommandLabel": "Comando eseguito",
-      "accountInfoLabel": "Info account"
+      "accountInfoLabel": "Info account",
+      "managePresets": "Preset modello",
+      "presetManagerTitle": "Gestisci i preset modello",
+      "presetListLabel": "Elenco preset",
+      "addPreset": "Aggiungi preset",
+      "presetEmpty": "Non ci sono ancora preset modello. Aggiungine uno per iniziare a scegliere i modelli per i task di risveglio.",
+      "presetNameLabel": "Nome preset",
+      "presetNamePlaceholder": "Ad esempio: risveglio standard GPT-5.4",
+      "presetNameRequired": "Inserisci un nome per il preset.",
+      "presetModelLabel": "Valore del modello",
+      "presetModelPlaceholder": "Ad esempio: gpt-5.4",
+      "presetModelRequired": "Inserisci il valore del modello.",
+      "presetModelDuplicate": "Questo valore del modello esiste già in un altro preset.",
+      "presetAllowedReasoningLabel": "Livelli di ragionamento consentiti",
+      "presetDefaultReasoningLabel": "Livello di ragionamento predefinito",
+      "presetReasoningEffortsRequired": "Seleziona almeno un livello di ragionamento.",
+      "presetDefaultReasoningRequired": "Scegli un livello di ragionamento predefinito dall’elenco consentito.",
+      "presetDeleteConfirm": "Eliminare il preset modello \"{{name}}\"?",
+      "noticePresetCreated": "Preset modello creato.",
+      "noticePresetUpdated": "Preset modello aggiornato.",
+      "noticePresetDeleted": "Preset modello eliminato.",
+      "taskModelLabel": "Preset modello",
+      "taskModelHint": "Scegli prima il preset e poi il livello di ragionamento usato da questo task di risveglio.",
+      "taskModelRequired": "Seleziona un preset modello per questo task.",
+      "testModelLabel": "Preset modello di test",
+      "testModelHint": "Scegli il preset e il livello di ragionamento per questo test manuale.",
+      "testModelRequired": "Seleziona un preset modello per questo test.",
+      "reasoningEffortLabel": "Livello di ragionamento",
+      "reasoningEffortEmpty": "Seleziona prima un preset modello per vedere i livelli di ragionamento disponibili.",
+      "taskReasoningEffortRequired": "Seleziona un livello di ragionamento per questo task.",
+      "testReasoningEffortRequired": "Seleziona un livello di ragionamento per questo test.",
+      "selectPresetPlaceholder": "Seleziona un preset",
+      "selectReasoningPlaceholder": "Seleziona un livello di ragionamento",
+      "modelValuePreview": "Valore reale del modello: {{model}}",
+      "modelSummaryLabel": "Modello: {{model}} · Ragionamento: {{reasoning}}",
+      "modelDefault": "Predefinito",
+      "reasoningEfforts": {
+        "low": "Basso",
+        "medium": "Medio",
+        "high": "Alto",
+        "xhigh": "Molto alto"
+      },
+      "scheduleQuotaResetHint": "Quando è attivo il risveglio dopo reset quota, l'aggiornamento automatico verrà impostato ogni 2 minuti.",
+      "scheduleQuotaResetSummary": "Esegui dopo il reset della quota",
+      "quotaResetWindowLabel": "Condizione di attivazione finestra di reset",
+      "quotaResetWindowHint": "primary_window di solito corrisponde alla quota di 5 ore. Per gli utenti gratuiti, primary_window può corrispondere alla quota settimanale e variare in base all'abbonamento.",
+      "quotaResetWindowOptions": {
+        "either": "Attiva quando si resetta primary_window o secondary_window",
+        "primary_window": "Attiva solo al reset di primary_window",
+        "secondary_window": "Attiva solo al reset di secondary_window"
+      },
+      "nextRunsQuotaResetHint": "I trigger dopo reset quota dipendono dai dati quota più recenti, quindi non è disponibile un'anteprima a orario fisso.",
+      "triggerQuotaReset": "Trigger reset quota",
+      "noticeSavedEnabledWithQuotaReset": "Attività salvate. Totale: {{count}}. L'aggiornamento automatico di Codex è stato impostato ogni {{minutes}} minuti."
     }
   },
   "githubCopilot": {

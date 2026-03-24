@@ -3,7 +3,10 @@ import {
   CodexCliStatus,
   CodexWakeupBatchResult,
   CodexWakeupHistoryItem,
+  CodexWakeupModelPreset,
+  CodexWakeupOverview,
   CodexWakeupProgressPayload,
+  CodexWakeupReasoningEffort,
   CodexWakeupState,
   CodexWakeupTask,
 } from '../types/codexWakeup';
@@ -29,6 +32,7 @@ interface RawCodexWakeupSchedule {
   weeklyDays?: number[];
   weeklyTime?: string;
   intervalHours?: number;
+  quotaResetWindow?: CodexWakeupTask['schedule']['quota_reset_window'];
 }
 
 interface RawCodexWakeupTask {
@@ -37,6 +41,9 @@ interface RawCodexWakeupTask {
   enabled: boolean;
   accountIds: string[];
   prompt?: string;
+  model?: string;
+  modelDisplayName?: string;
+  modelReasoningEffort?: CodexWakeupReasoningEffort;
   schedule: RawCodexWakeupSchedule;
   createdAt: number;
   updatedAt: number;
@@ -47,6 +54,14 @@ interface RawCodexWakeupTask {
   lastFailureCount?: number;
   lastDurationMs?: number;
   nextRunAt?: number;
+}
+
+interface RawCodexWakeupModelPreset {
+  id: string;
+  name: string;
+  model: string;
+  allowedReasoningEfforts?: CodexWakeupReasoningEffort[];
+  defaultReasoningEffort: CodexWakeupReasoningEffort;
 }
 
 interface RawCodexQuotaSnapshot {
@@ -68,6 +83,9 @@ interface RawCodexWakeupHistoryItem {
   accountContextText?: string;
   success: boolean;
   prompt?: string;
+  model?: string;
+  modelDisplayName?: string;
+  modelReasoningEffort?: CodexWakeupReasoningEffort;
   reply?: string;
   error?: string;
   quotaRefreshError?: string;
@@ -80,6 +98,7 @@ interface RawCodexWakeupHistoryItem {
 interface RawCodexWakeupState {
   enabled: boolean;
   tasks: RawCodexWakeupTask[];
+  modelPresets?: RawCodexWakeupModelPreset[];
 }
 
 interface RawCodexWakeupBatchResult {
@@ -88,6 +107,12 @@ interface RawCodexWakeupBatchResult {
   records: RawCodexWakeupHistoryItem[];
   successCount: number;
   failureCount: number;
+}
+
+interface RawCodexWakeupOverview {
+  runtime: RawCodexCliStatus;
+  state: RawCodexWakeupState;
+  history: RawCodexWakeupHistoryItem[];
 }
 
 interface RawCodexWakeupProgressPayload {
@@ -124,12 +149,16 @@ function toRawTask(task: CodexWakeupTask): RawCodexWakeupTask {
     enabled: task.enabled,
     accountIds: task.account_ids,
     prompt: task.prompt,
+    model: task.model,
+    modelDisplayName: task.model_display_name,
+    modelReasoningEffort: task.model_reasoning_effort,
     schedule: {
       kind: task.schedule.kind,
       dailyTime: task.schedule.daily_time,
       weeklyDays: task.schedule.weekly_days,
       weeklyTime: task.schedule.weekly_time,
       intervalHours: task.schedule.interval_hours,
+      quotaResetWindow: task.schedule.quota_reset_window,
     },
     createdAt: task.created_at,
     updatedAt: task.updated_at,
@@ -150,12 +179,16 @@ function fromRawTask(raw: RawCodexWakeupTask): CodexWakeupTask {
     enabled: raw.enabled,
     account_ids: raw.accountIds ?? [],
     prompt: raw.prompt,
+    model: raw.model,
+    model_display_name: raw.modelDisplayName,
+    model_reasoning_effort: raw.modelReasoningEffort,
     schedule: {
       kind: raw.schedule.kind,
       daily_time: raw.schedule.dailyTime,
       weekly_days: raw.schedule.weeklyDays ?? [],
       weekly_time: raw.schedule.weeklyTime,
       interval_hours: raw.schedule.intervalHours,
+      quota_reset_window: raw.schedule.quotaResetWindow,
     },
     created_at: raw.createdAt,
     updated_at: raw.updatedAt,
@@ -166,6 +199,26 @@ function fromRawTask(raw: RawCodexWakeupTask): CodexWakeupTask {
     last_failure_count: raw.lastFailureCount,
     last_duration_ms: raw.lastDurationMs,
     next_run_at: raw.nextRunAt,
+  };
+}
+
+function toRawModelPreset(preset: CodexWakeupModelPreset): RawCodexWakeupModelPreset {
+  return {
+    id: preset.id,
+    name: preset.name,
+    model: preset.model,
+    allowedReasoningEfforts: preset.allowed_reasoning_efforts,
+    defaultReasoningEffort: preset.default_reasoning_effort,
+  };
+}
+
+function fromRawModelPreset(raw: RawCodexWakeupModelPreset): CodexWakeupModelPreset {
+  return {
+    id: raw.id,
+    name: raw.name,
+    model: raw.model,
+    allowed_reasoning_efforts: raw.allowedReasoningEfforts ?? [],
+    default_reasoning_effort: raw.defaultReasoningEffort,
   };
 }
 
@@ -192,6 +245,9 @@ function fromRawHistoryItem(raw: RawCodexWakeupHistoryItem): CodexWakeupHistoryI
     account_context_text: raw.accountContextText,
     success: raw.success,
     prompt: raw.prompt,
+    model: raw.model,
+    model_display_name: raw.modelDisplayName,
+    model_reasoning_effort: raw.modelReasoningEffort,
     reply: raw.reply,
     error: raw.error,
     quota_refresh_error: raw.quotaRefreshError,
@@ -206,6 +262,7 @@ function fromRawState(raw: RawCodexWakeupState): CodexWakeupState {
   return {
     enabled: raw.enabled,
     tasks: (raw.tasks ?? []).map(fromRawTask),
+    model_presets: (raw.modelPresets ?? []).map(fromRawModelPreset),
   };
 }
 
@@ -216,6 +273,14 @@ function fromRawBatchResult(raw: RawCodexWakeupBatchResult): CodexWakeupBatchRes
     records: (raw.records ?? []).map(fromRawHistoryItem),
     success_count: raw.successCount,
     failure_count: raw.failureCount,
+  };
+}
+
+function fromRawOverview(raw: RawCodexWakeupOverview): CodexWakeupOverview {
+  return {
+    runtime: fromRawCliStatus(raw.runtime),
+    state: fromRawState(raw.state),
+    history: (raw.history ?? []).map(fromRawHistoryItem),
   };
 }
 
@@ -242,6 +307,10 @@ export async function getCodexWakeupCliStatus(): Promise<CodexCliStatus> {
   return fromRawCliStatus(await invoke<RawCodexCliStatus>('codex_wakeup_get_cli_status'));
 }
 
+export async function getCodexWakeupOverview(): Promise<CodexWakeupOverview> {
+  return fromRawOverview(await invoke<RawCodexWakeupOverview>('codex_wakeup_get_overview'));
+}
+
 export async function getCodexWakeupState(): Promise<CodexWakeupState> {
   return fromRawState(await invoke<RawCodexWakeupState>('codex_wakeup_get_state'));
 }
@@ -249,11 +318,13 @@ export async function getCodexWakeupState(): Promise<CodexWakeupState> {
 export async function saveCodexWakeupState(
   enabled: boolean,
   tasks: CodexWakeupTask[],
+  modelPresets: CodexWakeupModelPreset[],
 ): Promise<CodexWakeupState> {
   return fromRawState(
     await invoke<RawCodexWakeupState>('codex_wakeup_save_state', {
       enabled,
       tasks: tasks.map(toRawTask),
+      modelPresets: modelPresets.map(toRawModelPreset),
     }),
   );
 }
@@ -270,12 +341,18 @@ export async function testCodexWakeup(
   accountIds: string[],
   runId: string,
   prompt?: string,
+  model?: string,
+  modelDisplayName?: string,
+  modelReasoningEffort?: CodexWakeupReasoningEffort,
 ): Promise<CodexWakeupBatchResult> {
   return fromRawBatchResult(
     await invoke<RawCodexWakeupBatchResult>('codex_wakeup_test', {
       accountIds,
       runId,
       prompt: prompt ?? null,
+      model: model ?? null,
+      modelDisplayName: modelDisplayName ?? null,
+      modelReasoningEffort: modelReasoningEffort ?? null,
     }),
   );
 }

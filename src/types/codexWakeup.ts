@@ -13,7 +13,9 @@ export interface CodexCliStatus {
   install_hints: CodexCliInstallHint[];
 }
 
-export type CodexWakeupScheduleKind = 'daily' | 'weekly' | 'interval';
+export type CodexWakeupScheduleKind = 'daily' | 'weekly' | 'interval' | 'quota_reset';
+export type CodexWakeupQuotaResetWindow = 'either' | 'primary_window' | 'secondary_window';
+export type CodexWakeupReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh';
 
 export interface CodexWakeupSchedule {
   kind: CodexWakeupScheduleKind;
@@ -21,6 +23,7 @@ export interface CodexWakeupSchedule {
   weekly_days: number[];
   weekly_time?: string;
   interval_hours?: number;
+  quota_reset_window?: CodexWakeupQuotaResetWindow;
 }
 
 export interface CodexWakeupTask {
@@ -29,6 +32,9 @@ export interface CodexWakeupTask {
   enabled: boolean;
   account_ids: string[];
   prompt?: string;
+  model?: string;
+  model_display_name?: string;
+  model_reasoning_effort?: CodexWakeupReasoningEffort;
   schedule: CodexWakeupSchedule;
   created_at: number;
   updated_at: number;
@@ -41,9 +47,18 @@ export interface CodexWakeupTask {
   next_run_at?: number;
 }
 
+export interface CodexWakeupModelPreset {
+  id: string;
+  name: string;
+  model: string;
+  allowed_reasoning_efforts: CodexWakeupReasoningEffort[];
+  default_reasoning_effort: CodexWakeupReasoningEffort;
+}
+
 export interface CodexWakeupState {
   enabled: boolean;
   tasks: CodexWakeupTask[];
+  model_presets: CodexWakeupModelPreset[];
 }
 
 export interface CodexQuotaSnapshot {
@@ -65,6 +80,9 @@ export interface CodexWakeupHistoryItem {
   account_context_text?: string;
   success: boolean;
   prompt?: string;
+  model?: string;
+  model_display_name?: string;
+  model_reasoning_effort?: CodexWakeupReasoningEffort;
   reply?: string;
   error?: string;
   quota_refresh_error?: string;
@@ -95,4 +113,10 @@ export interface CodexWakeupProgressPayload {
   phase: string;
   current_account_id?: string;
   item?: CodexWakeupHistoryItem;
+}
+
+export interface CodexWakeupOverview {
+  runtime: CodexCliStatus;
+  state: CodexWakeupState;
+  history: CodexWakeupHistoryItem[];
 }

@@ -556,7 +556,11 @@
       "zedAppPathDesc": "Déjalo vacío para usar la ruta predeterminada",
       "zedAppPathPlaceholder": "Ruta predeterminada",
       "zedPathSelect": "Seleccionar",
-      "zedPathReset": "Restablecer predeterminado"
+      "zedPathReset": "Restablecer predeterminado",
+      "updateReminder": "Recordatorios de actualización",
+      "updateReminderDesc": "Cuando se detecte una nueva versión, mostrar avisos de actualización y acceso rápido en la barra lateral.",
+      "updateReminderOff": "Desactivado (sin recordatorios)",
+      "updateReminderOn": "Activado (mostrar recordatorios)"
     },
     "network": {
       "apiTitle": "API de cabina antigravedad",
@@ -1211,7 +1215,9 @@
     "installing": "Instalando...",
     "authorizing": "Esperando autorización del sistema...",
     "installFailed": "La instalación del sistema falló. Inténtalo más tarde o descarga el paquete manualmente.",
-    "restartRequiredAfterInstall": "La actualización ya está instalada. Reinicia la aplicación manualmente para completar el cambio."
+    "restartRequiredAfterInstall": "La actualización ya está instalada. Reinicia la aplicación manualmente para completar el cambio.",
+    "skipThisVersion": "Omitir esta versión",
+    "skipFailed": "No se pudo omitir esta actualización: {{error}}"
   },
   "closeDialog": {
     "title": "Cerrar ventana",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "Diaria",
         "weekly": "Semanal",
-        "interval": "Intervalo"
+        "interval": "Intervalo",
+        "quota_reset": "Después del restablecimiento de cuota"
       },
       "dailyTimeLabel": "Hora diaria de ejecución",
       "weeklyDaysLabel": "Ejecutar en",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "Prueba finalizada. {{success}} correctas y {{failed}} fallidas.",
       "deleteConfirm": "¿Eliminar la tarea \"{{name}}\"?",
       "executedCommandLabel": "Comando ejecutado",
-      "accountInfoLabel": "Información de la cuenta"
+      "accountInfoLabel": "Información de la cuenta",
+      "managePresets": "Ajustes de modelo",
+      "presetManagerTitle": "Gestionar ajustes de modelo",
+      "presetListLabel": "Lista de ajustes",
+      "addPreset": "Agregar ajuste",
+      "presetEmpty": "Todavía no hay ajustes de modelo. Agrega uno para empezar a elegir modelos para las tareas de activación.",
+      "presetNameLabel": "Nombre del ajuste",
+      "presetNamePlaceholder": "Por ejemplo: activación estándar GPT-5.4",
+      "presetNameRequired": "Introduce un nombre para el ajuste.",
+      "presetModelLabel": "Valor del modelo",
+      "presetModelPlaceholder": "Por ejemplo: gpt-5.4",
+      "presetModelRequired": "Introduce el valor del modelo.",
+      "presetModelDuplicate": "Este valor de modelo ya existe en otro ajuste.",
+      "presetAllowedReasoningLabel": "Niveles de razonamiento permitidos",
+      "presetDefaultReasoningLabel": "Nivel de razonamiento predeterminado",
+      "presetReasoningEffortsRequired": "Selecciona al menos un nivel de razonamiento.",
+      "presetDefaultReasoningRequired": "Elige un nivel de razonamiento predeterminado de la lista permitida.",
+      "presetDeleteConfirm": "¿Eliminar el ajuste de modelo \"{{name}}\"?",
+      "noticePresetCreated": "Ajuste de modelo creado.",
+      "noticePresetUpdated": "Ajuste de modelo actualizado.",
+      "noticePresetDeleted": "Ajuste de modelo eliminado.",
+      "taskModelLabel": "Ajuste de modelo",
+      "taskModelHint": "Primero elige el ajuste y luego el nivel de razonamiento para esta tarea de activación.",
+      "taskModelRequired": "Selecciona un ajuste de modelo para esta tarea.",
+      "testModelLabel": "Ajuste de modelo de prueba",
+      "testModelHint": "Elige el ajuste y el nivel de razonamiento para esta prueba manual.",
+      "testModelRequired": "Selecciona un ajuste de modelo para esta prueba.",
+      "reasoningEffortLabel": "Nivel de razonamiento",
+      "reasoningEffortEmpty": "Selecciona primero un ajuste de modelo para ver los niveles de razonamiento disponibles.",
+      "taskReasoningEffortRequired": "Selecciona un nivel de razonamiento para esta tarea.",
+      "testReasoningEffortRequired": "Selecciona un nivel de razonamiento para esta prueba.",
+      "selectPresetPlaceholder": "Selecciona un ajuste",
+      "selectReasoningPlaceholder": "Selecciona un nivel de razonamiento",
+      "modelValuePreview": "Valor real del modelo: {{model}}",
+      "modelSummaryLabel": "Modelo: {{model}} · Razonamiento: {{reasoning}}",
+      "modelDefault": "Predeterminado",
+      "reasoningEfforts": {
+        "low": "Bajo",
+        "medium": "Medio",
+        "high": "Alto",
+        "xhigh": "Muy alto"
+      },
+      "scheduleQuotaResetHint": "Cuando se habilita el despertar tras restablecimiento de cuota, la actualización automática se ajustará a cada 2 minutos.",
+      "scheduleQuotaResetSummary": "Ejecutar tras restablecimiento de cuota",
+      "quotaResetWindowLabel": "Condición de activación por ventana de reinicio",
+      "quotaResetWindowHint": "primary_window suele corresponder a la cuota de 5 horas. En usuarios gratuitos, primary_window puede corresponder a la cuota semanal y variar según la suscripción.",
+      "quotaResetWindowOptions": {
+        "either": "Activar cuando se reinicie primary_window o secondary_window",
+        "primary_window": "Activar solo al reiniciar primary_window",
+        "secondary_window": "Activar solo al reiniciar secondary_window"
+      },
+      "nextRunsQuotaResetHint": "Los disparadores por restablecimiento de cuota dependen de datos de cuota recientes, por lo que no hay vista previa de hora fija.",
+      "triggerQuotaReset": "Disparador por restablecimiento de cuota",
+      "noticeSavedEnabledWithQuotaReset": "Tareas guardadas. Total: {{count}}. La actualización automática de Codex se ajustó a cada {{minutes}} minutos."
     }
   },
   "githubCopilot": {

@@ -1,4 +1,4 @@
-use crate::modules::{codex_wakeup, logger};
+use crate::modules::{codex_account, codex_wakeup, logger};
 use chrono::{DateTime, Datelike, Local, TimeZone};
 use std::collections::HashSet;
 use std::sync::{Mutex, OnceLock};
@@ -43,6 +43,42 @@ fn build_local_datetime(date: chrono::NaiveDate, minutes: i32) -> Option<DateTim
         })
 }
 
+fn collect_task_reset_timestamps(task: &codex_wakeup::CodexWakeupTask) -> Vec<i64> {
+    if task.account_ids.is_empty() {
+        return Vec::new();
+    }
+    let quota_reset_window = task
+        .schedule
+        .quota_reset_window
+        .as_deref()
+        .unwrap_or("either");
+    let include_primary = quota_reset_window == "either" || quota_reset_window == "primary_window";
+    let include_secondary =
+        quota_reset_window == "either" || quota_reset_window == "secondary_window";
+
+    let selected: HashSet<&str> = task.account_ids.iter().map(String::as_str).collect();
+    let mut timestamps: Vec<i64> = codex_account::list_accounts()
+        .into_iter()
+        .filter(|account| selected.contains(account.id.as_str()))
+        .flat_map(|account| account.quota.into_iter())
+        .flat_map(|quota| {
+            let mut values = Vec::new();
+            if include_primary {
+                values.push(quota.hourly_reset_time);
+            }
+            if include_secondary {
+                values.push(quota.weekly_reset_time);
+            }
+            values
+        })
+        .flatten()
+        .filter(|ts| *ts > 0)
+        .collect();
+    timestamps.sort_unstable();
+    timestamps.dedup();
+    timestamps
+}
+
 fn current_due_at(task: &codex_wakeup::CodexWakeupTask, now: DateTime<Local>) -> Option<i64> {
     match task.schedule.kind.as_str() {
         "daily" => {
@@ -76,6 +112,13 @@ fn current_due_at(task: &codex_wakeup::CodexWakeupTask, now: DateTime<Local>) ->
             } else {
                 None
             }
+        }
+        "quota_reset" => {
+            let last_run_at = task.last_run_at.unwrap_or(task.created_at);
+            collect_task_reset_timestamps(task)
+                .into_iter()
+                .filter(|reset_at| *reset_at <= now.timestamp() && *reset_at > last_run_at)
+                .max()
         }
         _ => None,
     }
@@ -115,6 +158,10 @@ pub fn calculate_next_run_at(task: &codex_wakeup::CodexWakeupTask) -> Option<i64
                 i64::from(task.schedule.interval_hours.unwrap_or(4).max(1)) * 3600;
             Some(task.last_run_at.unwrap_or(task.created_at) + interval_seconds)
         }
+        "quota_reset" => collect_task_reset_timestamps(task)
+            .into_iter()
+            .filter(|reset_at| *reset_at > now.timestamp())
+            .min(),
         _ => None,
     }
 }
@@ -154,6 +201,11 @@ pub async fn run_task_now(
         app,
         task.account_ids.clone(),
         task.prompt.clone(),
+        codex_wakeup::CodexWakeupExecutionConfig {
+            model: task.model.clone(),
+            model_display_name: task.model_display_name.clone(),
+            model_reasoning_effort: task.model_reasoning_effort.clone(),
+        },
         context,
         run_id,
     )
@@ -170,7 +222,7 @@ pub async fn run_task_now(
 }
 
 async fn run_scheduler_once(app: &AppHandle) {
-    let state = match codex_wakeup::load_state() {
+    let state = match codex_wakeup::load_state_for_scheduler() {
         Ok(state) => state,
         Err(err) => {
             logger::log_warn(&format!("[CodexWakeup] 读取任务状态失败: {}", err));
@@ -192,9 +244,15 @@ async fn run_scheduler_once(app: &AppHandle) {
         }
 
         let task_id = task.id.clone();
+        let trigger_type = if task.schedule.kind == "quota_reset" {
+            "quota_reset"
+        } else {
+            "scheduled"
+        }
+        .to_string();
         let app_handle = app.clone();
         tauri::async_runtime::spawn(async move {
-            let result = run_task_now(Some(&app_handle), &task_id, "scheduled", None).await;
+            let result = run_task_now(Some(&app_handle), &task_id, &trigger_type, None).await;
             if let Err(err) = result {
                 logger::log_warn(&format!(
                     "[CodexWakeup] 调度任务执行失败: task_id={}, error={}",

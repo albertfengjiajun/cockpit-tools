@@ -335,6 +335,7 @@ pub fn run() {
             commands::codex::close_codex_oauth_port,
             commands::codex::update_codex_account_tags,
             commands::codex::codex_wakeup_get_cli_status,
+            commands::codex::codex_wakeup_get_overview,
             commands::codex::codex_wakeup_get_state,
             commands::codex::codex_wakeup_save_state,
             commands::codex::codex_wakeup_load_history,

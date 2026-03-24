@@ -556,7 +556,11 @@
       "zedAppPathDesc": "Để trống để dùng đường dẫn mặc định",
       "zedAppPathPlaceholder": "Đường dẫn mặc định",
       "zedPathSelect": "Chọn",
-      "zedPathReset": "Đặt lại mặc định"
+      "zedPathReset": "Đặt lại mặc định",
+      "updateReminder": "Nhắc cập nhật",
+      "updateReminderDesc": "Khi phát hiện phiên bản mới, hiển thị nhắc cập nhật và lối tắt nhanh ở thanh bên.",
+      "updateReminderOff": "Tắt (không nhắc)",
+      "updateReminderOn": "Bật (hiển thị nhắc)"
     },
     "network": {
       "apiTitle": "API Antigravity Cockpit",
@@ -1211,7 +1215,9 @@
     "installing": "Đang cài đặt...",
     "authorizing": "Đang chờ cấp quyền hệ thống...",
     "installFailed": "Cài đặt hệ thống thất bại. Hãy thử lại sau hoặc tải gói về thủ công.",
-    "restartRequiredAfterInstall": "Bản cập nhật đã được cài. Hãy khởi động lại ứng dụng thủ công để hoàn tất chuyển đổi."
+    "restartRequiredAfterInstall": "Bản cập nhật đã được cài. Hãy khởi động lại ứng dụng thủ công để hoàn tất chuyển đổi.",
+    "skipThisVersion": "Bỏ qua phiên bản này",
+    "skipFailed": "Không thể bỏ qua bản cập nhật này: {{error}}"
   },
   "closeDialog": {
     "title": "Đóng cửa sổ",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "Hàng ngày",
         "weekly": "Hàng tuần",
-        "interval": "Khoảng cách"
+        "interval": "Khoảng cách",
+        "quota_reset": "Sau khi đặt lại hạn mức"
       },
       "dailyTimeLabel": "Giờ chạy hàng ngày",
       "weeklyDaysLabel": "Chạy vào",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "Kiểm thử hoàn tất. Thành công {{success}}, thất bại {{failed}}.",
       "deleteConfirm": "Xóa tác vụ \"{{name}}\"?",
       "executedCommandLabel": "Lệnh thực thi thực tế",
-      "accountInfoLabel": "Thông tin tài khoản"
+      "accountInfoLabel": "Thông tin tài khoản",
+      "managePresets": "Preset model",
+      "presetManagerTitle": "Quản lý preset model",
+      "presetListLabel": "Danh sách preset",
+      "addPreset": "Thêm preset",
+      "presetEmpty": "Chưa có preset model nào. Hãy thêm một preset để bắt đầu chọn model cho tác vụ đánh thức.",
+      "presetNameLabel": "Tên preset",
+      "presetNamePlaceholder": "Ví dụ: đánh thức chuẩn GPT-5.4",
+      "presetNameRequired": "Vui lòng nhập tên preset.",
+      "presetModelLabel": "Giá trị model",
+      "presetModelPlaceholder": "Ví dụ: gpt-5.4",
+      "presetModelRequired": "Vui lòng nhập giá trị model.",
+      "presetModelDuplicate": "Giá trị model này đã tồn tại trong preset khác.",
+      "presetAllowedReasoningLabel": "Mức suy luận được phép",
+      "presetDefaultReasoningLabel": "Mức suy luận mặc định",
+      "presetReasoningEffortsRequired": "Hãy chọn ít nhất một mức suy luận.",
+      "presetDefaultReasoningRequired": "Hãy chọn mức suy luận mặc định trong danh sách được phép.",
+      "presetDeleteConfirm": "Xóa preset model \"{{name}}\"?",
+      "noticePresetCreated": "Đã tạo preset model.",
+      "noticePresetUpdated": "Đã cập nhật preset model.",
+      "noticePresetDeleted": "Đã xóa preset model.",
+      "taskModelLabel": "Preset model",
+      "taskModelHint": "Trước tiên chọn preset, sau đó chọn mức suy luận cho tác vụ đánh thức này.",
+      "taskModelRequired": "Vui lòng chọn preset model cho tác vụ này.",
+      "testModelLabel": "Preset model thử nghiệm",
+      "testModelHint": "Chọn preset và mức suy luận cho lần kiểm tra thủ công này.",
+      "testModelRequired": "Vui lòng chọn preset model cho lần kiểm tra này.",
+      "reasoningEffortLabel": "Mức suy luận",
+      "reasoningEffortEmpty": "Hãy chọn preset model trước để xem các mức suy luận khả dụng.",
+      "taskReasoningEffortRequired": "Vui lòng chọn mức suy luận cho tác vụ này.",
+      "testReasoningEffortRequired": "Vui lòng chọn mức suy luận cho lần kiểm tra này.",
+      "selectPresetPlaceholder": "Chọn preset",
+      "selectReasoningPlaceholder": "Chọn mức suy luận",
+      "modelValuePreview": "Giá trị model thực tế: {{model}}",
+      "modelSummaryLabel": "Model: {{model}} · Suy luận: {{reasoning}}",
+      "modelDefault": "Mặc định",
+      "reasoningEfforts": {
+        "low": "Thấp",
+        "medium": "Trung bình",
+        "high": "Cao",
+        "xhigh": "Rất cao"
+      },
+      "scheduleQuotaResetHint": "Khi bật đánh thức sau khi đặt lại hạn mức, làm mới tự động sẽ được điều chỉnh mỗi 2 phút.",
+      "scheduleQuotaResetSummary": "Chạy sau khi đặt lại hạn mức",
+      "quotaResetWindowLabel": "Điều kiện kích hoạt cửa sổ đặt lại",
+      "quotaResetWindowHint": "primary_window thường tương ứng với hạn mức 5 giờ. Với người dùng miễn phí, primary_window có thể tương ứng với hạn mức tuần và thay đổi theo gói đăng ký.",
+      "quotaResetWindowOptions": {
+        "either": "Kích hoạt khi primary_window hoặc secondary_window được đặt lại",
+        "primary_window": "Chỉ kích hoạt khi primary_window được đặt lại",
+        "secondary_window": "Chỉ kích hoạt khi secondary_window được đặt lại"
+      },
+      "nextRunsQuotaResetHint": "Kích hoạt đặt lại hạn mức phụ thuộc dữ liệu hạn mức mới nhất nên không có xem trước thời gian cố định.",
+      "triggerQuotaReset": "Kích hoạt đặt lại hạn mức",
+      "noticeSavedEnabledWithQuotaReset": "Đã lưu tác vụ. Tổng: {{count}}. Làm mới tự động Codex đã được điều chỉnh mỗi {{minutes}} phút."
     }
   },
   "githubCopilot": {

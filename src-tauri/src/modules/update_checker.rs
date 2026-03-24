@@ -18,10 +18,18 @@ pub struct UpdateSettings {
     pub auto_install: bool,
     #[serde(default)]
     pub last_run_version: String,
+    #[serde(default = "default_remind_on_update")]
+    pub remind_on_update: bool,
+    #[serde(default)]
+    pub skipped_version: String,
 }
 
 fn default_check_interval() -> u64 {
     DEFAULT_CHECK_INTERVAL_HOURS
+}
+
+fn default_remind_on_update() -> bool {
+    true
 }
 
 impl Default for UpdateSettings {
@@ -32,6 +40,8 @@ impl Default for UpdateSettings {
             check_interval_hours: DEFAULT_CHECK_INTERVAL_HOURS,
             auto_install: false,
             last_run_version: String::new(),
+            remind_on_update: true,
+            skipped_version: String::new(),
         }
     }
 }

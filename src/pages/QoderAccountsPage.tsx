@@ -55,6 +55,7 @@ import { useExportJsonModal } from '../hooks/useExportJsonModal';
 import { parseFileCorruptedError } from '../components/FileCorruptedModal';
 
 const QODER_FLOW_NOTICE_COLLAPSED_KEY = 'agtools.qoder.flow_notice_collapsed';
+const QODER_VIEW_MODE_KEY = 'agtools.qoder.accounts_view_mode';
 const UNTAGGED_KEY = '__untagged__';
 
 type ViewMode = 'grid' | 'list';
@@ -93,6 +94,15 @@ function writeBooleanStorage(key: string, value: boolean) {
     localStorage.setItem(key, value ? '1' : '0');
   } catch {
     // ignore
+  }
+}
+
+function readViewModeStorage(key: string, fallback: ViewMode): ViewMode {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw === 'grid' || raw === 'list' ? raw : fallback;
+  } catch {
+    return fallback;
   }
 }
 
@@ -194,7 +204,9 @@ export function QoderAccountsPage() {
   const store = useQoderAccountStore();
   const importFileInputRef = useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState<PlatformOverviewTab>('overview');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>(() =>
+    readViewModeStorage(QODER_VIEW_MODE_KEY, 'grid'),
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTypes, setFilterTypes] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortBy>('created_at');
@@ -238,6 +250,14 @@ export function QoderAccountsPage() {
   const [privacyModeEnabled, setPrivacyModeEnabled] = useState<boolean>(() =>
     isPrivacyModeEnabledByDefault(),
   );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(QODER_VIEW_MODE_KEY, viewMode);
+    } catch {
+      // ignore persistence failures
+    }
+  }, [viewMode]);
 
   useEffect(() => {
     if (!store.error) return;

@@ -16,6 +16,10 @@ const MAX_HISTORY_ITEMS: usize = 300;
 const MAX_LOGGED_SEARCH_DIRS: usize = 8;
 pub const DEFAULT_PROMPT: &str = "hi";
 pub const PROGRESS_EVENT: &str = "codex://wakeup-progress";
+const REASONING_EFFORT_LOW: &str = "low";
+const REASONING_EFFORT_MEDIUM: &str = "medium";
+const REASONING_EFFORT_HIGH: &str = "high";
+const REASONING_EFFORT_XHIGH: &str = "xhigh";
 
 static TASKS_LOCK: std::sync::LazyLock<Mutex<()>> = std::sync::LazyLock::new(|| Mutex::new(()));
 static HISTORY_LOCK: std::sync::LazyLock<Mutex<()>> = std::sync::LazyLock::new(|| Mutex::new(()));
@@ -51,6 +55,19 @@ pub struct CodexWakeupSchedule {
     pub weekly_time: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interval_hours: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quota_reset_window: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexWakeupModelPreset {
+    pub id: String,
+    pub name: String,
+    pub model: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub allowed_reasoning_efforts: Vec<String>,
+    pub default_reasoning_effort: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,6 +79,12 @@ pub struct CodexWakeupTask {
     pub account_ids: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_display_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_reasoning_effort: Option<String>,
     pub schedule: CodexWakeupSchedule,
     pub created_at: i64,
     pub updated_at: i64,
@@ -81,12 +104,14 @@ pub struct CodexWakeupTask {
     pub next_run_at: Option<i64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexWakeupState {
     pub enabled: bool,
     #[serde(default)]
     pub tasks: Vec<CodexWakeupTask>,
+    #[serde(default = "default_model_presets")]
+    pub model_presets: Vec<CodexWakeupModelPreset>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,6 +146,12 @@ pub struct CodexWakeupHistoryItem {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_display_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_reasoning_effort: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reply: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
@@ -144,6 +175,14 @@ pub struct CodexWakeupBatchResult {
     pub records: Vec<CodexWakeupHistoryItem>,
     pub success_count: usize,
     pub failure_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexWakeupOverview {
+    pub runtime: CodexCliStatus,
+    pub state: CodexWakeupState,
+    pub history: Vec<CodexWakeupHistoryItem>,
 }
 
 #[derive(Debug, Clone)]
@@ -187,12 +226,106 @@ struct CommandOutput {
     duration_ms: u64,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct CodexWakeupExecutionConfig {
+    pub model: Option<String>,
+    pub model_display_name: Option<String>,
+    pub model_reasoning_effort: Option<String>,
+}
+
+impl Default for CodexWakeupState {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            tasks: Vec::new(),
+            model_presets: default_model_presets(),
+        }
+    }
+}
+
 fn now_ts() -> i64 {
     chrono::Utc::now().timestamp()
 }
 
 fn now_ms() -> i64 {
     chrono::Utc::now().timestamp_millis()
+}
+
+fn supported_reasoning_efforts() -> &'static [&'static str] {
+    &[
+        REASONING_EFFORT_LOW,
+        REASONING_EFFORT_MEDIUM,
+        REASONING_EFFORT_HIGH,
+        REASONING_EFFORT_XHIGH,
+    ]
+}
+
+fn normalize_reasoning_effort(value: &str) -> Option<String> {
+    let normalized = value.trim().to_ascii_lowercase();
+    if supported_reasoning_efforts().contains(&normalized.as_str()) {
+        Some(normalized)
+    } else {
+        None
+    }
+}
+
+fn default_reasoning_efforts_for_model(model: &str) -> Vec<String> {
+    if model.trim().eq_ignore_ascii_case("gpt-5.1-codex-mini") {
+        vec![
+            REASONING_EFFORT_MEDIUM.to_string(),
+            REASONING_EFFORT_HIGH.to_string(),
+        ]
+    } else {
+        supported_reasoning_efforts()
+            .iter()
+            .map(|item| item.to_string())
+            .collect()
+    }
+}
+
+fn default_model_presets() -> Vec<CodexWakeupModelPreset> {
+    let items = [
+        ("preset-gpt-5-4", "GPT-5.4", "gpt-5.4"),
+        ("preset-gpt-5-4-mini", "GPT-5.4-Mini", "gpt-5.4-mini"),
+        ("preset-gpt-5-3-codex", "GPT-5.3-Codex", "gpt-5.3-codex"),
+        ("preset-gpt-5-2-codex", "GPT-5.2-Codex", "gpt-5.2-codex"),
+        ("preset-gpt-5-2", "GPT-5.2", "gpt-5.2"),
+        (
+            "preset-gpt-5-1-codex-max",
+            "GPT-5.1-Codex-Max",
+            "gpt-5.1-codex-max",
+        ),
+        (
+            "preset-gpt-5-1-codex-mini",
+            "GPT-5.1-Codex-Mini",
+            "gpt-5.1-codex-mini",
+        ),
+    ];
+
+    items
+        .into_iter()
+        .map(|(id, name, model)| {
+            let allowed_reasoning_efforts = default_reasoning_efforts_for_model(model);
+            let default_reasoning_effort = if allowed_reasoning_efforts
+                .iter()
+                .any(|item| item == REASONING_EFFORT_MEDIUM)
+            {
+                REASONING_EFFORT_MEDIUM.to_string()
+            } else {
+                allowed_reasoning_efforts
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| REASONING_EFFORT_MEDIUM.to_string())
+            };
+            CodexWakeupModelPreset {
+                id: id.to_string(),
+                name: name.to_string(),
+                model: model.to_string(),
+                allowed_reasoning_efforts,
+                default_reasoning_effort,
+            }
+        })
+        .collect()
 }
 
 fn data_dir() -> Result<PathBuf, String> {
@@ -678,17 +811,7 @@ fn resolve_binary() -> Result<ResolvedBinary, String> {
     Err(err)
 }
 
-fn fetch_binary_version(path: &Path) -> Option<String> {
-    let binary = match build_resolved_binary(path.to_path_buf(), "runtime".to_string()) {
-        Ok(binary) => binary,
-        Err(err) => {
-            logger::log_warn(&format!(
-                "[CodexWakeup][CLI] 版本探测前解析运行时失败: {}",
-                err
-            ));
-            return None;
-        }
-    };
+fn fetch_binary_version(binary: &ResolvedBinary) -> Option<String> {
     logger::log_info(&format!(
         "[CodexWakeup][CLI] 开始探测版本: codex_path={}, node_path={}",
         binary.path.display(),
@@ -749,7 +872,7 @@ fn build_binary_command(binary: &ResolvedBinary) -> Command {
 pub fn get_cli_status() -> CodexCliStatus {
     match resolve_binary() {
         Ok(binary) => {
-            let version = fetch_binary_version(&binary.path);
+            let version = fetch_binary_version(&binary);
             logger::log_info(&format!(
                 "[CodexWakeup][CLI] 检测成功: source={}, codex_path={}, node_path={}, version={}",
                 binary.source,
@@ -795,6 +918,48 @@ fn parse_time_to_minutes(value: &str) -> Option<i32> {
     Some(hour * 60 + minute)
 }
 
+fn normalize_model_preset(raw: &CodexWakeupModelPreset) -> Option<CodexWakeupModelPreset> {
+    let id = raw.id.trim().to_string();
+    let name = raw.name.trim().to_string();
+    let model = raw.model.trim().to_string();
+
+    if id.is_empty() || name.is_empty() || model.is_empty() {
+        return None;
+    }
+
+    let mut allowed_reasoning_efforts: Vec<String> = raw
+        .allowed_reasoning_efforts
+        .iter()
+        .filter_map(|item| normalize_reasoning_effort(item))
+        .collect();
+    allowed_reasoning_efforts.dedup();
+    if allowed_reasoning_efforts.is_empty() {
+        allowed_reasoning_efforts = default_reasoning_efforts_for_model(&model);
+    }
+
+    let default_reasoning_effort = normalize_reasoning_effort(&raw.default_reasoning_effort)
+        .filter(|item| allowed_reasoning_efforts.contains(item))
+        .or_else(|| {
+            if allowed_reasoning_efforts
+                .iter()
+                .any(|item| item == REASONING_EFFORT_MEDIUM)
+            {
+                Some(REASONING_EFFORT_MEDIUM.to_string())
+            } else {
+                allowed_reasoning_efforts.first().cloned()
+            }
+        })
+        .unwrap_or_else(|| REASONING_EFFORT_MEDIUM.to_string());
+
+    Some(CodexWakeupModelPreset {
+        id,
+        name,
+        model,
+        allowed_reasoning_efforts,
+        default_reasoning_effort,
+    })
+}
+
 fn normalize_schedule(raw: &CodexWakeupSchedule) -> CodexWakeupSchedule {
     let mut weekly_days: Vec<i32> = raw
         .weekly_days
@@ -805,8 +970,20 @@ fn normalize_schedule(raw: &CodexWakeupSchedule) -> CodexWakeupSchedule {
     weekly_days.sort_unstable();
     weekly_days.dedup();
 
+    let normalized_kind = raw.kind.trim().to_ascii_lowercase();
+    let quota_reset_window = raw
+        .quota_reset_window
+        .as_ref()
+        .map(|item| item.trim().to_ascii_lowercase())
+        .and_then(|item| match item.as_str() {
+            "primary_window" => Some("primary_window".to_string()),
+            "secondary_window" => Some("secondary_window".to_string()),
+            "either" => Some("either".to_string()),
+            _ => None,
+        });
+
     CodexWakeupSchedule {
-        kind: raw.kind.trim().to_ascii_lowercase(),
+        kind: normalized_kind.clone(),
         daily_time: raw
             .daily_time
             .as_ref()
@@ -819,6 +996,11 @@ fn normalize_schedule(raw: &CodexWakeupSchedule) -> CodexWakeupSchedule {
             .map(|item| item.trim().to_string())
             .filter(|item| parse_time_to_minutes(item).is_some()),
         interval_hours: raw.interval_hours.map(|value| value.max(1)),
+        quota_reset_window: if normalized_kind == "quota_reset" {
+            Some(quota_reset_window.unwrap_or_else(|| "either".to_string()))
+        } else {
+            None
+        },
     }
 }
 
@@ -839,6 +1021,20 @@ fn normalize_task(raw: &CodexWakeupTask) -> CodexWakeupTask {
         .as_ref()
         .map(|item| item.trim().to_string())
         .filter(|item| !item.is_empty());
+    let model = raw
+        .model
+        .as_ref()
+        .map(|item| item.trim().to_string())
+        .filter(|item| !item.is_empty());
+    let model_display_name = raw
+        .model_display_name
+        .as_ref()
+        .map(|item| item.trim().to_string())
+        .filter(|item| !item.is_empty());
+    let model_reasoning_effort = raw
+        .model_reasoning_effort
+        .as_ref()
+        .and_then(|item| normalize_reasoning_effort(item));
     let schedule = normalize_schedule(&raw.schedule);
 
     CodexWakeupTask {
@@ -851,6 +1047,9 @@ fn normalize_task(raw: &CodexWakeupTask) -> CodexWakeupTask {
         enabled: raw.enabled,
         account_ids,
         prompt,
+        model,
+        model_display_name,
+        model_reasoning_effort,
         schedule,
         created_at: if raw.created_at > 0 {
             raw.created_at
@@ -872,8 +1071,11 @@ fn normalize_task(raw: &CodexWakeupTask) -> CodexWakeupTask {
     }
 }
 
-fn disable_tasks_when_cli_missing(state: &mut CodexWakeupState) -> bool {
-    if get_cli_status().available {
+fn disable_tasks_when_cli_missing_with_runtime(
+    state: &mut CodexWakeupState,
+    runtime_available: bool,
+) -> bool {
+    if runtime_available {
         return false;
     }
 
@@ -892,6 +1094,11 @@ fn disable_tasks_when_cli_missing(state: &mut CodexWakeupState) -> bool {
     }
 
     changed
+}
+
+fn disable_tasks_when_cli_missing(state: &mut CodexWakeupState) -> bool {
+    let runtime = get_cli_status();
+    disable_tasks_when_cli_missing_with_runtime(state, runtime.available)
 }
 
 fn refresh_next_run_at(state: &mut CodexWakeupState) {
@@ -919,7 +1126,10 @@ fn save_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<(), String> 
     fs::rename(&temp_path, path).map_err(|e| format!("替换文件失败: {}", e))
 }
 
-pub fn load_state() -> Result<CodexWakeupState, String> {
+fn load_state_inner(
+    apply_cli_guard: bool,
+    runtime_available_override: Option<bool>,
+) -> Result<CodexWakeupState, String> {
     let path = tasks_path()?;
     if !path.exists() {
         return Ok(CodexWakeupState::default());
@@ -932,7 +1142,22 @@ pub fn load_state() -> Result<CodexWakeupState, String> {
     let mut state: CodexWakeupState =
         serde_json::from_str(&content).map_err(|e| format!("解析 Codex 唤醒任务失败: {}", e))?;
     state.tasks = state.tasks.iter().map(normalize_task).collect();
-    let changed = disable_tasks_when_cli_missing(&mut state);
+    let mut preset_ids = HashSet::new();
+    state.model_presets = state
+        .model_presets
+        .iter()
+        .filter_map(normalize_model_preset)
+        .filter(|preset| preset_ids.insert(preset.id.clone()))
+        .collect();
+    let changed = if apply_cli_guard {
+        if let Some(runtime_available) = runtime_available_override {
+            disable_tasks_when_cli_missing_with_runtime(&mut state, runtime_available)
+        } else {
+            disable_tasks_when_cli_missing(&mut state)
+        }
+    } else {
+        false
+    };
     refresh_next_run_at(&mut state);
     if changed {
         let _lock = TASKS_LOCK.lock().map_err(|_| "获取 Codex 唤醒任务锁失败")?;
@@ -941,9 +1166,33 @@ pub fn load_state() -> Result<CodexWakeupState, String> {
     Ok(state)
 }
 
+pub fn load_state() -> Result<CodexWakeupState, String> {
+    load_state_inner(true, None)
+}
+
+pub fn load_state_for_scheduler() -> Result<CodexWakeupState, String> {
+    load_state_inner(false, None)
+}
+
+fn load_state_with_runtime_available(runtime_available: bool) -> Result<CodexWakeupState, String> {
+    load_state_inner(true, Some(runtime_available))
+}
+
+pub fn load_overview() -> Result<CodexWakeupOverview, String> {
+    let runtime = get_cli_status();
+    let state = load_state_with_runtime_available(runtime.available)?;
+    let history = load_history()?;
+    Ok(CodexWakeupOverview {
+        runtime,
+        state,
+        history,
+    })
+}
+
 pub fn save_state(next_state: &CodexWakeupState) -> Result<CodexWakeupState, String> {
     let _lock = TASKS_LOCK.lock().map_err(|_| "获取 Codex 唤醒任务锁失败")?;
     let mut seen = HashSet::new();
+    let mut preset_seen = HashSet::new();
     let mut state = CodexWakeupState {
         enabled: next_state.enabled,
         tasks: next_state
@@ -953,6 +1202,12 @@ pub fn save_state(next_state: &CodexWakeupState) -> Result<CodexWakeupState, Str
             .filter(|task| {
                 !task.id.is_empty() && !task.account_ids.is_empty() && seen.insert(task.id.clone())
             })
+            .collect(),
+        model_presets: next_state
+            .model_presets
+            .iter()
+            .filter_map(normalize_model_preset)
+            .filter(|preset| preset_seen.insert(preset.id.clone()))
             .collect(),
     };
 
@@ -1025,6 +1280,7 @@ fn run_codex_exec_sync(
     binary_path: &Path,
     codex_home: &Path,
     prompt: &str,
+    execution_config: &CodexWakeupExecutionConfig,
 ) -> Result<CommandOutput, String> {
     let workspace_dir = codex_home.join("workspace");
     fs::create_dir_all(&workspace_dir).map_err(|e| format!("创建唤醒工作目录失败: {}", e))?;
@@ -1033,12 +1289,20 @@ fn run_codex_exec_sync(
     let started = std::time::Instant::now();
     let binary = build_resolved_binary(binary_path.to_path_buf(), "runtime".to_string())?;
     logger::log_info(&format!(
-        "[CodexWakeup][CLI] 开始执行唤醒命令: codex_path={}, node_path={}, codex_home={}, workspace_dir={}, prompt_chars={}",
+        "[CodexWakeup][CLI] 开始执行唤醒命令: codex_path={}, node_path={}, codex_home={}, workspace_dir={}, prompt_chars={}, model={}, reasoning_effort={}",
         binary.path.display(),
         format_optional_path_for_log(binary.node_path.as_deref()),
         codex_home.display(),
         workspace_dir.display(),
-        prompt.chars().count()
+        prompt.chars().count(),
+        execution_config
+            .model
+            .as_deref()
+            .unwrap_or("<default>"),
+        execution_config
+            .model_reasoning_effort
+            .as_deref()
+            .unwrap_or("<default>")
     ));
     let mut command = build_binary_command(&binary);
     command
@@ -1050,8 +1314,20 @@ fn run_codex_exec_sync(
         .arg("--output-last-message")
         .arg(&last_message_path)
         .arg("-C")
-        .arg(&workspace_dir)
-        .arg(prompt);
+        .arg(&workspace_dir);
+
+    if let Some(model) = execution_config.model.as_deref() {
+        command
+            .arg("-c")
+            .arg(format!(r#"model="{}""#, escape_toml_basic_string(model)));
+    }
+    if let Some(reasoning_effort) = execution_config.model_reasoning_effort.as_deref() {
+        command.arg("-c").arg(format!(
+            r#"model_reasoning_effort="{}""#,
+            escape_toml_basic_string(reasoning_effort)
+        ));
+    }
+    command.arg(prompt);
 
     let output = command
         .output()
@@ -1098,6 +1374,10 @@ fn run_codex_exec_sync(
     Err(message)
 }
 
+fn escape_toml_basic_string(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
 fn create_failure_record(
     run_id: &str,
     trigger_type: &str,
@@ -1107,6 +1387,7 @@ fn create_failure_record(
     account_email: String,
     account_context_text: Option<String>,
     prompt: Option<String>,
+    execution_config: &CodexWakeupExecutionConfig,
     error: String,
     cli_path: Option<String>,
 ) -> CodexWakeupHistoryItem {
@@ -1122,6 +1403,9 @@ fn create_failure_record(
         account_context_text,
         success: false,
         prompt,
+        model: execution_config.model.clone(),
+        model_display_name: execution_config.model_display_name.clone(),
+        model_reasoning_effort: execution_config.model_reasoning_effort.clone(),
         reply: None,
         error: Some(error),
         quota_refresh_error: None,
@@ -1171,6 +1455,7 @@ fn create_cli_missing_record(
     context: &TaskRunContext,
     account_id: &str,
     prompt: Option<String>,
+    execution_config: &CodexWakeupExecutionConfig,
 ) -> CodexWakeupHistoryItem {
     let existing = codex_account::load_account(account_id);
     let account_email = existing
@@ -1188,6 +1473,7 @@ fn create_cli_missing_record(
         account_email,
         account_context_text,
         prompt,
+        execution_config,
         "未检测到 Codex CLI，请先安装后再执行唤醒。".to_string(),
         None,
     )
@@ -1199,6 +1485,7 @@ async fn run_single_account(
     context: &TaskRunContext,
     account_id: &str,
     prompt: &str,
+    execution_config: &CodexWakeupExecutionConfig,
 ) -> CodexWakeupHistoryItem {
     let prompt_value = Some(prompt.to_string());
     let binary_path = binary.map(|item| item.path.display().to_string());
@@ -1215,6 +1502,7 @@ async fn run_single_account(
                 account_id.to_string(),
                 None,
                 prompt_value,
+                execution_config,
                 "账号不存在".to_string(),
                 binary_path,
             )
@@ -1232,13 +1520,20 @@ async fn run_single_account(
             existing.email,
             existing_context_text,
             prompt_value,
+            execution_config,
             "Codex 唤醒任务暂不支持 API Key 账号。".to_string(),
             binary_path,
         );
     }
 
     let Some(binary) = binary else {
-        return create_cli_missing_record(run_id, context, account_id, prompt_value);
+        return create_cli_missing_record(
+            run_id,
+            context,
+            account_id,
+            prompt_value,
+            execution_config,
+        );
     };
 
     let account = match codex_account::prepare_account_for_injection(account_id).await {
@@ -1253,6 +1548,7 @@ async fn run_single_account(
                 existing.email,
                 existing_context_text,
                 prompt_value,
+                execution_config,
                 err,
                 binary_path,
             )
@@ -1273,6 +1569,7 @@ async fn run_single_account(
                 account_email,
                 account_context_text,
                 prompt_value,
+                execution_config,
                 err,
                 Some(binary.path.display().to_string()),
             );
@@ -1291,6 +1588,7 @@ async fn run_single_account(
             account_email,
             account_context_text,
             prompt_value,
+            execution_config,
             format!("创建受管 CODEX_HOME 失败: {}", err),
             Some(binary.path.display().to_string()),
         );
@@ -1308,12 +1606,14 @@ async fn run_single_account(
             account_email,
             account_context_text,
             prompt_value,
+            execution_config,
             err,
             Some(binary.path.display().to_string()),
         );
     }
 
-    let command_result = run_codex_exec_sync(&binary.path, &managed_home, prompt);
+    let command_result =
+        run_codex_exec_sync(&binary.path, &managed_home, prompt, execution_config);
 
     match command_result {
         Ok(output) => {
@@ -1331,6 +1631,9 @@ async fn run_single_account(
                 account_context_text,
                 success: true,
                 prompt: prompt_value,
+                model: execution_config.model.clone(),
+                model_display_name: execution_config.model_display_name.clone(),
+                model_reasoning_effort: execution_config.model_reasoning_effort.clone(),
                 reply: Some(output.reply),
                 error: None,
                 quota_refresh_error: None,
@@ -1352,6 +1655,7 @@ async fn run_single_account(
                 account_email,
                 account_context_text,
                 prompt_value,
+                execution_config,
                 err,
                 Some(binary.path.display().to_string()),
             )
@@ -1363,6 +1667,7 @@ pub async fn run_batch(
     app: Option<&AppHandle>,
     account_ids: Vec<String>,
     prompt: Option<String>,
+    execution_config: CodexWakeupExecutionConfig,
     context: TaskRunContext,
     run_id: Option<String>,
 ) -> Result<CodexWakeupBatchResult, String> {
@@ -1417,7 +1722,13 @@ pub async fn run_batch(
             );
 
             let record =
-                create_cli_missing_record(&run_id, &context, account_id, Some(prompt.clone()));
+                create_cli_missing_record(
+                    &run_id,
+                    &context,
+                    account_id,
+                    Some(prompt.clone()),
+                    &execution_config,
+                );
             if record.success {
                 success_count += 1;
             } else {
@@ -1483,7 +1794,15 @@ pub async fn run_batch(
             None,
         );
         let record =
-            run_single_account(binary.as_ref(), &run_id, &context, &account_id, &prompt).await;
+            run_single_account(
+                binary.as_ref(),
+                &run_id,
+                &context,
+                &account_id,
+                &prompt,
+                &execution_config,
+            )
+            .await;
         if record.success {
             success_count += 1;
         } else {

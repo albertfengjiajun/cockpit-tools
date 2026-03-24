@@ -7,6 +7,20 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.20.4] - 2026-03-24
+
+### Added
+- **Codex wakeup now supports model presets and per-task reasoning-effort selection end-to-end**: wakeup tasks and manual tests can pick a managed model preset plus reasoning effort, execution records now store the model metadata, and wakeup runs pass `model` / `model_reasoning_effort` directly into Codex CLI execution.
+- **Codex wakeup scheduling now supports quota-reset triggers with window selection**: tasks can run after `primary_window`, `secondary_window`, or either reset window, and the scheduler computes due and next runs from real account quota reset timestamps.
+
+### Changed
+- **Quota-reset wakeup tasks now enforce a fast Codex quota refresh cadence**: when at least one enabled quota-reset task exists, Codex auto refresh is adjusted to every 2 minutes so reset-trigger detection stays timely.
+- **Desktop updater now supports reminder opt-out and per-version skip**: settings include an update reminder toggle, users can skip a detected version from the update dialog, skipped versions are ignored by subsequent checks, and the sidebar quick-update entry follows the reminder setting while preserving in-progress or ready states.
+- **Account page view mode persistence is now unified across providers, including the new Codex compact view**: Codex overview adds a compact layout mode, and provider pages persist list/grid preferences with platform-scoped local storage keys.
+- **Codex wakeup task summaries and execution details now mask displayed account emails**: task cards and execution result rows now hide full email addresses while preserving account context text and selected model metadata.
+- **The floating account card window now disables the native window shadow**: the transparent desktop floating-card window is configured without the system shadow layer.
+
+---
 ## [0.20.3] - 2026-03-24
 
 ### Fixed

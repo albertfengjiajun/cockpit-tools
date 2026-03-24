@@ -556,7 +556,11 @@
       "zedAppPathDesc": "Varsayılan yolu kullanmak için boş bırakın",
       "zedAppPathPlaceholder": "Varsayılan yol",
       "zedPathSelect": "Seç",
-      "zedPathReset": "Varsayılana sıfırla"
+      "zedPathReset": "Varsayılana sıfırla",
+      "updateReminder": "Güncelleme hatırlatmaları",
+      "updateReminderDesc": "Yeni sürüm algılandığında güncelleme uyarılarını ve kenar çubuğundaki hızlı girişi göster.",
+      "updateReminderOff": "Kapalı (hatırlatma yok)",
+      "updateReminderOn": "Açık (hatırlatmaları göster)"
     },
     "network": {
       "apiTitle": "Yerçekimine Karşı Kokpit API'si",
@@ -1211,7 +1215,9 @@
     "installing": "Yükleniyor...",
     "authorizing": "Sistem yetkisi bekleniyor...",
     "installFailed": "Sistem kurulumu başarısız oldu. Daha sonra yeniden deneyin veya paketi manuel indirin.",
-    "restartRequiredAfterInstall": "Güncelleme yüklendi. Geçişi tamamlamak için uygulamayı manuel olarak yeniden başlatın."
+    "restartRequiredAfterInstall": "Güncelleme yüklendi. Geçişi tamamlamak için uygulamayı manuel olarak yeniden başlatın.",
+    "skipThisVersion": "Bu sürümü atla",
+    "skipFailed": "Bu güncelleme atlanamadı: {{error}}"
   },
   "closeDialog": {
     "title": "Pencereyi kapat",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "Günlük",
         "weekly": "Haftalık",
-        "interval": "Aralık"
+        "interval": "Aralık",
+        "quota_reset": "Kota sıfırlamasından sonra"
       },
       "dailyTimeLabel": "Günlük çalışma saati",
       "weeklyDaysLabel": "Çalışacağı günler",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "Test tamamlandı. {{success}} başarılı, {{failed}} başarısız.",
       "deleteConfirm": "\"{{name}}\" görevi silinsin mi?",
       "executedCommandLabel": "Gerçekte çalıştırılan komut",
-      "accountInfoLabel": "Hesap bilgisi"
+      "accountInfoLabel": "Hesap bilgisi",
+      "managePresets": "Model hazır ayarları",
+      "presetManagerTitle": "Model hazır ayarlarını yönet",
+      "presetListLabel": "Hazır ayar listesi",
+      "addPreset": "Hazır ayar ekle",
+      "presetEmpty": "Henüz model hazır ayarı yok. Wakeup görevleri için model seçmeye başlamak üzere bir tane ekleyin.",
+      "presetNameLabel": "Hazır ayar adı",
+      "presetNamePlaceholder": "Örneğin: GPT-5.4 standart wakeup",
+      "presetNameRequired": "Lütfen bir hazır ayar adı girin.",
+      "presetModelLabel": "Model değeri",
+      "presetModelPlaceholder": "Örneğin: gpt-5.4",
+      "presetModelRequired": "Lütfen model değerini girin.",
+      "presetModelDuplicate": "Bu model değeri zaten başka bir hazır ayarda var.",
+      "presetAllowedReasoningLabel": "İzin verilen akıl yürütme seviyeleri",
+      "presetDefaultReasoningLabel": "Varsayılan akıl yürütme seviyesi",
+      "presetReasoningEffortsRequired": "En az bir akıl yürütme seviyesi seçin.",
+      "presetDefaultReasoningRequired": "İzin verilen listeden varsayılan bir akıl yürütme seviyesi seçin.",
+      "presetDeleteConfirm": "\"{{name}}\" model hazır ayarı silinsin mi?",
+      "noticePresetCreated": "Model hazır ayarı oluşturuldu.",
+      "noticePresetUpdated": "Model hazır ayarı güncellendi.",
+      "noticePresetDeleted": "Model hazır ayarı silindi.",
+      "taskModelLabel": "Model hazır ayarı",
+      "taskModelHint": "Önce hazır ayarı, sonra bu wakeup görevinin kullanacağı akıl yürütme seviyesini seçin.",
+      "taskModelRequired": "Bu görev için bir model hazır ayarı seçin.",
+      "testModelLabel": "Test model hazır ayarı",
+      "testModelHint": "Bu manuel test için hazır ayarı ve akıl yürütme seviyesini seçin.",
+      "testModelRequired": "Bu test için bir model hazır ayarı seçin.",
+      "reasoningEffortLabel": "Akıl yürütme seviyesi",
+      "reasoningEffortEmpty": "Önce bir model hazır ayarı seçerek kullanılabilir akıl yürütme seviyelerini görün.",
+      "taskReasoningEffortRequired": "Bu görev için bir akıl yürütme seviyesi seçin.",
+      "testReasoningEffortRequired": "Bu test için bir akıl yürütme seviyesi seçin.",
+      "selectPresetPlaceholder": "Bir hazır ayar seçin",
+      "selectReasoningPlaceholder": "Bir akıl yürütme seviyesi seçin",
+      "modelValuePreview": "Gerçek model değeri: {{model}}",
+      "modelSummaryLabel": "Model: {{model}} · Akıl yürütme: {{reasoning}}",
+      "modelDefault": "Varsayılan",
+      "reasoningEfforts": {
+        "low": "Düşük",
+        "medium": "Orta",
+        "high": "Yüksek",
+        "xhigh": "Çok yüksek"
+      },
+      "scheduleQuotaResetHint": "Kota sıfırlaması sonrası uyandırma açıldığında otomatik yenileme her 2 dakikaya ayarlanır.",
+      "scheduleQuotaResetSummary": "Kota sıfırlamasından sonra çalıştır",
+      "quotaResetWindowLabel": "Sıfırlama penceresi tetikleme koşulu",
+      "quotaResetWindowHint": "primary_window genellikle 5 saatlik kotayı ifade eder. Ücretsiz kullanıcılar için primary_window haftalık kotayı ifade edebilir ve aboneliğe göre değişebilir.",
+      "quotaResetWindowOptions": {
+        "either": "primary_window veya secondary_window sıfırlandığında tetikle",
+        "primary_window": "Yalnızca primary_window sıfırlandığında tetikle",
+        "secondary_window": "Yalnızca secondary_window sıfırlandığında tetikle"
+      },
+      "nextRunsQuotaResetHint": "Kota sıfırlama tetikleyicileri güncel kota verilerine bağlıdır, bu yüzden sabit zaman önizlemesi yoktur.",
+      "triggerQuotaReset": "Kota sıfırlama tetikleyicisi",
+      "noticeSavedEnabledWithQuotaReset": "Görevler kaydedildi. Toplam: {{count}}. Codex otomatik yenileme {{minutes}} dakikaya ayarlandı."
     }
   },
   "githubCopilot": {

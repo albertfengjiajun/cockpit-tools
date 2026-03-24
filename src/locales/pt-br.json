@@ -556,7 +556,11 @@
       "zedAppPathDesc": "Deixe em branco para usar o caminho padrão",
       "zedAppPathPlaceholder": "Caminho padrão",
       "zedPathSelect": "Selecionar",
-      "zedPathReset": "Redefinir padrão"
+      "zedPathReset": "Redefinir padrão",
+      "updateReminder": "Lembretes de atualização",
+      "updateReminderDesc": "Quando uma nova versão for detectada, mostrar avisos de atualização e atalho rápido na barra lateral.",
+      "updateReminderOff": "Desativado (sem lembretes)",
+      "updateReminderOn": "Ativado (mostrar lembretes)"
     },
     "network": {
       "apiTitle": "API de cockpit antigravidade",
@@ -1211,7 +1215,9 @@
     "installing": "Instalando...",
     "authorizing": "Aguardando autorização do sistema...",
     "installFailed": "A instalação do sistema falhou. Tente novamente mais tarde ou baixe o pacote manualmente.",
-    "restartRequiredAfterInstall": "A atualização foi instalada. Reinicie o app manualmente para concluir a troca."
+    "restartRequiredAfterInstall": "A atualização foi instalada. Reinicie o app manualmente para concluir a troca.",
+    "skipThisVersion": "Ignorar esta versão",
+    "skipFailed": "Não foi possível ignorar esta atualização: {{error}}"
   },
   "closeDialog": {
     "title": "Fechar janela",
@@ -1408,7 +1414,8 @@
       "schedule": {
         "daily": "Diário",
         "weekly": "Semanal",
-        "interval": "Intervalo"
+        "interval": "Intervalo",
+        "quota_reset": "Após redefinição de cota"
       },
       "dailyTimeLabel": "Horário diário de execução",
       "weeklyDaysLabel": "Executar em",
@@ -1470,7 +1477,60 @@
       "noticeTestFinishedWithError": "Teste concluído. {{success}} com sucesso e {{failed}} com falha.",
       "deleteConfirm": "Excluir a tarefa \"{{name}}\"?",
       "executedCommandLabel": "Comando executado",
-      "accountInfoLabel": "Informações da conta"
+      "accountInfoLabel": "Informações da conta",
+      "managePresets": "Presets de modelo",
+      "presetManagerTitle": "Gerenciar presets de modelo",
+      "presetListLabel": "Lista de presets",
+      "addPreset": "Adicionar preset",
+      "presetEmpty": "Ainda não há presets de modelo. Adicione um para começar a escolher modelos para as tarefas de wakeup.",
+      "presetNameLabel": "Nome do preset",
+      "presetNamePlaceholder": "Exemplo: wakeup padrão GPT-5.4",
+      "presetNameRequired": "Informe um nome para o preset.",
+      "presetModelLabel": "Valor do modelo",
+      "presetModelPlaceholder": "Exemplo: gpt-5.4",
+      "presetModelRequired": "Informe o valor do modelo.",
+      "presetModelDuplicate": "Esse valor de modelo já existe em outro preset.",
+      "presetAllowedReasoningLabel": "Níveis de raciocínio permitidos",
+      "presetDefaultReasoningLabel": "Nível de raciocínio padrão",
+      "presetReasoningEffortsRequired": "Selecione pelo menos um nível de raciocínio.",
+      "presetDefaultReasoningRequired": "Escolha um nível de raciocínio padrão na lista permitida.",
+      "presetDeleteConfirm": "Excluir o preset de modelo \"{{name}}\"?",
+      "noticePresetCreated": "Preset de modelo criado.",
+      "noticePresetUpdated": "Preset de modelo atualizado.",
+      "noticePresetDeleted": "Preset de modelo excluído.",
+      "taskModelLabel": "Preset de modelo",
+      "taskModelHint": "Escolha primeiro o preset e depois o nível de raciocínio usado por esta tarefa de wakeup.",
+      "taskModelRequired": "Selecione um preset de modelo para esta tarefa.",
+      "testModelLabel": "Preset de modelo de teste",
+      "testModelHint": "Escolha o preset e o nível de raciocínio para este teste manual.",
+      "testModelRequired": "Selecione um preset de modelo para este teste.",
+      "reasoningEffortLabel": "Nível de raciocínio",
+      "reasoningEffortEmpty": "Selecione primeiro um preset de modelo para ver os níveis de raciocínio disponíveis.",
+      "taskReasoningEffortRequired": "Selecione um nível de raciocínio para esta tarefa.",
+      "testReasoningEffortRequired": "Selecione um nível de raciocínio para este teste.",
+      "selectPresetPlaceholder": "Selecione um preset",
+      "selectReasoningPlaceholder": "Selecione um nível de raciocínio",
+      "modelValuePreview": "Valor real do modelo: {{model}}",
+      "modelSummaryLabel": "Modelo: {{model}} · Raciocínio: {{reasoning}}",
+      "modelDefault": "Padrão",
+      "reasoningEfforts": {
+        "low": "Baixo",
+        "medium": "Médio",
+        "high": "Alto",
+        "xhigh": "Muito alto"
+      },
+      "scheduleQuotaResetHint": "Quando o despertar após redefinição de cota estiver ativado, a atualização automática será ajustada para cada 2 minutos.",
+      "scheduleQuotaResetSummary": "Executar após redefinição de cota",
+      "quotaResetWindowLabel": "Condição de disparo da janela de redefinição",
+      "quotaResetWindowHint": "primary_window normalmente corresponde à cota de 5 horas. Em usuários gratuitos, primary_window pode corresponder à cota semanal e variar conforme a assinatura.",
+      "quotaResetWindowOptions": {
+        "either": "Disparar quando primary_window ou secondary_window for redefinida",
+        "primary_window": "Disparar apenas na redefinição de primary_window",
+        "secondary_window": "Disparar apenas na redefinição de secondary_window"
+      },
+      "nextRunsQuotaResetHint": "Os gatilhos de redefinição de cota dependem de dados recentes de cota, por isso não há prévia de horário fixo.",
+      "triggerQuotaReset": "Gatilho de redefinição de cota",
+      "noticeSavedEnabledWithQuotaReset": "Tarefas salvas. Total: {{count}}. A atualização automática do Codex foi ajustada para cada {{minutes}} minutos."
     }
   },
   "githubCopilot": {

@@ -602,7 +602,11 @@
       "zedAppPathDesc": "اتركه فارغًا لاستخدام المسار الافتراضي",
       "zedAppPathPlaceholder": "المسار الافتراضي",
       "zedPathSelect": "اختر",
-      "zedPathReset": "إعادة التعيين إلى الافتراضي"
+      "zedPathReset": "إعادة التعيين إلى الافتراضي",
+      "updateReminder": "تذكيرات التحديث",
+      "updateReminderDesc": "عند اكتشاف إصدار جديد، اعرض تنبيه التحديث والمدخل السريع في الشريط الجانبي.",
+      "updateReminderOff": "إيقاف (بدون تذكيرات)",
+      "updateReminderOn": "تشغيل (إظهار التذكيرات)"
     },
     "network": {
       "apiTitle": "واجهة برمجة تطبيقات قمرة القيادة المضادة للجاذبية",
@@ -1257,7 +1261,9 @@
     "installing": "جارٍ التثبيت...",
     "authorizing": "بانتظار تفويض النظام...",
     "installFailed": "فشل التثبيت على النظام. حاول لاحقًا أو نزّل الحزمة يدويًا.",
-    "restartRequiredAfterInstall": "تم تثبيت التحديث. أعد تشغيل التطبيق يدويًا لإكمال التبديل."
+    "restartRequiredAfterInstall": "تم تثبيت التحديث. أعد تشغيل التطبيق يدويًا لإكمال التبديل.",
+    "skipThisVersion": "تخطي هذا الإصدار",
+    "skipFailed": "تعذر تخطي هذا التحديث: {{error}}"
   },
   "closeDialog": {
     "title": "إغلاق النافذة",
@@ -1454,7 +1460,8 @@
       "schedule": {
         "daily": "يومي",
         "weekly": "أسبوعي",
-        "interval": "فاصل"
+        "interval": "فاصل",
+        "quota_reset": "بعد إعادة تعيين الحصة"
       },
       "dailyTimeLabel": "وقت التشغيل اليومي",
       "weeklyDaysLabel": "التشغيل في",
@@ -1516,7 +1523,60 @@
       "noticeTestFinishedWithError": "اكتمل الاختبار. نجح {{success}} وفشل {{failed}}.",
       "deleteConfirm": "حذف المهمة \"{{name}}\"؟",
       "executedCommandLabel": "الأمر المنفذ فعلياً",
-      "accountInfoLabel": "معلومات الحساب"
+      "accountInfoLabel": "معلومات الحساب",
+      "managePresets": "إعدادات النماذج",
+      "presetManagerTitle": "إدارة إعدادات النماذج",
+      "presetListLabel": "قائمة الإعدادات",
+      "addPreset": "إضافة إعداد",
+      "presetEmpty": "لا توجد إعدادات نماذج بعد. أضف واحداً لبدء اختيار النماذج لمهام الإيقاظ.",
+      "presetNameLabel": "اسم الإعداد",
+      "presetNamePlaceholder": "مثال: إيقاظ GPT-5.4 القياسي",
+      "presetNameRequired": "يرجى إدخال اسم الإعداد.",
+      "presetModelLabel": "قيمة النموذج",
+      "presetModelPlaceholder": "مثال: gpt-5.4",
+      "presetModelRequired": "يرجى إدخال قيمة النموذج.",
+      "presetModelDuplicate": "قيمة النموذج موجودة بالفعل في إعداد آخر.",
+      "presetAllowedReasoningLabel": "مستويات الاستدلال المسموح بها",
+      "presetDefaultReasoningLabel": "مستوى الاستدلال الافتراضي",
+      "presetReasoningEffortsRequired": "اختر مستوى استدلال واحداً على الأقل.",
+      "presetDefaultReasoningRequired": "اختر مستوى استدلال افتراضياً من القائمة المسموح بها.",
+      "presetDeleteConfirm": "هل تريد حذف إعداد النموذج \"{{name}}\"؟",
+      "noticePresetCreated": "تم إنشاء إعداد النموذج.",
+      "noticePresetUpdated": "تم تحديث إعداد النموذج.",
+      "noticePresetDeleted": "تم حذف إعداد النموذج.",
+      "taskModelLabel": "إعداد النموذج",
+      "taskModelHint": "اختر الإعداد أولاً ثم مستوى الاستدلال لهذه المهمة.",
+      "taskModelRequired": "يرجى اختيار إعداد نموذج لهذه المهمة.",
+      "testModelLabel": "إعداد نموذج الاختبار",
+      "testModelHint": "اختر الإعداد ومستوى الاستدلال لهذا الاختبار اليدوي.",
+      "testModelRequired": "يرجى اختيار إعداد نموذج لهذا الاختبار.",
+      "reasoningEffortLabel": "مستوى الاستدلال",
+      "reasoningEffortEmpty": "اختر إعداد نموذج أولاً لعرض مستويات الاستدلال المتاحة.",
+      "taskReasoningEffortRequired": "يرجى اختيار مستوى استدلال لهذه المهمة.",
+      "testReasoningEffortRequired": "يرجى اختيار مستوى استدلال لهذا الاختبار.",
+      "selectPresetPlaceholder": "اختر إعداداً",
+      "selectReasoningPlaceholder": "اختر مستوى الاستدلال",
+      "modelValuePreview": "قيمة النموذج الفعلية: {{model}}",
+      "modelSummaryLabel": "النموذج: {{model}} · الاستدلال: {{reasoning}}",
+      "modelDefault": "الافتراضي",
+      "reasoningEfforts": {
+        "low": "منخفض",
+        "medium": "متوسط",
+        "high": "عالٍ",
+        "xhigh": "عالٍ جداً"
+      },
+      "scheduleQuotaResetHint": "عند تفعيل الإيقاظ بعد إعادة تعيين الحصة، سيتم ضبط التحديث التلقائي ليعمل كل دقيقتين.",
+      "scheduleQuotaResetSummary": "التشغيل بعد إعادة تعيين الحصة",
+      "quotaResetWindowLabel": "شرط تفعيل نافذة إعادة التعيين",
+      "quotaResetWindowHint": "عادةً ما يشير primary_window إلى حصة 5 ساعات. لدى المستخدم المجاني قد يشير primary_window إلى الحصة الأسبوعية، وقد يختلف حسب الاشتراك.",
+      "quotaResetWindowOptions": {
+        "either": "التفعيل عند إعادة تعيين أيٍّ من primary_window أو secondary_window",
+        "primary_window": "التفعيل فقط عند إعادة تعيين primary_window",
+        "secondary_window": "التفعيل فقط عند إعادة تعيين secondary_window"
+      },
+      "nextRunsQuotaResetHint": "تعتمد عمليات التشغيل بعد إعادة تعيين الحصة على أحدث بيانات الحصة، لذا لا تتوفر معاينة بوقت ثابت.",
+      "triggerQuotaReset": "تشغيل بعد إعادة تعيين الحصة",
+      "noticeSavedEnabledWithQuotaReset": "تم حفظ المهام. الإجمالي: {{count}}. تم ضبط التحديث التلقائي لـ Codex ليعمل كل {{minutes}} دقيقة."
     }
   },
   "githubCopilot": {

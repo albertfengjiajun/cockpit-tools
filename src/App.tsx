@@ -398,6 +398,8 @@ function MainApp() {
   const [updateRuntimeInfoLoaded, setUpdateRuntimeInfoLoaded] = useState(false);
   const [updateNotificationInfo, setUpdateNotificationInfo] = useState<UpdateInfo | null>(null);
   const [updateNotificationChecking, setUpdateNotificationChecking] = useState(false);
+  const [updateRemindersEnabled, setUpdateRemindersEnabled] = useState(true);
+  const [updateSkipError, setUpdateSkipError] = useState('');
   const [silentUpdateVersion, setSilentUpdateVersion] = useState<string | null>(null);
   const [updateAction, setUpdateAction] = useState<UpdateAction>({
     state: 'hidden',
@@ -456,12 +458,14 @@ function MainApp() {
     if (source === 'manual') {
       window.dispatchEvent(new CustomEvent('update-check-started', { detail: { source } }));
     }
+    setUpdateSkipError('');
     setUpdateNotificationKey(Date.now());
     setShowUpdateNotification(true);
   }, []);
 
   const closeUpdateNotification = useCallback(() => {
     setShowUpdateNotification(false);
+    setUpdateSkipError('');
     if (updateAction.state === 'hidden') {
       setUpdateNotificationInfo(null);
       setUpdateRetryStatus('');
@@ -556,6 +560,41 @@ function MainApp() {
       cancelled = true;
     };
   }, [writeUpdateLog]);
+
+  useEffect(() => {
+    let cancelled = false;
+    invoke<{
+      auto_check?: boolean;
+      check_interval_hours?: number;
+      auto_install?: boolean;
+      last_run_version?: string;
+      remind_on_update?: boolean;
+      skipped_version?: string;
+    }>('get_update_settings')
+      .then((settings) => {
+        if (cancelled) {
+          return;
+        }
+        setUpdateRemindersEnabled(settings?.remind_on_update ?? true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleUpdateReminderChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ enabled?: boolean }>).detail;
+      if (typeof detail?.enabled === 'boolean') {
+        setUpdateRemindersEnabled(detail.enabled);
+      }
+    };
+    window.addEventListener('update-reminder-changed', handleUpdateReminderChanged as EventListener);
+    return () => {
+      window.removeEventListener('update-reminder-changed', handleUpdateReminderChanged as EventListener);
+    };
+  }, []);
 
   const isLinuxManagedUpdate = updateRuntimeInfo?.platform === 'linux'
     && updateRuntimeInfo.linux_managed_install_supported;
@@ -1055,6 +1094,63 @@ function MainApp() {
     writeUpdateLog,
   ]);
 
+  const handleSkipUpdateVersion = useCallback(async () => {
+    const targetVersion = updateNotificationInfo?.latest_version;
+    if (!targetVersion) {
+      return;
+    }
+    setUpdateSkipError('');
+    try {
+      const settings = await invoke<{
+        auto_check?: boolean;
+        check_interval_hours?: number;
+        auto_install?: boolean;
+        last_run_version?: string;
+        remind_on_update?: boolean;
+        skipped_version?: string;
+      }>('get_update_settings');
+      await invoke('save_update_settings', {
+        settings: { ...settings, skipped_version: targetVersion },
+      });
+      const pendingUpdate = pendingSilentUpdateRef.current;
+      if (pendingUpdate && pendingUpdate.version === targetVersion) {
+        await closeUpdaterHandle(pendingUpdate);
+        pendingSilentUpdateRef.current = null;
+      }
+      writeUpdateLog('info', `用户跳过更新版本: version=${targetVersion}`);
+      setUpdateAction((prev) => {
+        if (
+          prev.version === targetVersion
+          && (prev.state === 'available' || prev.state === 'downloading' || prev.state === 'ready')
+        ) {
+          return {
+            state: 'hidden',
+            version: null,
+            progress: 0,
+            requiresInstall: true,
+          };
+        }
+        return prev;
+      });
+      setShowUpdateNotification(false);
+      setUpdateNotificationInfo(null);
+      setUpdateRetryStatus('');
+      setUpdateDownloadError('');
+      setUpdateErrorDetails('');
+      setSilentUpdateVersion(null);
+      updateDownloadOwnerRef.current = 'none';
+      setUpdateSkipError('');
+    } catch (error) {
+      console.error('[App] Failed to skip update version:', error);
+      setUpdateSkipError(
+        t('update_notification.skipFailed', {
+          error: sanitizeUpdaterErrorMessage(error),
+        }),
+      );
+      writeUpdateLog('error', `跳过更新版本失败: error=${sanitizeUpdaterErrorMessage(error)}`);
+    }
+  }, [closeUpdaterHandle, t, updateNotificationInfo, writeUpdateLog]);
+
   useEffect(() => {
     return () => {
       const pendingUpdate = pendingSilentUpdateRef.current;
@@ -1192,12 +1288,17 @@ function MainApp() {
           auto_check?: boolean;
           check_interval_hours?: number;
           auto_install?: boolean;
+          remind_on_update?: boolean;
+          skipped_version?: string;
         }>('get_update_settings');
         const settingsInvokeElapsed = performance.now() - settingsInvokeStartedAt;
         console.log(
           `[StartupPerf][UpdateCheck] get_update_settings completed in ${settingsInvokeElapsed.toFixed(2)}ms`,
         );
         const autoInstall = settings?.auto_install ?? false;
+        const remindOnUpdate = settings?.remind_on_update ?? true;
+        const skippedVersion = (settings?.skipped_version ?? '').trim();
+        setUpdateRemindersEnabled(remindOnUpdate);
         writeUpdateLog(
           'info',
           `读取更新设置: auto_install=${autoInstall}；启动始终执行更新检查`,
@@ -1234,159 +1335,179 @@ function MainApp() {
               `[StartupPerf][UpdateCheck] silent runUpdaterCheck completed in ${(performance.now() - silentCheckStartedAt).toFixed(2)}ms; hasUpdate=${Boolean(update)}`,
             );
             if (update) {
-              preparedUpdateInfo = await prepareUpdateNotificationInfo(update);
-              setUpdateNotificationInfo(preparedUpdateInfo);
-              handleUpdateCheckResult({
-                source: 'auto',
-                status: 'has_update',
-                currentVersion: preparedUpdateInfo.current_version,
-                latestVersion: preparedUpdateInfo.latest_version,
-              });
-              console.log('[App] Update found, downloading silently with retry...');
-              writeUpdateLog('info', `检测到新版本，开始静默下载: version=${update.version}`);
-              updateDownloadOwnerRef.current = 'silent';
-              setUpdateRetryStatus('');
-              setUpdateDownloadError('');
-              setUpdateErrorDetails('');
-              setUpdateAction((prev) => {
-                if (prev.state === 'ready' && prev.version === update.version) {
+              if (skippedVersion && update.version === skippedVersion) {
+                console.log('[App] Update skipped by user, ignoring:', update.version);
+                writeUpdateLog('info', `检测到新版本但已跳过: version=${update.version}`);
+                await closeUpdaterHandle(update);
+                setUpdateAction((prev) => {
+                  if (prev.state === 'available' && prev.version === update.version) {
+                    return {
+                      state: 'hidden',
+                      version: null,
+                      progress: 0,
+                      requiresInstall: true,
+                    };
+                  }
                   return prev;
+                });
+              } else {
+                preparedUpdateInfo = await prepareUpdateNotificationInfo(update);
+                if (remindOnUpdate) {
+                  setUpdateNotificationInfo(preparedUpdateInfo);
+                  handleUpdateCheckResult({
+                    source: 'auto',
+                    status: 'has_update',
+                    currentVersion: preparedUpdateInfo.current_version,
+                    latestVersion: preparedUpdateInfo.latest_version,
+                  });
                 }
-                return {
-                  state: 'downloading',
+                console.log('[App] Update found, downloading silently with retry...');
+                writeUpdateLog('info', `检测到新版本，开始静默下载: version=${update.version}`);
+                updateDownloadOwnerRef.current = 'silent';
+                setUpdateRetryStatus('');
+                setUpdateDownloadError('');
+                setUpdateErrorDetails('');
+                setUpdateAction((prev) => {
+                  if (prev.state === 'ready' && prev.version === update.version) {
+                    return prev;
+                  }
+                  return {
+                    state: 'downloading',
+                    version: update.version,
+                    progress: 0,
+                    requiresInstall: true,
+                  };
+                });
+                await invoke('save_pending_update_notes', {
                   version: update.version,
-                  progress: 0,
-                  requiresInstall: true,
-                };
-              });
-              await invoke('save_pending_update_notes', {
-                version: update.version,
-                releaseNotes: preparedUpdateInfo.release_notes,
-                releaseNotesZh: preparedUpdateInfo.release_notes_zh,
-              }).catch((error) => {
-                console.error('[App] Failed to cache silent update notes:', error);
-                writeUpdateLog(
-                  'warn',
-                  `缓存待安装更新说明失败: version=${update.version}, error=${sanitizeUpdaterErrorMessage(error)}`,
-                );
-              });
+                  releaseNotes: preparedUpdateInfo.release_notes,
+                  releaseNotesZh: preparedUpdateInfo.release_notes_zh,
+                }).catch((error) => {
+                  console.error('[App] Failed to cache silent update notes:', error);
+                  writeUpdateLog(
+                    'warn',
+                    `缓存待安装更新说明失败: version=${update.version}, error=${sanitizeUpdaterErrorMessage(error)}`,
+                  );
+                });
+                const silentDownloadStartedAt = performance.now();
+                const downloadedUpdate = await retryWithBackoff(
+                  async (attempt) => {
+                    let candidate: UpdaterUpdate | null = null;
+                    try {
+                      if (attempt === 1) {
+                        candidate = update;
+                      } else {
+                        candidate = await runUpdaterCheck();
+                      }
 
-              const silentDownloadStartedAt = performance.now();
-              const downloadedUpdate = await retryWithBackoff(
-                async (attempt) => {
-                  let candidate: UpdaterUpdate | null = null;
-                  try {
-                    if (attempt === 1) {
-                      candidate = update;
-                    } else {
-                      candidate = await runUpdaterCheck();
+                      if (!candidate) {
+                        throw new Error('No update available from updater plugin');
+                      }
+
+                      let downloaded = 0;
+                      let contentLength = 0;
+                      const candidateVersion = candidate.version;
+                      await candidate.download((event) => {
+                        setUpdateAction((prev) => {
+                          if (prev.state !== 'downloading') {
+                            return prev;
+                          }
+
+                          if (event.event === 'Started') {
+                            contentLength = event.data.contentLength ?? 0;
+                            return {
+                              ...prev,
+                              version: candidateVersion,
+                              progress: 0,
+                            };
+                          }
+
+                          if (event.event === 'Progress') {
+                            downloaded += event.data.chunkLength;
+                            const nextProgress = contentLength > 0
+                              ? Math.min(100, Math.round((downloaded / contentLength) * 100))
+                              : Math.min(95, prev.progress + 1);
+                            return {
+                              ...prev,
+                              version: candidateVersion,
+                              progress: nextProgress,
+                            };
+                          }
+
+                          return {
+                            ...prev,
+                            version: candidateVersion,
+                            progress: 100,
+                          };
+                        });
+                      });
+                      return candidate;
+                    } catch (error) {
+                      if (candidate) {
+                        await candidate.close().catch(() => {});
+                      }
+                      throw error;
                     }
-
-                    if (!candidate) {
-                      throw new Error('No update available from updater plugin');
-                    }
-
-                    let downloaded = 0;
-                    let contentLength = 0;
-                    const candidateVersion = candidate.version;
-                    await candidate.download((event) => {
+                  },
+                  {
+                    delaysMs: UPDATE_DOWNLOAD_RETRY_DELAYS_MS,
+                    shouldRetry: isRetryableUpdaterError,
+                    onRetry: ({ retryIndex, totalRetries, delayMs, error }) => {
+                      const compactError = sanitizeUpdaterErrorMessage(error);
+                      setUpdateRetryStatus(
+                        t('update_notification.downloadRetrying', {
+                          attempt: retryIndex,
+                          total: totalRetries,
+                        }),
+                      );
+                      console.warn(
+                        `[App] Silent update download failed, retrying (${retryIndex}/${totalRetries}) in ${delayMs}ms:`,
+                        error,
+                      );
+                      writeUpdateLog(
+                        'warn',
+                        `静默更新下载失败，准备重试(${retryIndex}/${totalRetries})，delay=${delayMs}ms，error=${compactError}`,
+                      );
                       setUpdateAction((prev) => {
                         if (prev.state !== 'downloading') {
                           return prev;
                         }
-
-                        if (event.event === 'Started') {
-                          contentLength = event.data.contentLength ?? 0;
-                          return {
-                            ...prev,
-                            version: candidateVersion,
-                            progress: 0,
-                          };
-                        }
-
-                        if (event.event === 'Progress') {
-                          downloaded += event.data.chunkLength;
-                          const nextProgress = contentLength > 0
-                            ? Math.min(100, Math.round((downloaded / contentLength) * 100))
-                            : Math.min(95, prev.progress + 1);
-                          return {
-                            ...prev,
-                            version: candidateVersion,
-                            progress: nextProgress,
-                          };
-                        }
-
                         return {
                           ...prev,
-                          version: candidateVersion,
-                          progress: 100,
+                          progress: 0,
                         };
                       });
-                    });
-                    return candidate;
-                  } catch (error) {
-                    if (candidate) {
-                      await candidate.close().catch(() => {});
-                    }
-                    throw error;
-                  }
-                },
-                {
-                  delaysMs: UPDATE_DOWNLOAD_RETRY_DELAYS_MS,
-                  shouldRetry: isRetryableUpdaterError,
-                  onRetry: ({ retryIndex, totalRetries, delayMs, error }) => {
-                    const compactError = sanitizeUpdaterErrorMessage(error);
-                    setUpdateRetryStatus(
-                      t('update_notification.downloadRetrying', {
-                        attempt: retryIndex,
-                        total: totalRetries,
-                      }),
-                    );
-                    console.warn(
-                      `[App] Silent update download failed, retrying (${retryIndex}/${totalRetries}) in ${delayMs}ms:`,
-                      error,
-                    );
-                    writeUpdateLog(
-                      'warn',
-                      `静默更新下载失败，准备重试(${retryIndex}/${totalRetries})，delay=${delayMs}ms，error=${compactError}`,
-                    );
-                    setUpdateAction((prev) => {
-                      if (prev.state !== 'downloading') {
-                        return prev;
-                      }
-                      return {
-                        ...prev,
-                        progress: 0,
-                      };
-                    });
+                    },
                   },
-                },
-              );
-              console.log(
-                `[StartupPerf][UpdateCheck] silent update download completed in ${(performance.now() - silentDownloadStartedAt).toFixed(2)}ms; version=${downloadedUpdate.version}`,
-              );
+                );
+                console.log(
+                  `[StartupPerf][UpdateCheck] silent update download completed in ${(performance.now() - silentDownloadStartedAt).toFixed(2)}ms; version=${downloadedUpdate.version}`,
+                );
 
-              if (pendingSilentUpdateRef.current) {
-                await pendingSilentUpdateRef.current.close();
+                if (pendingSilentUpdateRef.current) {
+                  await pendingSilentUpdateRef.current.close();
+                }
+                pendingSilentUpdateRef.current = downloadedUpdate;
+                console.log('[App] Silent download complete, waiting for restart to install.');
+                writeUpdateLog(
+                  'info',
+                  `静默更新下载完成，等待用户重启应用生效: version=${downloadedUpdate.version}`,
+                );
+                updateDownloadOwnerRef.current = 'none';
+                setUpdateRetryStatus('');
+                setUpdateDownloadError('');
+                setUpdateErrorDetails('');
+                setSilentUpdateVersion(downloadedUpdate.version);
+                setUpdateAction({
+                  state: 'ready',
+                  version: downloadedUpdate.version,
+                  progress: 100,
+                  requiresInstall: true,
+                });
+                if (remindOnUpdate) {
+                  openUpdateNotification('auto');
+                }
               }
-              pendingSilentUpdateRef.current = downloadedUpdate;
-              console.log('[App] Silent download complete, waiting for restart to install.');
-              writeUpdateLog(
-                'info',
-                `静默更新下载完成，等待用户重启应用生效: version=${downloadedUpdate.version}`,
-              );
-              updateDownloadOwnerRef.current = 'none';
-              setUpdateRetryStatus('');
-              setUpdateDownloadError('');
-              setUpdateErrorDetails('');
-              setSilentUpdateVersion(downloadedUpdate.version);
-              setUpdateAction({
-                state: 'ready',
-                version: downloadedUpdate.version,
-                progress: 100,
-                requiresInstall: true,
-              });
-              openUpdateNotification('auto');
             } else {
               console.log('[App] No update available.');
               writeUpdateLog('info', '更新检查完成：当前已是最新版本');
@@ -1413,7 +1534,23 @@ function MainApp() {
               'error',
               `静默更新失败，展示更新弹窗: error=${sanitizeUpdaterErrorMessage(err)}`,
             );
-            if (preparedUpdateInfo) {
+            if (!remindOnUpdate) {
+              setUpdateRetryStatus('');
+              setUpdateDownloadError('');
+              setUpdateErrorDetails('');
+              setUpdateAction((prev) => {
+                if (prev.state === 'downloading' || prev.state === 'available') {
+                  return {
+                    state: 'hidden',
+                    version: null,
+                    progress: 0,
+                    requiresInstall: true,
+                  };
+                }
+                return prev;
+              });
+            }
+            if (preparedUpdateInfo && remindOnUpdate) {
               setUpdateNotificationInfo(preparedUpdateInfo);
               setUpdateAction({
                 state: 'available',
@@ -1458,17 +1595,38 @@ function MainApp() {
             );
 
             if (update) {
-              const info = await prepareUpdateNotificationInfo(update);
-              setUpdateNotificationInfo(info);
-              handleUpdateCheckResult({
-                source: 'auto',
-                status: 'has_update',
-                currentVersion: info.current_version,
-                latestVersion: info.latest_version,
-              });
-              writeUpdateLog('info', `检测到新版本，展示手动更新弹窗: version=${update.version}`);
-              await closeUpdaterHandle(update);
-              openUpdateNotification('auto');
+              if (skippedVersion && update.version === skippedVersion) {
+                console.log('[App] Update skipped by user, ignoring:', update.version);
+                writeUpdateLog('info', `检测到新版本但已跳过: version=${update.version}`);
+                await closeUpdaterHandle(update);
+                setUpdateAction((prev) => {
+                  if (prev.state === 'available' && prev.version === update.version) {
+                    return {
+                      state: 'hidden',
+                      version: null,
+                      progress: 0,
+                      requiresInstall: true,
+                    };
+                  }
+                  return prev;
+                });
+              } else {
+                const info = await prepareUpdateNotificationInfo(update);
+                if (remindOnUpdate) {
+                  setUpdateNotificationInfo(info);
+                }
+                handleUpdateCheckResult({
+                  source: 'auto',
+                  status: 'has_update',
+                  currentVersion: info.current_version,
+                  latestVersion: info.latest_version,
+                });
+                writeUpdateLog('info', `检测到新版本，展示手动更新弹窗: version=${update.version}`);
+                await closeUpdaterHandle(update);
+                if (remindOnUpdate) {
+                  openUpdateNotification('auto');
+                }
+              }
             } else {
               writeUpdateLog('info', '更新检查完成：当前已是最新版本');
               setUpdateRetryStatus('');
@@ -2304,11 +2462,13 @@ function MainApp() {
                 ? t('quickSettings.trae.appPath', 'Trae 路径')
               : t('quickSettings.antigravity.appPath', '启动路径')
     : t('quickSettings.antigravity.appPath', '启动路径');
+  const shouldRenderUpdateNotification = showUpdateNotification
+    || (updateRemindersEnabled && updateAction.state !== 'hidden');
 
   return (
     <div className="app-container">
       {/* 更新通知：活跃状态时保持挂载，关闭后继续保留当前更新状态 */}
-      {(showUpdateNotification || updateAction.state !== 'hidden') && (
+      {shouldRenderUpdateNotification && (
         <div style={showUpdateNotification ? undefined : { display: 'none' }}>
         <Suspense fallback={null}>
           <UpdateNotification
@@ -2322,8 +2482,10 @@ function MainApp() {
             actionRetryStatus={updateRetryStatus}
             actionError={updateDownloadError}
             actionErrorDetails={updateErrorDetails}
+            skipError={updateSkipError}
             onPrimaryAction={handleQuickUpdateActionClick}
             onCancelUpdate={cancelUpdateDownload}
+            onSkipUpdate={handleSkipUpdateVersion}
             onClose={closeUpdateNotification}
           />
         </Suspense>
@@ -2483,6 +2645,7 @@ function MainApp() {
         updateActionState={updateAction.state}
         updateProgress={updateAction.progress}
         onUpdateActionClick={handleQuickUpdateActionClick}
+        updateRemindersEnabled={updateRemindersEnabled}
       />
 
       <button
