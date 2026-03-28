@@ -7,6 +7,22 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.20.14] - 2026-03-28
+
+### Added
+- **CodeBuddy CN and WorkBuddy now share one account workspace and check-in flow with synchronized capabilities**: both platforms now use the same account list/table rendering, check-in modal interactions, and parsing/normalization pipeline so account actions and quota display behavior stay consistent.
+- **CodeBuddy CN now supports daily check-in end-to-end**: the account page and desktop command layer now include check-in API integration, status presentation, and in-context check-in dialog interactions.
+
+### Changed
+- **CodeBuddy CN quota presentation now uses a four-category model with unified aggregation logic**: quota data is reorganized into `base`, `activity`, `extra`, and `other` groups, and shared suite models now drive account-page and dashboard totals consistently.
+- **Settings now complete CodeBuddy CN and WorkBuddy refresh controls in one loop**: quick settings and settings page now expose aligned refresh options for both platforms and reuse shared auto-refresh wiring.
+- **Cloud Code quota requests now build metadata and User-Agent from detected official Antigravity installation details**: local quota fetching and onboarding now derive IDE version, platform, and client headers dynamically (including `x-goog-api-client`) instead of relying on hard-coded version/header values.
+
+### Fixed
+- **CodeBuddy instances and dashboard cards now resolve account type and quota aggregation more accurately**: instance rows now follow shared account-type mapping and dashboard cards no longer mix incorrect aggregates across providers.
+- **Check-in i18n keys are now fully aligned across locales (including ar and zh-tw)**: missing keys are added and duplicated English fallbacks are removed to keep localized check-in UI complete.
+
+---
 ## [0.20.13] - 2026-03-28
 
 ### Changed

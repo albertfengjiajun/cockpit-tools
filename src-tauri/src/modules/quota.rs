@@ -2,7 +2,7 @@ use crate::models::{CreditInfo, QuotaData, TokenData};
 use crate::modules;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::PathBuf;
@@ -14,7 +14,6 @@ const CLOUD_CODE_AUTOPUSH_SANDBOX_BASE_URL: &str =
 const LOAD_CODE_ASSIST_PATH: &str = "v1internal:loadCodeAssist";
 const ONBOARD_USER_PATH: &str = "v1internal:onboardUser";
 const FETCH_AVAILABLE_MODELS_PATH: &str = "v1internal:fetchAvailableModels";
-const USER_AGENT: &str = "antigravity";
 const DEFAULT_ATTEMPTS: usize = 2;
 const BACKOFF_BASE_MS: u64 = 500;
 const BACKOFF_MAX_MS: u64 = 4000;
@@ -22,6 +21,14 @@ const ONBOARD_POLL_DELAY_MS: u64 = 500;
 const API_CACHE_DIR: &str = "cache/quota_api_v1_desktop";
 const API_CACHE_VERSION: u8 = 1;
 const API_CACHE_TTL_MS: i64 = 60_000;
+const DEFAULT_CLOUD_CODE_IDE_VERSION: &str = "1.20.5";
+const DEFAULT_LOAD_CODE_ASSIST_UA_OS: &str = "windows";
+const DEFAULT_LOAD_CODE_ASSIST_UA_ARCH: &str = "amd64";
+const DEFAULT_GOOGLE_API_NODEJS_CLIENT_VERSION: &str = "10.3.0";
+const DEFAULT_CLOUD_CODE_USER_AGENT: &str = "antigravity/1.20.5 windows/amd64";
+const DEFAULT_LOAD_CODE_ASSIST_USER_AGENT: &str =
+    "antigravity/1.20.5 windows/amd64 google-api-nodejs-client/10.3.0";
+const DEFAULT_X_GOOG_API_CLIENT_NODE_VERSION: &str = "22.21.1";
 
 #[derive(Debug, Clone, Default)]
 pub struct QuotaCloudCodeContext {
@@ -64,6 +71,174 @@ fn env_quality_is_insider_or_dev() -> bool {
             .as_str(),
         "insider" | "dev"
     )
+}
+
+fn official_antigravity_version_for_cloud_code() -> String {
+    let version = crate::modules::wakeup_gateway::official_antigravity_app_version();
+    let trimmed = version.trim();
+    if trimmed.is_empty() {
+        return DEFAULT_CLOUD_CODE_IDE_VERSION.to_string();
+    }
+    trimmed.to_string()
+}
+
+fn load_code_assist_user_agent_os() -> &'static str {
+    match std::env::consts::OS {
+        "macos" => "darwin",
+        "windows" => "windows",
+        "linux" => "linux",
+        _ => DEFAULT_LOAD_CODE_ASSIST_UA_OS,
+    }
+}
+
+fn load_code_assist_user_agent_arch() -> &'static str {
+    match std::env::consts::ARCH {
+        "x86_64" => "amd64",
+        "aarch64" => "arm64",
+        _ => DEFAULT_LOAD_CODE_ASSIST_UA_ARCH,
+    }
+}
+
+fn read_json_version_field(path: &std::path::Path) -> Option<String> {
+    let content = std::fs::read_to_string(path).ok()?;
+    let value = serde_json::from_str::<serde_json::Value>(&content).ok()?;
+    value
+        .get("version")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .map(str::to_string)
+}
+
+fn google_api_nodejs_client_version_for_load_code_assist() -> String {
+    if let Some(root) = crate::modules::wakeup_gateway::official_antigravity_root_for_version() {
+        let candidates = [
+            root.join("Contents")
+                .join("Resources")
+                .join("app")
+                .join("node_modules")
+                .join("google-auth-library")
+                .join("package.json"),
+            root.join("resources")
+                .join("app")
+                .join("node_modules")
+                .join("google-auth-library")
+                .join("package.json"),
+            root.join("node_modules")
+                .join("google-auth-library")
+                .join("package.json"),
+        ];
+
+        for candidate in candidates {
+            if let Some(version) = read_json_version_field(&candidate) {
+                return version;
+            }
+        }
+    }
+
+    DEFAULT_GOOGLE_API_NODEJS_CLIENT_VERSION.to_string()
+}
+
+fn build_load_code_assist_user_agent() -> String {
+    let ide_version = official_antigravity_version_for_cloud_code();
+    let os = load_code_assist_user_agent_os();
+    let arch = load_code_assist_user_agent_arch();
+    let google_client_version = google_api_nodejs_client_version_for_load_code_assist();
+    if ide_version.trim().is_empty()
+        || os.trim().is_empty()
+        || arch.trim().is_empty()
+        || google_client_version.trim().is_empty()
+    {
+        return DEFAULT_LOAD_CODE_ASSIST_USER_AGENT.to_string();
+    }
+
+    format!(
+        "antigravity/{} {}/{} google-api-nodejs-client/{}",
+        ide_version, os, arch, google_client_version
+    )
+}
+
+fn build_cloud_code_user_agent() -> String {
+    let ide_version = official_antigravity_version_for_cloud_code();
+    let os = load_code_assist_user_agent_os();
+    let arch = load_code_assist_user_agent_arch();
+    if ide_version.trim().is_empty() || os.trim().is_empty() || arch.trim().is_empty() {
+        return DEFAULT_CLOUD_CODE_USER_AGENT.to_string();
+    }
+    format!("antigravity/{} {}/{}", ide_version, os, arch)
+}
+
+fn load_code_assist_user_agent() -> String {
+    let ua = build_load_code_assist_user_agent();
+    if ua.trim().is_empty() {
+        return DEFAULT_LOAD_CODE_ASSIST_USER_AGENT.to_string();
+    }
+    ua
+}
+
+fn load_code_assist_x_goog_api_client() -> String {
+    if let Ok(raw) = std::env::var("AG_LOAD_CODE_ASSIST_NODE_VERSION") {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            return format!("gl-node/{}", trimmed);
+        }
+    }
+    format!("gl-node/{}", DEFAULT_X_GOOG_API_CLIENT_NODE_VERSION)
+}
+
+fn cloud_code_platform_name() -> &'static str {
+    match (
+        load_code_assist_user_agent_os(),
+        load_code_assist_user_agent_arch(),
+    ) {
+        ("darwin", "amd64") => "DARWIN_AMD64",
+        ("darwin", "arm64") => "DARWIN_ARM64",
+        ("linux", "amd64") => "LINUX_AMD64",
+        ("linux", "arm64") => "LINUX_ARM64",
+        ("windows", "amd64") => "WINDOWS_AMD64",
+        _ => "PLATFORM_UNSPECIFIED",
+    }
+}
+
+fn cloud_code_plugin_version() -> String {
+    let version = env!("CARGO_PKG_VERSION").trim();
+    if version.is_empty() {
+        return "unknown".to_string();
+    }
+    version.to_string()
+}
+
+fn build_cloud_code_metadata(duet_project: Option<&str>) -> Value {
+    let mut metadata = serde_json::Map::new();
+    metadata.insert("ideName".to_string(), Value::String("antigravity".to_string()));
+    metadata.insert("ideType".to_string(), Value::String("ANTIGRAVITY".to_string()));
+    metadata.insert(
+        "ideVersion".to_string(),
+        Value::String(official_antigravity_version_for_cloud_code()),
+    );
+    metadata.insert(
+        "pluginVersion".to_string(),
+        Value::String(cloud_code_plugin_version()),
+    );
+    metadata.insert(
+        "platform".to_string(),
+        Value::String(cloud_code_platform_name().to_string()),
+    );
+    metadata.insert(
+        "updateChannel".to_string(),
+        Value::String("stable".to_string()),
+    );
+    metadata.insert(
+        "pluginType".to_string(),
+        Value::String("GEMINI".to_string()),
+    );
+    if let Some(project) = duet_project
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        metadata.insert("duetProject".to_string(), Value::String(project.to_string()));
+    }
+    Value::Object(metadata)
 }
 
 fn resolve_cloud_code_base_url(ctx: &QuotaCloudCodeContext) -> String {
@@ -272,19 +447,11 @@ fn create_client() -> reqwest::Client {
     crate::utils::http::create_client(15)
 }
 
-/// metadata 使用 snake_case 格式，确保 loadCodeAssist 返回 availableCredits
-fn build_metadata_payload() -> serde_json::Value {
-    json!({
-        "metadata": {
-            "ide_type": "ANTIGRAVITY",
-            "ide_version": "1.20.5",
-            "ide_name": "antigravity"
-        }
-    })
-}
-
 fn build_load_code_assist_payload(project_id: Option<&str>) -> serde_json::Value {
-    let mut payload = build_metadata_payload();
+    let mut payload = json!({
+        "metadata": build_cloud_code_metadata(project_id),
+        "mode": "FULL_ELIGIBILITY_CHECK"
+    });
     if let Some(project_id) = project_id.filter(|id| !id.trim().is_empty()) {
         if let Some(obj) = payload.as_object_mut() {
             obj.insert(
@@ -347,12 +514,9 @@ async fn try_onboard_user(
 ) -> Result<Option<String>, String> {
     let mut payload = json!({
         "tierId": tier_id,
-        "metadata": {
-            "ideType": "ANTIGRAVITY",
-            "platform": "PLATFORM_UNSPECIFIED",
-            "pluginType": "GEMINI"
-        }
+        "metadata": build_cloud_code_metadata(project_id)
     });
+    let ua = load_code_assist_user_agent();
     if let Some(project_id) = project_id.filter(|id| !id.trim().is_empty()) {
         if let Some(obj) = payload.as_object_mut() {
             obj.insert(
@@ -366,7 +530,7 @@ async fn try_onboard_user(
         .post(format!("{}/{}", base_url, ONBOARD_USER_PATH))
         .bearer_auth(access_token)
         .header(reqwest::header::CONTENT_TYPE, "application/json")
-        .header(reqwest::header::USER_AGENT, USER_AGENT)
+        .header(reqwest::header::USER_AGENT, &ua)
         .header(reqwest::header::ACCEPT_ENCODING, "gzip")
         .json(&payload)
         .send()
@@ -403,7 +567,7 @@ async fn try_onboard_user(
             .get(format!("{}/v1internal/{}", base_url, op_name))
             .bearer_auth(access_token)
             .header(reqwest::header::CONTENT_TYPE, "application/json")
-            .header(reqwest::header::USER_AGENT, USER_AGENT)
+            .header(reqwest::header::USER_AGENT, &ua)
             .header(reqwest::header::ACCEPT_ENCODING, "gzip")
             .send()
             .await
@@ -470,6 +634,8 @@ pub async fn fetch_project_id_with_context(
     let mut last_error: Option<String> = None;
     let mut credits: Vec<CreditInfo> = Vec::new();
     let base_url = resolve_cloud_code_base_url(ctx);
+    let ua = load_code_assist_user_agent();
+    let x_goog_api_client = load_code_assist_x_goog_api_client();
     let preferred_project_id = ctx
         .preferred_project_id
         .as_deref()
@@ -478,15 +644,26 @@ pub async fn fetch_project_id_with_context(
         .map(str::to_string);
 
     for attempt in 1..=DEFAULT_ATTEMPTS {
+        crate::modules::logger::log_info(&format!(
+            "[Quota][loadCodeAssist] account={} attempt={}/{} url={}/{} user-agent=\"{}\" x-goog-api-client=\"{}\"",
+            email,
+            attempt,
+            DEFAULT_ATTEMPTS,
+            base_url,
+            LOAD_CODE_ASSIST_PATH,
+            ua,
+            x_goog_api_client
+        ));
+
         let response = client
             .post(format!("{}/{}", base_url, LOAD_CODE_ASSIST_PATH))
             .bearer_auth(access_token)
             .header(reqwest::header::CONTENT_TYPE, "application/json")
             .header(
                 reqwest::header::USER_AGENT,
-                "antigravity/1.20.5 windows/amd64 google-api-nodejs-client/10.3.0",
+                &ua,
             )
-            .header("x-goog-api-client", "gl-node/22.21.1")
+            .header("x-goog-api-client", &x_goog_api_client)
             .header(reqwest::header::ACCEPT, "*/*")
             .header(reqwest::header::ACCEPT_ENCODING, "gzip, deflate, br")
             .json(&build_load_code_assist_payload(
@@ -807,6 +984,7 @@ pub async fn fetch_quota_with_context(
         .as_ref()
         .map(|id| json!({ "project": id }))
         .unwrap_or_else(|| json!({}));
+    let cloud_code_user_agent = build_cloud_code_user_agent();
 
     let max_retries = 3;
 
@@ -814,7 +992,7 @@ pub async fn fetch_quota_with_context(
         match client
             .post(format!("{}/{}", base_url, FETCH_AVAILABLE_MODELS_PATH))
             .bearer_auth(access_token)
-            .header("User-Agent", USER_AGENT)
+            .header(reqwest::header::USER_AGENT, &cloud_code_user_agent)
             .header(reqwest::header::ACCEPT_ENCODING, "gzip")
             .json(&payload)
             .send()

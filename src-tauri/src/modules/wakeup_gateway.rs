@@ -610,8 +610,50 @@ fn official_ls_app_data_dir_name() -> String {
     OFFICIAL_LS_DEFAULT_APP_DATA_DIR.to_string()
 }
 
-fn official_antigravity_info_plist_path() -> &'static str {
-    "/Applications/Antigravity.app/Contents/Info.plist"
+pub(crate) fn official_antigravity_root_for_version() -> Option<std::path::PathBuf> {
+    let user_config = crate::modules::config::get_user_config();
+    if let Some(root) = resolve_configured_antigravity_root(user_config.antigravity_app_path.trim()) {
+        return Some(root);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let default_root = std::path::PathBuf::from("/Applications/Antigravity.app");
+        if default_root.exists() {
+            return Some(default_root);
+        }
+    }
+
+    None
+}
+
+fn official_antigravity_info_plist_path() -> Option<std::path::PathBuf> {
+    #[cfg(target_os = "macos")]
+    {
+        return official_antigravity_root_for_version()
+            .map(|root| root.join("Contents").join("Info.plist"));
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        None
+    }
+}
+
+fn parse_version_from_plutil_output(text: &str) -> Option<String> {
+    for line in text.lines() {
+        let line = line.trim();
+        if !line.starts_with("\"CFBundleShortVersionString\"") {
+            continue;
+        }
+        let Some(version) = line.split("=>").nth(1) else {
+            continue;
+        };
+        let version = version.trim().trim_matches('"');
+        if !version.is_empty() {
+            return Some(version.to_string());
+        }
+    }
+    None
 }
 
 fn official_antigravity_extension_path() -> String {
@@ -633,7 +675,7 @@ fn official_antigravity_extension_path() -> String {
     "/Applications/Antigravity.app".to_string()
 }
 
-fn official_antigravity_app_version() -> String {
+pub(crate) fn official_antigravity_app_version() -> String {
     if let Ok(v) = std::env::var("AG_WAKEUP_OFFICIAL_APP_VERSION") {
         let trimmed = v.trim();
         if !trimmed.is_empty() {
@@ -641,34 +683,24 @@ fn official_antigravity_app_version() -> String {
         }
     }
 
-    static CACHE: OnceLock<String> = OnceLock::new();
-    CACHE
-        .get_or_init(|| {
-            let output = std::process::Command::new("plutil")
-                .arg("-p")
-                .arg(official_antigravity_info_plist_path())
-                .output();
-            match output {
-                Ok(out) if out.status.success() => {
-                    let text = String::from_utf8_lossy(&out.stdout);
-                    for line in text.lines() {
-                        let line = line.trim();
-                        if !line.starts_with("\"CFBundleShortVersionString\"") {
-                            continue;
-                        }
-                        if let Some(version) = line.split("=>").nth(1) {
-                            let version = version.trim().trim_matches('"');
-                            if !version.is_empty() {
-                                return version.to_string();
-                            }
-                        }
-                    }
-                    "1.19.5".to_string()
+    let plist_path = official_antigravity_info_plist_path();
+    if let Some(plist_path) = plist_path {
+        let output = std::process::Command::new("plutil")
+            .arg("-p")
+            .arg(&plist_path)
+            .output();
+        if let Ok(out) = output {
+            if out.status.success() {
+                let text = String::from_utf8_lossy(&out.stdout);
+                if let Some(version) = parse_version_from_plutil_output(&text) {
+                    return version;
                 }
-                _ => "1.19.5".to_string(),
             }
-        })
-        .clone()
+        }
+    }
+
+    // 未读取到官方安装版本时，不再返回写死版本号。
+    String::new()
 }
 
 fn build_official_ls_metadata_bytes() -> Vec<u8> {
