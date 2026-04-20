@@ -1735,7 +1735,10 @@
         "daily": "Ngày",
         "weekly": "Tuần",
         "monthly": "Tháng"
-      }
+      },
+      "enableBeforeActivateTitle": "Dịch vụ chưa bật",
+      "enableBeforeActivateMessage": "Dịch vụ API hiện đang tắt và cần bật trước. Bật và chuyển ngay?",
+      "enableAndActivateAction": "Bật và chuyển"
     },
     "local": {
       "desc": "Nhập tài khoản hiện tại từ ~/.codex/auth.json",

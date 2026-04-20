@@ -1735,7 +1735,10 @@
         "daily": "Jour",
         "weekly": "Semaine",
         "monthly": "Mois"
-      }
+      },
+      "enableBeforeActivateTitle": "Service désactivé",
+      "enableBeforeActivateMessage": "Le service API est actuellement désactivé et doit d'abord être activé. L'activer et basculer maintenant ?",
+      "enableAndActivateAction": "Activer et basculer"
     },
     "local": {
       "desc": "Importer le compte connecté depuis ~/.codex/auth.json",

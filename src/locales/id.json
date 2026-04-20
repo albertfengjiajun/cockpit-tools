@@ -1784,7 +1784,10 @@
         "daily": "Hari",
         "weekly": "Minggu",
         "monthly": "Bulan"
-      }
+      },
+      "enableBeforeActivateTitle": "Layanan belum diaktifkan",
+      "enableBeforeActivateMessage": "Layanan API saat ini dinonaktifkan dan harus diaktifkan terlebih dahulu. Aktifkan dan alihkan sekarang?",
+      "enableAndActivateAction": "Aktifkan dan alihkan"
     },
     "api": {
       "baseUrl": "URL Dasar",

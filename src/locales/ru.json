@@ -1735,7 +1735,10 @@
         "daily": "День",
         "weekly": "Неделя",
         "monthly": "Месяц"
-      }
+      },
+      "enableBeforeActivateTitle": "Сервис не включен",
+      "enableBeforeActivateMessage": "API‑сервис сейчас отключен, его нужно сначала включить. Включить и переключить сейчас?",
+      "enableAndActivateAction": "Включить и переключить"
     },
     "local": {
       "desc": "Импортировать текущий аккаунт из ~/.codex/auth.json",

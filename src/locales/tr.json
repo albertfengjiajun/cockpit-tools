@@ -1735,7 +1735,10 @@
         "daily": "Gün",
         "weekly": "Hafta",
         "monthly": "Ay"
-      }
+      },
+      "enableBeforeActivateTitle": "Hizmet etkin değil",
+      "enableBeforeActivateMessage": "API hizmeti şu anda devre dışı ve önce etkinleştirilmesi gerekiyor. Şimdi etkinleştirip geçiş yapılsın mı?",
+      "enableAndActivateAction": "Etkinleştir ve geçiş yap"
     },
     "local": {
       "desc": "~/.codex/auth.json'dan mevcut hesabı içe aktar",

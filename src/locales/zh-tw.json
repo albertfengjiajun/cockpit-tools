@@ -1735,7 +1735,10 @@
         "daily": "日",
         "weekly": "週",
         "monthly": "月"
-      }
+      },
+      "enableBeforeActivateTitle": "服務未啟用",
+      "enableBeforeActivateMessage": "API 服務目前未啟用，需要先啟用服務。是否啟用並切號？",
+      "enableAndActivateAction": "啟用並切號"
     },
     "api": {
       "baseUrl": "基礎網址",

@@ -1735,7 +1735,10 @@
         "daily": "Dia",
         "weekly": "Semana",
         "monthly": "Mês"
-      }
+      },
+      "enableBeforeActivateTitle": "Serviço desativado",
+      "enableBeforeActivateMessage": "O serviço de API está desativado no momento e precisa ser ativado primeiro. Ativar e alternar agora?",
+      "enableAndActivateAction": "Ativar e alternar"
     },
     "local": {
       "desc": "Importe a conta atual de ~/.codex/auth.json",

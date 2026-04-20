@@ -1735,7 +1735,10 @@
         "daily": "Tag",
         "weekly": "Woche",
         "monthly": "Monat"
-      }
+      },
+      "enableBeforeActivateTitle": "Dienst nicht aktiviert",
+      "enableBeforeActivateMessage": "Der API-Dienst ist derzeit deaktiviert und muss zuerst aktiviert werden. Jetzt aktivieren und wechseln?",
+      "enableAndActivateAction": "Aktivieren und wechseln"
     },
     "local": {
       "desc": "Aktuell eingeloggtes Konto aus ~/.codex/auth.json importieren",

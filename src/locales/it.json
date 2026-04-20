@@ -1735,7 +1735,10 @@
         "daily": "Giorno",
         "weekly": "Settimana",
         "monthly": "Mese"
-      }
+      },
+      "enableBeforeActivateTitle": "Servizio non abilitato",
+      "enableBeforeActivateMessage": "Il servizio API è attualmente disattivato e deve essere prima abilitato. Abilitare e cambiare ora?",
+      "enableAndActivateAction": "Abilita e cambia"
     },
     "local": {
       "desc": "Importa l'account attuale da ~/.codex/auth.json",

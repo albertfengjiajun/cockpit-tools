@@ -1735,7 +1735,10 @@
         "daily": "Dzień",
         "weekly": "Tydzień",
         "monthly": "Miesiąc"
-      }
+      },
+      "enableBeforeActivateTitle": "Usługa nie jest włączona",
+      "enableBeforeActivateMessage": "Usługa API jest obecnie wyłączona i trzeba ją najpierw włączyć. Włączyć i przełączyć teraz?",
+      "enableAndActivateAction": "Włącz i przełącz"
     },
     "local": {
       "desc": "Importuj bieżące konto z ~/.codex/auth.json",

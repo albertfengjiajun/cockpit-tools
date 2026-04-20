@@ -2510,6 +2510,21 @@ export function CodexAccountsPage() {
     if (!localAccessCollection) {
       throw new Error(t('codex.localAccess.testUnavailable', '当前 API 服务地址不可用'));
     }
+    if (!localAccessCollection.enabled) {
+      const confirmedEnableAndSwitch = await confirmDialog(
+        t(
+          'codex.localAccess.enableBeforeActivateMessage',
+          'API 服务当前未启用，需要先启用服务。是否启用并切号？',
+        ),
+        {
+          title: t('codex.localAccess.enableBeforeActivateTitle', '服务未启用'),
+          kind: 'warning',
+          okLabel: t('codex.localAccess.enableAndActivateAction', '启用并切号'),
+          cancelLabel: t('common.cancel', '取消'),
+        },
+      );
+      if (!confirmedEnableAndSwitch) return;
+    }
     const confirmed = await requestLocalAccessRiskNotice('service');
     if (!confirmed) return;
     setLocalAccessStarting(true);

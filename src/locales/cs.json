@@ -1735,7 +1735,10 @@
         "daily": "Den",
         "weekly": "Týden",
         "monthly": "Měsíc"
-      }
+      },
+      "enableBeforeActivateTitle": "Služba není zapnutá",
+      "enableBeforeActivateMessage": "Služba API je momentálně vypnutá a je potřeba ji nejdříve zapnout. Zapnout a přepnout nyní?",
+      "enableAndActivateAction": "Zapnout a přepnout"
     },
     "local": {
       "desc": "Importovat aktuální účet z ~/.codex/auth.json",

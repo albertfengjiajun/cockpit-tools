@@ -7,6 +7,20 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [0.22.5] - 2026-04-20
+
+### Fixed
+- **Trae account upsert now uses `user_id` as the primary identity key and falls back to email only when needed**: imports no longer merge different users just because emails match, and placeholder `unknown` email values are excluded from identity matching.
+- **Cursor plan badge normalization now maps `pro_student` to `pro`**: student Pro subscriptions now render the expected Pro badge instead of exposing raw membership text.
+
+### Added
+- **Codex API Service switch now prompts to enable the service when it is currently disabled**: the account-page action shows a warning modal and supports one-click `Enable and Switch` before proceeding.
+
+### Changed
+- **Gemini default-instance settings now persist `working_dir` end-to-end**: list/update/start/stop flows all read and return the saved working directory instead of forcing it to empty.
+- **API Service activation paths no longer auto-run session visibility repair**: switching to service mode now focuses on applying the real profile change, while history-repair remains an explicit operation.
+
+---
 ## [0.22.4] - 2026-04-19
 
 ### Added

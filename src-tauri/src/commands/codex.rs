@@ -725,18 +725,6 @@ pub async fn codex_local_access_set_enabled(
 #[tauri::command]
 pub async fn codex_local_access_activate(app: AppHandle) -> Result<CodexLocalAccessState, String> {
     let codex_home = codex_account::get_codex_home();
-    let provider_before =
-        crate::modules::codex_session_visibility::read_history_visibility_provider_for_dir(
-            &codex_home,
-        )
-        .map(Some)
-        .unwrap_or_else(|error| {
-            logger::log_warn(&format!(
-                "切换 API 服务前读取 Codex provider 失败，跳过自动修复预判: {}",
-                error
-            ));
-            None
-        });
     let state = codex_local_access::activate_local_access_for_dir(&codex_home).await?;
 
     let mut index = codex_account::load_account_index();
@@ -754,41 +742,6 @@ pub async fn codex_local_access_activate(app: AppHandle) -> Result<CodexLocalAcc
         logger::log_warn(&format!("更新 Codex 默认实例为 API 服务模式失败: {}", e));
     } else {
         logger::log_info("已同步更新 Codex 默认实例为 API 服务模式");
-    }
-
-    let provider_after =
-        crate::modules::codex_session_visibility::read_history_visibility_provider_for_dir(
-            &codex_home,
-        )
-        .map(Some)
-        .unwrap_or_else(|error| {
-            logger::log_warn(&format!(
-                "切换 API 服务后读取 Codex provider 失败，跳过自动修复可见性: {}",
-                error
-            ));
-            None
-        });
-    let should_repair_visibility = match (provider_before.as_deref(), provider_after.as_deref()) {
-        (Some(before), Some(after)) => before != after,
-        (None, Some(_)) => true,
-        _ => false,
-    };
-    if should_repair_visibility {
-        match crate::modules::codex_session_visibility::repair_session_visibility_across_instances()
-        {
-            Ok(summary) => {
-                logger::log_info(&format!(
-                    "切换 API 服务后已自动执行历史会话可见性修复: {}",
-                    summary.message
-                ));
-            }
-            Err(error) => {
-                logger::log_warn(&format!(
-                    "API 服务切换成功，但自动修复历史会话可见性失败，请稍后在会话管理中手动补跑: {}",
-                    error
-                ));
-            }
-        }
     }
 
     let user_config = config::get_user_config();

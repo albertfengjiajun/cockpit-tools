@@ -110,6 +110,35 @@ fn normalize_email(value: Option<&str>) -> Option<String> {
     })
 }
 
+fn normalize_identity_email(value: Option<&str>) -> Option<String> {
+    normalize_email(value).and_then(|email| if email == "unknown" { None } else { Some(email) })
+}
+
+fn account_matches_import_identity(
+    account: &TraeAccount,
+    normalized_user_id: Option<&str>,
+    normalized_email: Option<&str>,
+) -> bool {
+    let existing_user_id = normalize_non_empty(account.user_id.as_deref());
+
+    if let (Some(left), Some(right)) = (existing_user_id.as_deref(), normalized_user_id) {
+        return left == right;
+    }
+
+    // Only fallback to email when one side is missing user_id.
+    if normalized_user_id.is_some() && existing_user_id.is_some() {
+        return false;
+    }
+
+    matches!(
+        (
+            normalize_identity_email(Some(account.email.as_str())).as_deref(),
+            normalized_email
+        ),
+        (Some(left), Some(right)) if left == right
+    )
+}
+
 fn normalize_timestamp(raw: Option<i64>) -> Option<i64> {
     let value = raw?;
     if value <= 0 {
@@ -926,7 +955,7 @@ pub fn upsert_account(payload: TraeImportPayload) -> Result<TraeAccount, String>
     let now = now_ts();
     let mut index = load_account_index();
     let normalized_user_id = normalize_non_empty(payload.user_id.as_deref());
-    let normalized_email = normalize_email(Some(payload.email.as_str()));
+    let normalized_email = normalize_identity_email(Some(payload.email.as_str()));
 
     let identity = resolve_payload_identity(&payload);
     let generated_id = format!("trae_{:x}", md5::compute(identity.as_bytes()));
@@ -936,22 +965,11 @@ pub fn upsert_account(payload: TraeImportPayload) -> Result<TraeAccount, String>
         .iter()
         .filter_map(|summary| load_account(summary.id.as_str()))
         .find(|account| {
-            if let (Some(left), Some(right)) = (
-                normalize_non_empty(account.user_id.as_deref()),
-                normalized_user_id.clone(),
-            ) {
-                if left == right {
-                    return true;
-                }
-            }
-
-            if let (Some(left), Some(right)) = (
-                normalize_email(Some(account.email.as_str())),
-                normalized_email.clone(),
-            ) {
-                return left == right;
-            }
-            false
+            account_matches_import_identity(
+                account,
+                normalized_user_id.as_deref(),
+                normalized_email.as_deref(),
+            )
         })
         .map(|account| account.id)
         .unwrap_or(generated_id);
@@ -3208,6 +3226,37 @@ mod tests {
             created_at: 0,
             last_used: 0,
         }
+    }
+
+    #[test]
+    fn account_identity_match_uses_user_id_as_primary_key() {
+        let mut account = sample_account();
+        account.email = "same@example.com".to_string();
+        account.user_id = Some("uid-a".to_string());
+
+        assert!(account_matches_import_identity(
+            &account,
+            Some("uid-a"),
+            Some("same@example.com")
+        ));
+        assert!(!account_matches_import_identity(
+            &account,
+            Some("uid-b"),
+            Some("same@example.com")
+        ));
+    }
+
+    #[test]
+    fn account_identity_match_falls_back_to_email_only_when_needed() {
+        let mut account = sample_account();
+        account.email = "fallback@example.com".to_string();
+        account.user_id = Some("uid-a".to_string());
+
+        assert!(account_matches_import_identity(
+            &account,
+            None,
+            Some("fallback@example.com")
+        ));
     }
 
     #[test]

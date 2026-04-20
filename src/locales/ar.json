@@ -1781,7 +1781,10 @@
         "daily": "يوم",
         "weekly": "أسبوع",
         "monthly": "شهر"
-      }
+      },
+      "enableBeforeActivateTitle": "الخدمة غير مفعلة",
+      "enableBeforeActivateMessage": "خدمة API غير مفعلة حاليًا، ويجب تفعيلها أولًا. هل تريد التفعيل والتبديل الآن؟",
+      "enableAndActivateAction": "تفعيل والتبديل"
     },
     "local": {
       "desc": "استيراد الحساب الحالي من ~/.codex/auth.json",
