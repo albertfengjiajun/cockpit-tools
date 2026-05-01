@@ -84,6 +84,7 @@ interface GeneralConfig {
   kiro_auto_refresh_minutes: number;
   cursor_auto_refresh_minutes: number;
   gemini_auto_refresh_minutes: number;
+  gemini_sync_wsl: boolean;
   close_behavior: 'ask' | 'minimize' | 'quit';
   minimize_behavior?: 'dock_and_tray' | 'tray_only';
   hide_dock_icon?: boolean;
@@ -337,6 +338,7 @@ export function SettingsPage() {
   const [kiroAutoRefresh, setKiroAutoRefresh] = useState('10');
   const [cursorAutoRefresh, setCursorAutoRefresh] = useState('10');
   const [geminiAutoRefresh, setGeminiAutoRefresh] = useState('10');
+  const [geminiSyncWsl, setGeminiSyncWsl] = useState(true);
   const [closeBehavior, setCloseBehavior] = useState<'ask' | 'minimize' | 'quit'>('ask');
   const [minimizeBehavior, setMinimizeBehavior] = useState<'dock_and_tray' | 'tray_only'>('dock_and_tray');
   const [hideDockIcon, setHideDockIcon] = useState(false);
@@ -772,6 +774,7 @@ export function SettingsPage() {
           zedAutoRefreshMinutes: zedAutoRefreshNum,
           cursorAutoRefreshMinutes: cursorAutoRefreshNum,
           geminiAutoRefreshMinutes: geminiAutoRefreshNum,
+          geminiSyncWsl,
           closeBehavior,
           minimizeBehavior,
           hideDockIcon,
@@ -1172,6 +1175,7 @@ export function SettingsPage() {
       setKiroAutoRefresh(String(config.kiro_auto_refresh_minutes ?? 10));
       setCursorAutoRefresh(String(config.cursor_auto_refresh_minutes ?? 10));
       setGeminiAutoRefresh(String(config.gemini_auto_refresh_minutes ?? 10));
+      setGeminiSyncWsl(Boolean(config.gemini_sync_wsl ?? true));
       setCloseBehavior(config.close_behavior || 'ask');
       setMinimizeBehavior(config.minimize_behavior || 'dock_and_tray');
       setHideDockIcon(Boolean(config.hide_dock_icon));
@@ -4867,6 +4871,25 @@ export function SettingsPage() {
                       </div>
                     </div>
                   </div>
+
+                  {isWindows && (
+                    <div className="settings-row">
+                      <div className="row-label">
+                        <div className="row-title">{t('quickSettings.gemini.syncWsl', '同步 WSL 配置')}</div>
+                        <div className="row-desc">{t('quickSettings.gemini.syncWslDesc', '切号时自动覆盖 WSL 下的 .gemini 配置')}</div>
+                      </div>
+                      <div className="row-control">
+                        <label className="switch">
+                          <input
+                            type="checkbox"
+                            checked={geminiSyncWsl}
+                            onChange={(e) => setGeminiSyncWsl(e.target.checked)}
+                          />
+                          <span className="slider"></span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
 
                   {renderCurrentAccountRefreshRow('gemini')}
 

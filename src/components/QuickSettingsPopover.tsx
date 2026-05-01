@@ -59,6 +59,7 @@ interface GeneralConfig {
   kiro_auto_refresh_minutes: number;
   cursor_auto_refresh_minutes: number;
   gemini_auto_refresh_minutes: number;
+  gemini_sync_wsl: boolean;
   codebuddy_auto_refresh_minutes: number;
   codebuddy_cn_auto_refresh_minutes: number;
   qoder_auto_refresh_minutes: number;
@@ -820,6 +821,7 @@ export function QuickSettingsPopover({ type }: QuickSettingsPopoverProps) {
           kiroAutoRefreshMinutes: merged.kiro_auto_refresh_minutes,
           cursorAutoRefreshMinutes: merged.cursor_auto_refresh_minutes,
           geminiAutoRefreshMinutes: merged.gemini_auto_refresh_minutes,
+          geminiSyncWsl: merged.gemini_sync_wsl,
           codebuddyAutoRefreshMinutes: merged.codebuddy_auto_refresh_minutes,
           codebuddyCnAutoRefreshMinutes: merged.codebuddy_cn_auto_refresh_minutes,
           workbuddyAutoRefreshMinutes: merged.workbuddy_auto_refresh_minutes,
