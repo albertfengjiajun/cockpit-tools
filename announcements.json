@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "topRightAd": null,
-  "topRightAd_backup": {
+  "topRightAd_backup": null,
+  "topRightAd": {
     "id": "top-right-ad-2026-04-shop",
     "priority": 100,
-    "text": "此地址提供Codex Plus成品号9.9元和15元两种，非注册机，可一键导入到此工具里。需要的可以选购，感谢",
+    "text": "此地址提供Codex Plus成品号9.9元日抛号速蹬不要省，可一键导入到此工具里。需要的可以选购，感谢",
     "badge": "推广",
     "ctaLabel": "选购",
     "ctaUrl": "https://xiangzili.xyz",
@@ -16,7 +16,7 @@
     "expiresAt": null,
     "locales": {
       "zh-CN": {
-        "text": "此地址提供Codex Plus成品号9.9元和15元两种，非注册机，可一键导入到此工具里。需要的可以选购，感谢",  
+        "text": "此地址提供Codex Plus成品号9.9元日抛号速蹬不要省，可一键导入到此工具里。需要的可以选购，感谢",
         "badge": "推广",
         "ctaLabel": "选购"
       }
