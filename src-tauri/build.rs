@@ -1,7 +1,7 @@
 #[cfg(target_os = "macos")]
 use swift_rs::SwiftLinker;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 #[cfg(target_os = "macos")]
@@ -35,41 +35,25 @@ fn go_target_from_rust_target(target: &str) -> Option<(&'static str, &'static st
     Some((goos, goarch))
 }
 
-fn build_cockpit_cliproxy_sidecar() {
-    let manifest_dir =
-        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is required"));
-    let target = std::env::var("TARGET").expect("TARGET is required");
-    println!("cargo:rustc-env=COCKPIT_RUST_TARGET={target}");
-    let Some((goos, goarch)) = go_target_from_rust_target(&target) else {
-        panic!("unsupported sidecar build target: {target}");
-    };
+fn should_skip_sidecar_build(output: &Path) -> bool {
+    std::env::var("COCKPIT_SKIP_CLIPROXY_BUILD").ok().as_deref() == Some("1") && output.exists()
+}
 
-    let sidecar_dir = manifest_dir.join("../sidecars/cockpit-cliproxy");
-    let output_dir = sidecar_dir.join("bin");
+fn build_go_sidecar(
+    sidecar_dir: &Path,
+    output_dir: &Path,
+    rust_target: &str,
+    goos: &str,
+    goarch: &str,
+) -> PathBuf {
     let extension = if goos == "windows" { ".exe" } else { "" };
-    let output = output_dir.join(format!("cockpit-cliproxy-{target}{extension}"));
-
-    println!("cargo:rerun-if-env-changed=COCKPIT_SKIP_CLIPROXY_BUILD");
-    println!(
-        "cargo:rerun-if-changed={}",
-        sidecar_dir.join("go.mod").display()
-    );
-    println!(
-        "cargo:rerun-if-changed={}",
-        sidecar_dir.join("go.sum").display()
-    );
-    println!(
-        "cargo:rerun-if-changed={}",
-        sidecar_dir.join("main.go").display()
-    );
-    if std::env::var("COCKPIT_SKIP_CLIPROXY_BUILD").ok().as_deref() == Some("1") && output.exists()
-    {
-        return;
+    let output = output_dir.join(format!("cockpit-cliproxy-{rust_target}{extension}"));
+    if should_skip_sidecar_build(&output) {
+        return output;
     }
 
-    std::fs::create_dir_all(&output_dir).expect("failed to create cockpit-cliproxy bin dir");
     let status = Command::new("go")
-        .current_dir(&sidecar_dir)
+        .current_dir(sidecar_dir)
         .env("GOOS", goos)
         .env("GOARCH", goarch)
         .env("CGO_ENABLED", "0")
@@ -85,6 +69,80 @@ fn build_cockpit_cliproxy_sidecar() {
 
     if !status.success() {
         panic!("go build for cockpit-cliproxy failed with status: {status}");
+    }
+
+    output
+}
+
+fn build_macos_universal_sidecar(sidecar_dir: &Path, output_dir: &Path) {
+    let output = output_dir.join("cockpit-cliproxy-universal-apple-darwin");
+    if should_skip_sidecar_build(&output) {
+        return;
+    }
+
+    let x86_64_output = build_go_sidecar(
+        sidecar_dir,
+        output_dir,
+        "x86_64-apple-darwin",
+        "darwin",
+        "amd64",
+    );
+    let aarch64_output = build_go_sidecar(
+        sidecar_dir,
+        output_dir,
+        "aarch64-apple-darwin",
+        "darwin",
+        "arm64",
+    );
+
+    let status = Command::new("lipo")
+        .arg("-create")
+        .arg(&x86_64_output)
+        .arg(&aarch64_output)
+        .arg("-output")
+        .arg(&output)
+        .status()
+        .expect("failed to start lipo for cockpit-cliproxy universal sidecar");
+
+    if !status.success() {
+        panic!("lipo for cockpit-cliproxy universal sidecar failed with status: {status}");
+    }
+}
+
+fn build_cockpit_cliproxy_sidecar() {
+    let manifest_dir =
+        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is required"));
+    let target = std::env::var("TARGET").expect("TARGET is required");
+    println!("cargo:rustc-env=COCKPIT_RUST_TARGET={target}");
+    let sidecar_dir = manifest_dir.join("../sidecars/cockpit-cliproxy");
+    let output_dir = sidecar_dir.join("bin");
+
+    println!("cargo:rerun-if-env-changed=COCKPIT_SKIP_CLIPROXY_BUILD");
+    println!(
+        "cargo:rerun-if-changed={}",
+        sidecar_dir.join("go.mod").display()
+    );
+    println!(
+        "cargo:rerun-if-changed={}",
+        sidecar_dir.join("go.sum").display()
+    );
+    println!(
+        "cargo:rerun-if-changed={}",
+        sidecar_dir.join("main.go").display()
+    );
+    std::fs::create_dir_all(&output_dir).expect("failed to create cockpit-cliproxy bin dir");
+
+    if cfg!(target_os = "macos") && target == "universal-apple-darwin" {
+        build_macos_universal_sidecar(&sidecar_dir, &output_dir);
+        return;
+    }
+
+    let Some((goos, goarch)) = go_target_from_rust_target(&target) else {
+        panic!("unsupported sidecar build target: {target}");
+    };
+    build_go_sidecar(&sidecar_dir, &output_dir, &target, goos, goarch);
+    if cfg!(target_os = "macos") && target.contains("apple-darwin") {
+        build_macos_universal_sidecar(&sidecar_dir, &output_dir);
     }
 }
 
