@@ -1140,7 +1140,9 @@ pub async fn refresh_account_quota_with_options(
 pub async fn probe_import_account_quota(account: &CodexAccount) -> Result<CodexQuota, String> {
     if account.is_api_key_auth() {
         if is_new_api_account(account) {
-            return fetch_new_api_quota(account).await.map(|result| result.quota);
+            return fetch_new_api_quota(account)
+                .await
+                .map(|result| result.quota);
         }
         return Err("API Key 账号不支持自动查询额度".to_string());
     }
