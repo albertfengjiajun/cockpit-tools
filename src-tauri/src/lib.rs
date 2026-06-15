@@ -409,6 +409,7 @@ pub fn run() {
             commands::claude::delete_claude_accounts,
             commands::claude::import_claude_from_json,
             commands::claude::import_claude_api_key,
+            commands::claude::claude_oauth_login_prepare,
             commands::claude::claude_oauth_login_start,
             commands::claude::claude_oauth_login_complete,
             commands::claude::claude_oauth_login_cancel,

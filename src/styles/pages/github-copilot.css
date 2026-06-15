@@ -2492,6 +2492,11 @@
   gap: 12px;
 }
 
+.ghcp-add-modal .oauth-url-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .ghcp-add-modal .oauth-url-box {
   display: flex;
   gap: 8px;

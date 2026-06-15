@@ -102,6 +102,8 @@ static CLAUDE_PENDING_OAUTH_LOGIN: std::sync::LazyLock<Mutex<Option<PendingClaud
 static CLAUDE_PENDING_DESKTOP_LOGIN: std::sync::LazyLock<
     Mutex<Option<PendingClaudeDesktopLoginState>>,
 > = std::sync::LazyLock::new(|| Mutex::new(None));
+static CLAUDE_DESKTOP_AUTH_RESOURCE_DIR: std::sync::LazyLock<Mutex<Option<PathBuf>>> =
+    std::sync::LazyLock::new(|| Mutex::new(None));
 static EMAIL_RE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
     Regex::new(r"(?i)[a-z0-9._%+\-]{1,64}@[a-z0-9.\-]{2,253}\.[a-z]{2,24}")
         .expect("valid email regex")
@@ -216,6 +218,19 @@ fn now_ts() -> i64 {
 
 fn now_ts_ms() -> i64 {
     chrono::Utc::now().timestamp_millis()
+}
+
+pub fn set_desktop_auth_resource_dir(path: Option<PathBuf>) {
+    if let Ok(mut guard) = CLAUDE_DESKTOP_AUTH_RESOURCE_DIR.lock() {
+        *guard = path;
+    }
+}
+
+fn get_desktop_auth_resource_dir() -> Option<PathBuf> {
+    CLAUDE_DESKTOP_AUTH_RESOURCE_DIR
+        .lock()
+        .ok()
+        .and_then(|guard| guard.clone())
 }
 
 fn normalize_non_empty(value: Option<&str>) -> Option<String> {
@@ -2685,6 +2700,9 @@ fn backup_current_desktop_profile(target_dir: &Path) -> Result<Option<PathBuf>, 
 
 fn find_desktop_auth_helper_script() -> Result<PathBuf, String> {
     let mut candidates = Vec::new();
+    if let Some(resource_dir) = get_desktop_auth_resource_dir() {
+        candidates.push(resource_dir.join(CLAUDE_DESKTOP_AUTH_HELPER_SCRIPT));
+    }
     if let Ok(current_dir) = std::env::current_dir() {
         candidates.push(current_dir.join(CLAUDE_DESKTOP_AUTH_HELPER_SCRIPT));
     }
@@ -2723,6 +2741,9 @@ fn find_electron_executable_for_desktop_auth() -> Result<PathBuf, String> {
         "electron"
     };
     let mut candidates = Vec::new();
+    if let Some(resource_dir) = get_desktop_auth_resource_dir() {
+        candidates.extend(electron_resource_executable_candidates(&resource_dir));
+    }
     if let Ok(current_dir) = std::env::current_dir() {
         candidates.push(current_dir.join("node_modules").join(".bin").join(bin_name));
     }
@@ -2738,9 +2759,36 @@ fn find_electron_executable_for_desktop_auth() -> Result<PathBuf, String> {
         .into_iter()
         .find(|path| path.exists())
         .ok_or_else(|| {
-            "未找到 Electron 运行时，无法在平台内打开 Claude Desktop 授权窗口。请先执行 npm install，或设置 CLAUDE_DESKTOP_AUTH_ELECTRON。"
+            "未找到 Electron 运行时，无法在平台内打开 Claude Desktop 授权窗口。请确认安装包包含 electron 资源；开发环境请先执行 npm install，或设置 CLAUDE_DESKTOP_AUTH_ELECTRON。"
                 .to_string()
         })
+}
+
+fn electron_resource_executable_candidates(resource_dir: &Path) -> Vec<PathBuf> {
+    let electron_root = resource_dir.join("electron");
+    let mut candidates = Vec::new();
+    #[cfg(target_os = "windows")]
+    {
+        candidates.push(electron_root.join("electron.exe"));
+        candidates.push(electron_root.join("dist").join("electron.exe"));
+    }
+    #[cfg(target_os = "macos")]
+    {
+        candidates.push(
+            electron_root
+                .join("Electron.app")
+                .join("Contents")
+                .join("MacOS")
+                .join("Electron"),
+        );
+        candidates.push(electron_root.join("electron"));
+    }
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        candidates.push(electron_root.join("electron"));
+        candidates.push(electron_root.join("dist").join("electron"));
+    }
+    candidates
 }
 
 fn launch_platform_desktop_auth_helper(

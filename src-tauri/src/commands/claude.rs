@@ -1,15 +1,22 @@
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::collections::BTreeMap;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tauri::AppHandle;
+use tauri::Manager;
 use tauri_plugin_opener::OpenerExt;
 
 use crate::models::claude::{
     ClaudeAccount, ClaudeAuthMode, ClaudeDesktopLoginStartResponse, ClaudeOAuthStartResponse,
 };
 use crate::modules::{claude_account, logger};
+
+fn configure_claude_desktop_auth_resources(app: &AppHandle) {
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        claude_account::set_desktop_auth_resource_dir(Some(resource_dir));
+    }
+}
 
 #[cfg(not(target_os = "windows"))]
 fn posix_shell_quote(value: &str) -> String {
@@ -117,10 +124,6 @@ fn write_windows_env_script(
     let script_path_text = script_path.to_string_lossy();
     let mut script = String::new();
     script.push_str(&format!(
-        "Remove-Item -LiteralPath {} -Force -ErrorAction SilentlyContinue\n",
-        powershell_quote(&script_path_text)
-    ));
-    script.push_str(&format!(
         "Set-Location -LiteralPath {}\n",
         powershell_quote(working_dir)
     ));
@@ -131,6 +134,10 @@ fn write_windows_env_script(
         script.push_str(&format!("$env:{} = {}\n", key, powershell_quote(value)));
     }
     script.push_str("claude\n");
+    script.push_str(&format!(
+        "Remove-Item -LiteralPath {} -Force -ErrorAction SilentlyContinue\n",
+        powershell_quote(&script_path_text)
+    ));
     fs::write(&script_path, script).map_err(|e| format!("写入 Claude CLI 临时脚本失败: {}", e))?;
     Ok(script_path)
 }
@@ -145,10 +152,7 @@ fn build_claude_cli_command(
         if !env.is_empty() {
             let script_path = write_windows_env_script(&working_dir, env)?;
             let script_path_text = script_path.to_string_lossy();
-            return Ok(format!(
-                "powershell -NoProfile -ExecutionPolicy Bypass -File {}",
-                powershell_quote(script_path_text.as_ref())
-            ));
+            return Ok(format!("& {}", powershell_quote(script_path_text.as_ref())));
         }
         return Ok(format!(
             "Set-Location -LiteralPath {}; claude",
@@ -241,34 +245,41 @@ fn execute_claude_cli_command(command: &str, terminal: Option<String>) -> Result
 
     #[cfg(target_os = "windows")]
     {
-        let mut cmd = if terminal == "pwsh" {
-            let mut command_process = Command::new("pwsh");
-            command_process.args(["-NoExit", "-Command", command]);
-            command_process
-        } else if terminal == "wt" {
+        let terminal_key = terminal.to_ascii_lowercase();
+        let shell = if terminal_key == "pwsh" {
+            "pwsh"
+        } else {
+            "powershell"
+        };
+        let mut cmd = if terminal_key == "wt" {
             let mut command_process = Command::new("wt");
-            command_process.args(["powershell", "-NoExit", "-Command", command]);
-            command_process
-        } else if terminal == "cmd" {
-            let mut command_process = Command::new("cmd");
             command_process.args([
-                "/C",
-                "start",
-                "",
-                "powershell",
+                shell,
                 "-NoExit",
+                "-ExecutionPolicy",
+                "Bypass",
                 "-Command",
                 command,
             ]);
             command_process
         } else {
-            let mut command_process = Command::new("powershell");
-            command_process.args(["-NoExit", "-Command", command]);
+            let mut command_process = Command::new("cmd");
+            command_process.args([
+                "/C",
+                "start",
+                "",
+                shell,
+                "-NoExit",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                command,
+            ]);
             command_process
         };
 
         cmd.spawn().map_err(|e| format!("打开终端失败: {}", e))?;
-        return Ok("已在终端执行 Claude CLI 命令".to_string());
+        return Ok("已打开 Claude CLI 终端窗口".to_string());
     }
 
     #[cfg(target_os = "linux")]
@@ -375,6 +386,11 @@ pub async fn import_claude_api_key(
 }
 
 #[tauri::command]
+pub fn claude_oauth_login_prepare() -> Result<ClaudeOAuthStartResponse, String> {
+    claude_account::start_oauth_login()
+}
+
+#[tauri::command]
 pub async fn claude_oauth_login_start(app: AppHandle) -> Result<ClaudeOAuthStartResponse, String> {
     let response = claude_account::start_oauth_login()?;
     if let Err(error) = app
@@ -411,6 +427,7 @@ pub async fn import_claude_desktop_from_local(
     app: AppHandle,
     account_name: Option<String>,
 ) -> Result<ClaudeAccount, String> {
+    configure_claude_desktop_auth_resources(&app);
     let account = claude_account::import_desktop_from_local(account_name.as_deref())?;
     let _ = crate::modules::tray::update_tray_menu(&app);
     Ok(account)
@@ -425,8 +442,9 @@ pub async fn import_claude_cli_from_local(app: AppHandle) -> Result<ClaudeAccoun
 
 #[tauri::command]
 pub async fn claude_desktop_login_start(
-    _app: AppHandle,
+    app: AppHandle,
 ) -> Result<ClaudeDesktopLoginStartResponse, String> {
+    configure_claude_desktop_auth_resources(&app);
     claude_account::start_desktop_login()
 }
 
@@ -436,6 +454,7 @@ pub async fn claude_desktop_login_complete(
     login_id: String,
     account_name: Option<String>,
 ) -> Result<ClaudeAccount, String> {
+    configure_claude_desktop_auth_resources(&app);
     let account = claude_account::complete_desktop_login(&login_id, account_name.as_deref())?;
     let _ = crate::modules::tray::update_tray_menu(&app);
     Ok(account)
@@ -456,6 +475,7 @@ pub async fn refresh_claude_quota(
     app: AppHandle,
     account_id: String,
 ) -> Result<ClaudeAccount, String> {
+    configure_claude_desktop_auth_resources(&app);
     let started_at = Instant::now();
     logger::log_info(&format!(
         "[Claude Command] 手动刷新账号开始: account_id={}",
@@ -475,6 +495,7 @@ pub async fn refresh_claude_quota(
 
 #[tauri::command]
 pub async fn refresh_all_claude_quotas(app: AppHandle) -> Result<i32, String> {
+    configure_claude_desktop_auth_resources(&app);
     let started_at = Instant::now();
     logger::log_info("[Claude Command] 批量刷新开始");
     let results = claude_account::refresh_all_quotas().await?;

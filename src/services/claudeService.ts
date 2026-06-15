@@ -139,6 +139,11 @@ export async function claudeOauthLoginStart(): Promise<ClaudeOAuthStartResponse>
   return normalizeClaudeOAuthStartResponse(raw);
 }
 
+export async function claudeOauthLoginPrepare(): Promise<ClaudeOAuthStartResponse> {
+  const raw = await invoke<ClaudeOAuthStartResponseRaw>('claude_oauth_login_prepare');
+  return normalizeClaudeOAuthStartResponse(raw);
+}
+
 export async function claudeOauthLoginComplete(
   loginId: string,
   callbackOrCode: string,

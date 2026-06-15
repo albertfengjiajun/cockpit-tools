@@ -32,6 +32,7 @@ import {
   X,
 } from 'lucide-react';
 import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { ModalErrorMessage, useModalErrorState } from '../components/ModalErrorMessage';
@@ -452,6 +453,9 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
   const apiKeyUsageInFlightRef = useRef<Set<string>>(claudeApiKeyUsageInFlight);
   const apiKeyUsageAutoRefreshAtRef = useRef<Record<string, number>>(claudeApiKeyUsageAutoRefreshAt);
   const apiKeyUsageManualRefreshAtRef = useRef<Record<string, number>>(claudeApiKeyUsageManualRefreshAt);
+  const cliApiKeyUsageAutoRefreshPendingRef = useRef(activeSubPlatform === 'cli');
+  const previousActiveSubPlatformRef = useRef<ClaudeSubPlatform>(activeSubPlatform);
+  const oauthPrepareAttemptedRef = useRef(false);
   const [switching, setSwitching] = useState<string | null>(null);
   const [cliLaunchingAccountId, setCliLaunchingAccountId] = useState<string | null>(null);
   const [currentAccountId, setCurrentAccountId] = useState<string | null>(null);
@@ -514,6 +518,7 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     setOauthCallbackInput('');
     setOauthEmailHint('');
     setOauthCopied(false);
+    oauthPrepareAttemptedRef.current = false;
     setAddModalError(null);
   }, [activeSubPlatform, getDefaultAddTab, setAddModalError]);
 
@@ -570,6 +575,15 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
 
   useEffect(() => {
     setSelectedIds(new Set());
+  }, [activeSubPlatform]);
+
+  useEffect(() => {
+    if (previousActiveSubPlatformRef.current !== activeSubPlatform) {
+      if (activeSubPlatform === 'cli') {
+        cliApiKeyUsageAutoRefreshPendingRef.current = true;
+      }
+      previousActiveSubPlatformRef.current = activeSubPlatform;
+    }
   }, [activeSubPlatform]);
 
   const maskAccountText = useCallback(
@@ -778,6 +792,10 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
       setOauthLogin(null);
       setOauthCallbackInput('');
       setOauthCopied(false);
+      oauthPrepareAttemptedRef.current = false;
+    }
+    if (tab === 'oauth' && addTab !== 'oauth') {
+      oauthPrepareAttemptedRef.current = false;
     }
     setAddTab(tab);
   };
@@ -916,18 +934,44 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
     }
   };
 
-  const handleStartOAuth = async () => {
+  const prepareOAuthLogin = useCallback(async (): Promise<ClaudeOAuthStartResponse | null> => {
+    if (oauthLogin) return oauthLogin;
+    if (oauthStarting) return null;
     setOauthStarting(true);
     setAddModalError(null);
     try {
-      const login = await claudeService.claudeOauthLoginStart();
+      const login = await claudeService.claudeOauthLoginPrepare();
       setOauthLogin(login);
       setOauthCallbackInput('');
       setOauthCopied(false);
+      return login;
     } catch (error) {
       setAddModalError(String(error).replace(/^Error:\s*/, ''));
+      return null;
     } finally {
       setOauthStarting(false);
+    }
+  }, [oauthLogin, oauthStarting, setAddModalError]);
+
+  useEffect(() => {
+    if (!showAddModal || addTab !== 'oauth' || oauthLogin || oauthStarting || oauthPrepareAttemptedRef.current) {
+      return;
+    }
+    oauthPrepareAttemptedRef.current = true;
+    void prepareOAuthLogin();
+  }, [addTab, oauthLogin, oauthStarting, prepareOAuthLogin, showAddModal]);
+
+  const handleOpenOAuthUrl = async () => {
+    const login = oauthLogin ?? await prepareOAuthLogin();
+    if (!login?.verificationUri) return;
+    try {
+      await openUrl(login.verificationUri);
+    } catch (error) {
+      setAddModalError(
+        t('claude.oauth.openFailed', '打开授权链接失败：{{error}}', {
+          error: String(error).replace(/^Error:\s*/, ''),
+        }),
+      );
     }
   };
 
@@ -1170,9 +1214,14 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
   );
 
   useEffect(() => {
-    if (activeSubPlatform !== 'cli') return;
-    currentSubPlatformAccounts.forEach((account) => {
-      if (normalizeClaudeAuthMode(account.auth_mode) !== 'api_key') return;
+    if (activeSubPlatform !== 'cli' || !cliApiKeyUsageAutoRefreshPendingRef.current) return;
+    const apiKeyAccounts = currentSubPlatformAccounts.filter(
+      (account) => normalizeClaudeAuthMode(account.auth_mode) === 'api_key',
+    );
+    if (apiKeyAccounts.length === 0) return;
+
+    cliApiKeyUsageAutoRefreshPendingRef.current = false;
+    apiKeyAccounts.forEach((account) => {
       void refreshClaudeApiKeyUsage(account, { source: 'auto' });
     });
   }, [activeSubPlatform, currentSubPlatformAccounts, refreshClaudeApiKeyUsage]);
@@ -2161,14 +2210,6 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                         )}
                       </p>
                     </div>
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => void handleStartOAuth()}
-                      disabled={addModalBusy || Boolean(oauthLogin)}
-                    >
-                      {oauthStarting ? <RefreshCw size={14} className="loading-spinner" /> : <ExternalLink size={14} />}
-                      {oauthStarting ? t('common.loading', '加载中...') : t('claude.oauth.start', 'OAuth 授权')}
-                    </button>
                   </div>
                   <p className="oauth-hint">
                     {t(
@@ -2176,53 +2217,77 @@ export function ClaudeAccountsPage({ subPlatform = 'desktop' }: ClaudeAccountsPa
                       'Claude 官方 OAuth 通常用于 Claude Code 授权；如果页面停在升级或无权限页面，可改用 Claude Desktop 登录。',
                     )}
                   </p>
-                  {oauthLogin && (
-                    <div className="oauth-url-section">
-                      <p className="section-desc">
-                        {t(
-                          'claude.oauth.waiting',
-                          '浏览器已打开授权页。完成授权后，将最终页面地址或页面显示的 code 粘贴到下方。',
-                        )}
-                      </p>
-                      <div className="oauth-url-box">
-                        <input value={oauthLogin.verificationUri} readOnly aria-label={t('claude.oauth.authUrl', '授权链接')} />
-                        <button
-                          type="button"
-                          className="oauth-copy-button"
-                          onClick={() => void handleCopyOAuthUrl()}
-                        >
-                          {oauthCopied ? <Check size={14} /> : <Copy size={14} />}
-                          {oauthCopied ? t('common.success', '成功') : t('common.copy', '复制')}
-                        </button>
-                      </div>
-                      <div className="oauth-url-box oauth-manual-input">
-                        <input
-                          value={oauthCallbackInput}
-                          onChange={(event) => {
-                            setOauthCallbackInput(event.target.value);
-                            setAddModalError(null);
-                          }}
-                          placeholder={t('claude.oauth.callbackPlaceholder', '粘贴回调链接或授权 code')}
-                        />
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => void handleCompleteOAuth()}
-                          disabled={addModalBusy}
-                        >
-                          {oauthCompleting ? <RefreshCw size={14} className="loading-spinner" /> : <Download size={14} />}
-                          {oauthCompleting ? t('common.loading', '加载中...') : t('claude.oauth.complete', '完成导入')}
-                        </button>
-                      </div>
-                      <div className="oauth-url-box oauth-manual-input">
-                        <input
-                          value={oauthEmailHint}
-                          onChange={(event) => setOauthEmailHint(event.target.value)}
-                          placeholder={t('claude.oauth.emailPlaceholder', '邮箱（无法自动识别时填写）')}
-                        />
-                      </div>
+                  <div className="oauth-url-section">
+                    <p className="section-desc">
+                      {t(
+                        'claude.oauth.openInstruction',
+                        '点击下方按钮，在浏览器中完成 Claude OAuth 授权。',
+                      )}
+                    </p>
+                    <label className="oauth-url-label">
+                      {t('claude.oauth.authUrl', '授权链接')}
+                    </label>
+                    <div className="oauth-url-box">
+                      <input
+                        value={
+                          oauthLogin?.verificationUri
+                            ?? (oauthStarting ? t('claude.oauth.preparing', '正在生成授权链接...') : '')
+                        }
+                        readOnly
+                        aria-label={t('claude.oauth.authUrl', '授权链接')}
+                      />
+                      <button
+                        type="button"
+                        className="oauth-copy-button"
+                        onClick={() => void handleCopyOAuthUrl()}
+                        disabled={!oauthLogin?.verificationUri}
+                      >
+                        {oauthCopied ? <Check size={14} /> : <Copy size={14} />}
+                        {oauthCopied ? t('common.success', '成功') : t('common.copy', '复制')}
+                      </button>
                     </div>
-                  )}
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-full"
+                      onClick={() => void handleOpenOAuthUrl()}
+                      disabled={addModalBusy || !oauthLogin?.verificationUri}
+                    >
+                      {oauthStarting ? <RefreshCw size={14} className="loading-spinner" /> : <Globe size={14} />}
+                      {oauthStarting ? t('common.loading', '加载中...') : t('claude.oauth.openInBrowser', '在浏览器中打开')}
+                    </button>
+                    <p className="section-desc">
+                      {t(
+                        'claude.oauth.waiting',
+                        '完成授权后，将最终页面地址或页面显示的 code 粘贴到下方。',
+                      )}
+                    </p>
+                    <div className="oauth-url-box oauth-manual-input">
+                      <input
+                        value={oauthCallbackInput}
+                        onChange={(event) => {
+                          setOauthCallbackInput(event.target.value);
+                          setAddModalError(null);
+                        }}
+                        placeholder={t('claude.oauth.callbackPlaceholder', '粘贴回调链接或授权 code')}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => void handleCompleteOAuth()}
+                        disabled={addModalBusy || !oauthLogin}
+                      >
+                        {oauthCompleting ? <RefreshCw size={14} className="loading-spinner" /> : <Download size={14} />}
+                        {oauthCompleting ? t('common.loading', '加载中...') : t('claude.oauth.complete', '完成导入')}
+                      </button>
+                    </div>
+                    <div className="oauth-url-box oauth-manual-input">
+                      <input
+                        value={oauthEmailHint}
+                        onChange={(event) => setOauthEmailHint(event.target.value)}
+                        placeholder={t('claude.oauth.emailPlaceholder', '邮箱（无法自动识别时填写）')}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
               {addTab === 'apikey' && (

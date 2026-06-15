@@ -4939,6 +4939,7 @@ export function CodexAccountsPage() {
         reason?: string;
       } | null;
       if (payload?.platformId !== "codex") return;
+      if (payload.reason === "delete") return;
       if (payload.accountId) {
         await refreshApiKeyUsageByAccountId(payload.accountId, {
           force: false,
@@ -4953,8 +4954,10 @@ export function CodexAccountsPage() {
       const payload = event.payload as {
         platformId?: string;
         accountId?: string | null;
+        reason?: string;
       } | null;
       if (payload?.platformId !== "codex") return;
+      if (payload.reason === "delete") return;
       if (payload.accountId) {
         await refreshApiKeyUsageByAccountId(payload.accountId, {
           force: false,
