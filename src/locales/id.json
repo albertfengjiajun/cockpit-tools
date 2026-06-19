@@ -2205,7 +2205,17 @@
       "resetCreditNoCredits": "Tidak ada reset tersedia",
       "resetCreditConsumed": "Kuota 5 jam disetel ulang",
       "resetCreditFailed": "Gagal reset: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "Reset dikirim, tetapi pembaruan kuota gagal: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "Reset dikirim, tetapi pembaruan kuota gagal: {{error}}",
+      "resetCreditsTitleWithExpiry": "Sisa reset untuk jendela 5 jam: {{count}}. Kedaluwarsa terdekat: {{time}}",
+      "resetCreditTimeUnknown": "Waktu tidak diketahui",
+      "resetCreditStatusAvailable": "Tersedia",
+      "resetCreditStatusRedeemed": "Dipakai",
+      "resetCreditStatusExpired": "Kedaluwarsa",
+      "resetCreditStatusUnknown": "Tidak diketahui",
+      "resetCreditNextExpiry": "Kedaluwarsa terdekat: {{time}}",
+      "resetCreditDetailsTitle": "Detail reset",
+      "resetCreditGrantedAt": "Diberikan",
+      "resetCreditExpiresAt": "Kedaluwarsa"
     },
     "usage": {
       "open": "Buka penggunaan OpenAI",

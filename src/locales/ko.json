@@ -2045,7 +2045,17 @@
       "resetCreditNoCredits": "사용 가능한 재설정 횟수가 없습니다",
       "resetCreditConsumed": "5시간 쿼터가 재설정되었습니다",
       "resetCreditFailed": "재설정 실패: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "재설정은 제출됐지만 쿼터 새로고침에 실패했습니다: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "재설정은 제출됐지만 쿼터 새로고침에 실패했습니다: {{error}}",
+      "resetCreditsTitleWithExpiry": "5시간 창에 남은 재설정 횟수: {{count}}. 다음 만료: {{time}}",
+      "resetCreditTimeUnknown": "시간 알 수 없음",
+      "resetCreditStatusAvailable": "사용 가능",
+      "resetCreditStatusRedeemed": "사용됨",
+      "resetCreditStatusExpired": "만료됨",
+      "resetCreditStatusUnknown": "알 수 없음",
+      "resetCreditNextExpiry": "다음 만료: {{time}}",
+      "resetCreditDetailsTitle": "재설정 상세",
+      "resetCreditGrantedAt": "지급",
+      "resetCreditExpiresAt": "만료"
     },
     "quotaError": {
       "badge": "할당량 오류",

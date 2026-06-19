@@ -7016,6 +7016,128 @@ fn close_pids(pids: &[u32], timeout_secs: u64) -> Result<(), String> {
     }
 }
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+pub fn close_processes_by_exact_exe_paths(
+    exe_paths: &[std::path::PathBuf],
+    timeout_secs: u64,
+) -> Result<usize, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let mut candidates: Vec<(String, String, String)> = Vec::new();
+        let mut expected_paths = HashSet::new();
+        let mut process_names = HashSet::new();
+        for path in exe_paths {
+            let raw_path = path.to_string_lossy().to_string();
+            let normalized = normalize_path_for_compare(&raw_path);
+            if normalized.is_empty() {
+                continue;
+            }
+            let Some(file_name) = path
+                .file_name()
+                .map(|value| value.to_string_lossy().trim().to_string())
+                .filter(|value| !value.is_empty())
+            else {
+                continue;
+            };
+            expected_paths.insert(normalized.clone());
+            process_names.insert(file_name.to_ascii_lowercase());
+            candidates.push((raw_path, normalized, file_name));
+        }
+
+        if candidates.is_empty() {
+            return Ok(0);
+        }
+
+        let current_pid = std::process::id();
+        let mut pids = Vec::new();
+        for (raw_path, _, process_name) in &candidates {
+            let script = build_windows_path_filtered_process_probe_script(process_name, raw_path);
+            match powershell_output_with_timeout(
+                &["-NoProfile", "-Command", &script],
+                WINDOWS_PROCESS_PROBE_TIMEOUT,
+            ) {
+                Ok(output) if output.status.success() => {
+                    for line in String::from_utf8_lossy(&output.stdout).lines() {
+                        let line = line.trim();
+                        if line.is_empty() {
+                            continue;
+                        }
+                        let mut parts = line.splitn(2, '|');
+                        let pid_str = parts.next().unwrap_or("").trim();
+                        let Ok(pid) = pid_str.parse::<u32>() else {
+                            continue;
+                        };
+                        if pid != current_pid {
+                            pids.push(pid);
+                        }
+                    }
+                }
+                Ok(output) => {
+                    crate::modules::logger::log_warn(&format!(
+                        "[CloseByExe] PowerShell probe failed: name={} status={} stderr={}",
+                        process_name,
+                        output.status,
+                        String::from_utf8_lossy(&output.stderr).trim()
+                    ));
+                }
+                Err(err) => {
+                    crate::modules::logger::log_warn(&format!(
+                        "[CloseByExe] PowerShell probe error: name={} err={}",
+                        process_name, err
+                    ));
+                }
+            }
+        }
+
+        let mut system = System::new();
+        system.refresh_processes_specifics(
+            sysinfo::ProcessesToUpdate::All,
+            true,
+            ProcessRefreshKind::nothing()
+                .with_exe(UpdateKind::OnlyIfNotSet)
+                .with_cmd(UpdateKind::OnlyIfNotSet),
+        );
+        for (pid, process) in system.processes() {
+            let pid_u32 = pid.as_u32();
+            if pid_u32 == current_pid {
+                continue;
+            }
+            let process_name = process.name().to_string_lossy().to_ascii_lowercase();
+            if !process_names.contains(&process_name) {
+                continue;
+            }
+            let (resolved_exe, _) = resolve_windows_process_exe_for_match(process);
+            if let Some(resolved_exe) = resolved_exe {
+                if expected_paths.contains(&resolved_exe) {
+                    pids.push(pid_u32);
+                }
+            }
+        }
+
+        pids.sort();
+        pids.dedup();
+        if pids.is_empty() {
+            return Ok(0);
+        }
+        crate::modules::logger::log_info(&format!(
+            "[CloseByExe] closing exact-path processes: targets={}, paths={:?}",
+            summarize_pid_list_for_log(&pids),
+            candidates
+                .iter()
+                .map(|(_, normalized, _)| summarize_text_for_process_log(normalized, 160))
+                .collect::<Vec<_>>()
+        ));
+        close_pids(&pids, timeout_secs)?;
+        Ok(pids.len())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (exe_paths, timeout_secs);
+        Ok(0)
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn try_launch_via_shortcut(shortcut_pattern: &str) -> Result<Option<u32>, String> {
     use std::fs;

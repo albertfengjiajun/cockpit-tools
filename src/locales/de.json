@@ -2045,7 +2045,17 @@
       "resetCreditNoCredits": "Keine Resets verfügbar",
       "resetCreditConsumed": "5-Stunden-Kontingent zurückgesetzt",
       "resetCreditFailed": "Zurücksetzen fehlgeschlagen: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "Reset gesendet, aber Kontingentaktualisierung fehlgeschlagen: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "Reset gesendet, aber Kontingentaktualisierung fehlgeschlagen: {{error}}",
+      "resetCreditsTitleWithExpiry": "Verbleibende Rücksetzungen für das 5-Stunden-Fenster: {{count}}. Nächster Ablauf: {{time}}",
+      "resetCreditTimeUnknown": "Zeit unbekannt",
+      "resetCreditStatusAvailable": "Verfügbar",
+      "resetCreditStatusRedeemed": "Genutzt",
+      "resetCreditStatusExpired": "Abgelaufen",
+      "resetCreditStatusUnknown": "Unbekannt",
+      "resetCreditNextExpiry": "Nächster Ablauf: {{time}}",
+      "resetCreditDetailsTitle": "Rücksetzdetails",
+      "resetCreditGrantedAt": "Gewährt",
+      "resetCreditExpiresAt": "Läuft ab"
     },
     "quotaError": {
       "badge": "Kontingentfehler",

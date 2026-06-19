@@ -2631,7 +2631,17 @@
       "resetCreditNoCredits": "没有可用的主动重置次数",
       "resetCreditConsumed": "已重置 5 小时额度",
       "resetCreditFailed": "重置失败：{{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "已提交重置，但刷新配额失败：{{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "已提交重置，但刷新配额失败：{{error}}",
+      "resetCreditsTitleWithExpiry": "可用于重置当前 5 小时窗口的剩余次数：{{count}}，最近到期：{{time}}",
+      "resetCreditTimeUnknown": "时间未知",
+      "resetCreditStatusAvailable": "可用",
+      "resetCreditStatusRedeemed": "已使用",
+      "resetCreditStatusExpired": "已过期",
+      "resetCreditStatusUnknown": "未知",
+      "resetCreditNextExpiry": "最近到期：{{time}}",
+      "resetCreditDetailsTitle": "重置次数明细",
+      "resetCreditGrantedAt": "发放",
+      "resetCreditExpiresAt": "到期"
     },
     "usage": {
       "open": "查看 OpenAI 用量",

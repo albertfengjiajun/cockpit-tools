@@ -179,9 +179,34 @@ pub struct CodexQuota {
     /// 主动重置次数（rate-limit reset credits）
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reset_credits_available: Option<i64>,
+    /// 主动重置明细（rate-limit reset credits）
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reset_credits: Vec<CodexResetCredit>,
+    /// 最近一张可用主动重置次数的到期时间 (Unix timestamp)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reset_credits_next_expires_at: Option<i64>,
     /// 原始响应数据
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_data: Option<serde_json::Value>,
+}
+
+/// Codex 主动重置次数明细
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CodexResetCredit {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reset_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub granted_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub redeemed_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_status: Option<String>,
 }
 
 /// Codex 配额错误信息

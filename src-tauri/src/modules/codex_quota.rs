@@ -1,4 +1,4 @@
-use crate::models::codex::{CodexAccount, CodexQuota, CodexQuotaErrorInfo};
+use crate::models::codex::{CodexAccount, CodexQuota, CodexQuotaErrorInfo, CodexResetCredit};
 use crate::modules::{codex_account, logger};
 use reqwest::header::{
     HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE, REFERER, USER_AGENT,
@@ -9,6 +9,7 @@ use serde_json::json;
 
 // 使用 wham/usage 端点（Quotio 使用的）
 const USAGE_URL: &str = "https://chatgpt.com/backend-api/wham/usage";
+const RESET_CREDITS_URL: &str = "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits";
 const RESET_CREDITS_CONSUME_URL: &str =
     "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits/consume";
 const SUBSCRIPTION_ACCOUNTS_CHECK_URL: &str =
@@ -21,6 +22,7 @@ const LEGACY_NEW_API_EXCLUSIVE_PLAN_TYPE: &str = "NEW_API_EXCLUSIVE";
 const COCKPIT_API_BASE_URL: &str = "https://chongcodex.cn/v1";
 const CHATGPT_WEB_REFERER: &str = "https://chatgpt.com/";
 const CHATGPT_WEB_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36";
+const RESET_CREDITS_MOCK_JSON_ENV: &str = "CODEX_RESET_CREDITS_MOCK_JSON";
 const SUBSCRIPTION_RETRY_INTERVAL_SECONDS: i64 = 30 * 60;
 const HTTP_ERROR_BODY_DISPLAY_MAX_CHARS: usize = 4000;
 
@@ -161,6 +163,14 @@ struct UsageResponse {
     rate_limit_reset_credits: Option<ResetCreditsInfo>,
 }
 
+#[derive(Debug, Clone)]
+struct ResetCreditsSnapshot {
+    available_count: Option<i64>,
+    credits: Vec<CodexResetCredit>,
+    next_expires_at: Option<i64>,
+    raw_data: serde_json::Value,
+}
+
 fn normalize_remaining_percentage(window: &WindowInfo) -> i32 {
     let used = window.used_percent.unwrap_or(0).clamp(0, 100);
     100 - used
@@ -218,6 +228,174 @@ struct AccountCheckRecord {
 
 fn now_timestamp() -> i64 {
     chrono::Utc::now().timestamp()
+}
+
+fn parse_reset_credit_timestamp_value(value: Option<&serde_json::Value>) -> Option<i64> {
+    match value? {
+        serde_json::Value::Number(number) => {
+            let mut timestamp = number
+                .as_i64()
+                .or_else(|| number.as_u64().and_then(|raw| i64::try_from(raw).ok()))?;
+            if timestamp > 1_000_000_000_000 {
+                timestamp /= 1000;
+            }
+            Some(timestamp)
+        }
+        serde_json::Value::String(text) => parse_subscription_timestamp(text),
+        _ => None,
+    }
+}
+
+fn extract_reset_credit_timestamp(
+    record: &serde_json::Map<String, serde_json::Value>,
+    keys: &[&str],
+) -> Option<i64> {
+    for key in keys {
+        if let Some(timestamp) = parse_reset_credit_timestamp_value(record.get(*key)) {
+            return Some(timestamp);
+        }
+    }
+    None
+}
+
+fn extract_reset_credit_string(
+    record: &serde_json::Map<String, serde_json::Value>,
+    keys: &[&str],
+) -> Option<String> {
+    for key in keys {
+        if let Some(value) = normalize_optional_json_scalar(record.get(*key)) {
+            return Some(value);
+        }
+    }
+    None
+}
+
+fn normalize_reset_credit_status(status: Option<&str>, expires_at: Option<i64>) -> Option<String> {
+    let normalized = status.and_then(|value| normalize_optional_ref(Some(value)));
+    if let Some(value) = normalized {
+        return Some(value.to_ascii_lowercase());
+    }
+
+    if expires_at.is_some_and(|timestamp| timestamp <= now_timestamp()) {
+        return Some("expired".to_string());
+    }
+
+    None
+}
+
+fn is_available_reset_credit(credit: &CodexResetCredit) -> bool {
+    let status = credit
+        .status
+        .as_deref()
+        .or(credit.raw_status.as_deref())
+        .unwrap_or("available")
+        .trim()
+        .to_ascii_lowercase();
+    if matches!(
+        status.as_str(),
+        "redeemed" | "used" | "consumed" | "expired"
+    ) {
+        return false;
+    }
+
+    credit
+        .expires_at
+        .map(|timestamp| timestamp > now_timestamp())
+        .unwrap_or(true)
+}
+
+fn parse_reset_credit_record(value: &serde_json::Value) -> Option<CodexResetCredit> {
+    let record = value.as_object()?;
+    let raw_status = extract_reset_credit_string(record, &["status", "state"]);
+    let expires_at =
+        extract_reset_credit_timestamp(record, &["expires_at", "expire_at", "expiresAt"]);
+    let status = normalize_reset_credit_status(raw_status.as_deref(), expires_at);
+
+    Some(CodexResetCredit {
+        id: extract_reset_credit_string(record, &["id", "credit_id", "creditId"]),
+        status,
+        reset_type: extract_reset_credit_string(record, &["type", "reset_type", "resetType"]),
+        granted_at: extract_reset_credit_timestamp(
+            record,
+            &["granted_at", "created_at", "grantedAt"],
+        ),
+        expires_at,
+        redeemed_at: extract_reset_credit_timestamp(
+            record,
+            &["redeemed_at", "used_at", "consumed_at", "redeemedAt"],
+        ),
+        raw_status,
+    })
+}
+
+fn parse_reset_credits_snapshot(payload: serde_json::Value) -> ResetCreditsSnapshot {
+    let credits = payload
+        .get("credits")
+        .or_else(|| payload.get("data").and_then(|data| data.get("credits")))
+        .and_then(|value| value.as_array())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(parse_reset_credit_record)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    let available_count = payload
+        .get("available_count")
+        .or_else(|| payload.get("availableCount"))
+        .or_else(|| {
+            payload.get("data").and_then(|data| {
+                data.get("available_count")
+                    .or_else(|| data.get("availableCount"))
+            })
+        })
+        .and_then(|value| {
+            value
+                .as_i64()
+                .or_else(|| value.as_u64().and_then(|raw| i64::try_from(raw).ok()))
+        })
+        .or_else(|| {
+            Some(
+                credits
+                    .iter()
+                    .filter(|credit| is_available_reset_credit(credit))
+                    .count() as i64,
+            )
+        });
+
+    let next_expires_at = credits
+        .iter()
+        .filter(|credit| is_available_reset_credit(credit))
+        .filter_map(|credit| credit.expires_at)
+        .min();
+
+    ResetCreditsSnapshot {
+        available_count,
+        credits,
+        next_expires_at,
+        raw_data: payload,
+    }
+}
+
+fn mock_reset_credits_payload() -> Option<serde_json::Value> {
+    if !cfg!(debug_assertions) {
+        return None;
+    }
+
+    if let Ok(raw) = std::env::var(RESET_CREDITS_MOCK_JSON_ENV) {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            match serde_json::from_str(trimmed) {
+                Ok(payload) => return Some(payload),
+                Err(error) => {
+                    logger::log_warn(&format!("Codex reset credit mock JSON 解析失败: {}", error))
+                }
+            }
+        }
+    }
+
+    None
 }
 
 fn current_chatgpt_timezone_offset_min() -> i32 {
@@ -769,7 +947,28 @@ pub async fn fetch_quota(account: &CodexAccount) -> Result<FetchQuotaResult, Str
     let usage: UsageResponse =
         serde_json::from_str(&body).map_err(|e| format!("解析 JSON 失败: {}", e))?;
 
-    let quota = parse_quota_from_usage(&usage, &body)?;
+    let mut quota = parse_quota_from_usage(&usage, &body)?;
+    match fetch_reset_credits(account).await {
+        Ok(snapshot) => {
+            quota.reset_credits_available = snapshot.available_count;
+            quota.reset_credits = snapshot.credits;
+            quota.reset_credits_next_expires_at = snapshot.next_expires_at;
+            if let Some(raw_data) = quota.raw_data.as_mut() {
+                if let Some(object) = raw_data.as_object_mut() {
+                    object.insert(
+                        "rate_limit_reset_credits_detail".to_string(),
+                        snapshot.raw_data,
+                    );
+                }
+            }
+        }
+        Err(error) => {
+            logger::log_warn(&format!(
+                "Codex 主动重置次数明细刷新失败，保留 usage 中的 available_count: {}",
+                error
+            ));
+        }
+    }
     let plan_type = usage.plan_type.clone();
 
     Ok(FetchQuotaResult { quota, plan_type })
@@ -821,6 +1020,8 @@ fn parse_quota_from_usage(usage: &UsageResponse, raw_body: &str) -> Result<Codex
             .rate_limit_reset_credits
             .as_ref()
             .and_then(|credits| credits.available_count),
+        reset_credits: Vec::new(),
+        reset_credits_next_expires_at: None,
         raw_data,
     })
 }
@@ -976,6 +1177,8 @@ async fn fetch_new_api_quota(account: &CodexAccount) -> Result<FetchQuotaResult,
             weekly_window_minutes: None,
             weekly_window_present: Some(false),
             reset_credits_available: None,
+            reset_credits: Vec::new(),
+            reset_credits_next_expires_at: None,
             raw_data: Some(json!({
                 "provider": "cockpit-api",
                 "object": "codex_cockpit_api_quota",
@@ -1011,6 +1214,8 @@ fn build_codex_api_headers(
     headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
     headers.insert(REFERER, HeaderValue::from_static(CHATGPT_WEB_REFERER));
     headers.insert(USER_AGENT, HeaderValue::from_static(CHATGPT_WEB_USER_AGENT));
+    headers.insert("OpenAI-Beta", HeaderValue::from_static("codex-1"));
+    headers.insert("originator", HeaderValue::from_static("Codex Desktop"));
 
     if let Some(account_id) = normalize_optional_ref(account_id) {
         headers.insert(
@@ -1021,6 +1226,55 @@ fn build_codex_api_headers(
     }
 
     Ok(headers)
+}
+
+async fn fetch_reset_credits(account: &CodexAccount) -> Result<ResetCreditsSnapshot, String> {
+    if let Some(payload) = mock_reset_credits_payload() {
+        logger::log_info("Codex reset credit 查询使用显式 mock JSON");
+        return Ok(parse_reset_credits_snapshot(payload));
+    }
+
+    let account_id = account.account_id.clone().or_else(|| {
+        codex_account::extract_chatgpt_account_id_from_access_token(&account.tokens.access_token)
+    });
+    let headers = build_codex_api_headers(account, account_id.as_deref())?;
+    let response = reqwest::Client::new()
+        .get(RESET_CREDITS_URL)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|e| format!("请求主动重置次数明细失败: {}", e))?;
+    let status = response.status();
+    let headers = response.headers().clone();
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("读取主动重置次数明细响应失败: {}", e))?;
+
+    logger::log_info(&format!(
+        "Codex 主动重置次数明细响应: url={}, status={}, request-id={}, x-request-id={}, cf-ray={}, body_len={}",
+        RESET_CREDITS_URL,
+        status,
+        get_header_value(&headers, "request-id"),
+        get_header_value(&headers, "x-request-id"),
+        get_header_value(&headers, "cf-ray"),
+        body.len()
+    ));
+
+    if !status.is_success() {
+        let detail_code = extract_detail_code_from_body(&body);
+        let mut error_message = format!("主动重置次数明细接口返回错误 {}", status);
+        if let Some(code) = detail_code {
+            error_message.push_str(&format!(" [error_code:{}]", code));
+        }
+        error_message.push_str(&format!(" [body_len:{}]", body.len()));
+        append_http_error_diagnostics(&mut error_message, &headers, &body);
+        return Err(error_message);
+    }
+
+    let payload: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|e| format!("主动重置次数明细 JSON 解析失败: {}", e))?;
+    Ok(parse_reset_credits_snapshot(payload))
 }
 
 async fn post_reset_credit_once(
@@ -1077,6 +1331,13 @@ pub async fn consume_reset_credit(account_id: &str) -> Result<(), String> {
     let mut account = codex_account::prepare_account_for_injection(account_id).await?;
     if account.is_api_key_auth() {
         return Err("API Key 账号不支持主动重置额度".to_string());
+    }
+    if mock_reset_credits_payload().is_some() {
+        logger::log_info(&format!(
+            "Codex 主动重置使用显式 mock JSON 空操作: account_id={}",
+            account_id
+        ));
+        return Ok(());
     }
 
     if crate::modules::codex_oauth::is_token_expired(&account.tokens.access_token) {
@@ -1346,7 +1607,11 @@ pub async fn refresh_all_quotas() -> Result<Vec<(String, Result<CodexQuota, Stri
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_http_error_body_for_display, HTTP_ERROR_BODY_DISPLAY_MAX_CHARS};
+    use super::{
+        normalize_http_error_body_for_display, parse_reset_credits_snapshot,
+        HTTP_ERROR_BODY_DISPLAY_MAX_CHARS,
+    };
+    use serde_json::json;
 
     #[test]
     fn displays_empty_http_error_body_explicitly() {
@@ -1364,5 +1629,53 @@ mod tests {
         assert!(display.starts_with("first second "));
         assert!(display.ends_with("...(truncated)"));
         assert!(display.chars().count() <= HTTP_ERROR_BODY_DISPLAY_MAX_CHARS + 14);
+    }
+
+    #[test]
+    fn parses_reset_credit_details_and_next_expiry() {
+        let snapshot = parse_reset_credits_snapshot(json!({
+            "available_count": 1,
+            "credits": [
+                {
+                    "id": "credit-1",
+                    "status": "available",
+                    "type": "rate_limit_reset",
+                    "granted_at": "2026-06-19T00:00:00Z",
+                    "expires_at": "2026-06-25T08:30:00Z"
+                },
+                {
+                    "id": "credit-2",
+                    "status": "redeemed",
+                    "granted_at": 1781846400,
+                    "expires_at": 1782451200,
+                    "redeemed_at": 1781900000
+                }
+            ]
+        }));
+
+        assert_eq!(snapshot.available_count, Some(1));
+        assert_eq!(snapshot.credits.len(), 2);
+        assert_eq!(snapshot.credits[0].id.as_deref(), Some("credit-1"));
+        assert_eq!(snapshot.credits[0].status.as_deref(), Some("available"));
+        assert_eq!(snapshot.credits[0].granted_at, Some(1781827200));
+        assert_eq!(snapshot.credits[0].expires_at, Some(1782376200));
+        assert_eq!(snapshot.next_expires_at, Some(1782376200));
+    }
+
+    #[test]
+    fn derives_reset_credit_count_when_available_count_missing() {
+        let future = chrono::Utc::now().timestamp() + 3600;
+        let past = chrono::Utc::now().timestamp() - 3600;
+        let snapshot = parse_reset_credits_snapshot(json!({
+            "credits": [
+                { "id": "available", "expires_at": future },
+                { "id": "expired", "expires_at": past },
+                { "id": "used", "status": "used", "expires_at": future }
+            ]
+        }));
+
+        assert_eq!(snapshot.available_count, Some(1));
+        assert_eq!(snapshot.next_expires_at, Some(future));
+        assert_eq!(snapshot.credits[1].status.as_deref(), Some("expired"));
     }
 }

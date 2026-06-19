@@ -2045,7 +2045,17 @@
       "resetCreditNoCredits": "Žádné dostupné resety",
       "resetCreditConsumed": "5hodinová kvóta byla resetována",
       "resetCreditFailed": "Reset selhal: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "Reset byl odeslán, ale obnova kvóty selhala: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "Reset byl odeslán, ale obnova kvóty selhala: {{error}}",
+      "resetCreditsTitleWithExpiry": "Zbývající resety pro 5hodinové okno: {{count}}. Nejbližší expirace: {{time}}",
+      "resetCreditTimeUnknown": "Čas neznámý",
+      "resetCreditStatusAvailable": "K dispozici",
+      "resetCreditStatusRedeemed": "Použito",
+      "resetCreditStatusExpired": "Vypršelo",
+      "resetCreditStatusUnknown": "Neznámé",
+      "resetCreditNextExpiry": "Nejbližší expirace: {{time}}",
+      "resetCreditDetailsTitle": "Podrobnosti resetů",
+      "resetCreditGrantedAt": "Přiděleno",
+      "resetCreditExpiresAt": "Vyprší"
     },
     "quotaError": {
       "badge": "Chyba kvóty",

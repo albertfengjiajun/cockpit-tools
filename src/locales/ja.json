@@ -2045,7 +2045,17 @@
       "resetCreditNoCredits": "利用可能なリセット回数がありません",
       "resetCreditConsumed": "5時間クォータをリセットしました",
       "resetCreditFailed": "リセット失敗: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "リセットを送信しましたが、クォータ更新に失敗しました: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "リセットを送信しましたが、クォータ更新に失敗しました: {{error}}",
+      "resetCreditsTitleWithExpiry": "5時間枠の残りリセット回数: {{count}}。次の有効期限: {{time}}",
+      "resetCreditTimeUnknown": "時刻不明",
+      "resetCreditStatusAvailable": "利用可",
+      "resetCreditStatusRedeemed": "使用済み",
+      "resetCreditStatusExpired": "期限切れ",
+      "resetCreditStatusUnknown": "不明",
+      "resetCreditNextExpiry": "次の有効期限: {{time}}",
+      "resetCreditDetailsTitle": "リセット明細",
+      "resetCreditGrantedAt": "付与",
+      "resetCreditExpiresAt": "期限"
     },
     "quotaError": {
       "badge": "クォータエラー",

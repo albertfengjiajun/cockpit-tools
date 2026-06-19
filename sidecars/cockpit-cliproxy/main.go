@@ -18,7 +18,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	goruntime "runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -5532,38 +5531,7 @@ func monitorParentProcess(ctx context.Context, parentPID int, cancel context.Can
 	if parentPID <= 0 || parentPID == os.Getpid() {
 		return
 	}
-	if goruntime.GOOS == "windows" {
-		if emitter != nil {
-			emitter.emit(map[string]any{
-				"type":      "parent_monitor_disabled",
-				"reason":    "windows_getppid_unreliable",
-				"parentPid": parentPID,
-			})
-		}
-		return
-	}
-	go func() {
-		ticker := time.NewTicker(2 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				if os.Getppid() == parentPID {
-					continue
-				}
-				if emitter != nil {
-					emitter.emit(map[string]any{
-						"type":      "parent_exit",
-						"parentPid": parentPID,
-					})
-				}
-				cancel()
-				return
-			}
-		}
-	}()
+	monitorParentProcessPlatform(ctx, parentPID, cancel, emitter)
 }
 
 func main() {

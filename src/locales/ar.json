@@ -2091,7 +2091,17 @@
       "resetCreditNoCredits": "لا توجد مرات إعادة ضبط متاحة",
       "resetCreditConsumed": "تمت إعادة ضبط حصة 5 ساعات",
       "resetCreditFailed": "فشلت إعادة الضبط: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "تم إرسال إعادة الضبط، لكن تحديث الحصة فشل: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "تم إرسال إعادة الضبط، لكن تحديث الحصة فشل: {{error}}",
+      "resetCreditsTitleWithExpiry": "عمليات إعادة التعيين المتبقية لنافذة 5 ساعات: {{count}}. أقرب انتهاء: {{time}}",
+      "resetCreditTimeUnknown": "الوقت غير معروف",
+      "resetCreditStatusAvailable": "متاح",
+      "resetCreditStatusRedeemed": "مستخدم",
+      "resetCreditStatusExpired": "منتهي",
+      "resetCreditStatusUnknown": "غير معروف",
+      "resetCreditNextExpiry": "أقرب انتهاء: {{time}}",
+      "resetCreditDetailsTitle": "تفاصيل إعادة التعيين",
+      "resetCreditGrantedAt": "مُنحت",
+      "resetCreditExpiresAt": "تنتهي"
     },
     "quotaError": {
       "badge": "خطأ في الحصة",

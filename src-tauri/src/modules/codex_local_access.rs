@@ -10745,6 +10745,13 @@ fn apply_provider_gateway_template_settings(
     collection.debug_logs = template.debug_logs;
 }
 
+fn provider_gateway_bound_oauth_account_id_for_account(account: &CodexAccount) -> Option<String> {
+    if !account.is_api_key_auth() {
+        return None;
+    }
+    normalize_optional_account_ref(account.bound_oauth_account_id.as_deref())
+}
+
 fn build_provider_gateway_collection_for_profile(
     profile_dir: &Path,
     account: &CodexAccount,
@@ -10770,7 +10777,8 @@ fn build_provider_gateway_collection_for_profile(
     collection.custom_routing_rules.clear();
     collection.account_model_rules.clear();
     collection.api_keys.clear();
-    collection.bound_oauth_account_id = None;
+    collection.bound_oauth_account_id =
+        provider_gateway_bound_oauth_account_id_for_account(account);
 
     if !is_provider_gateway_eligible_account(account) {
         return Err("该供应商账号不符合本地网关使用条件".to_string());
@@ -11213,6 +11221,28 @@ pub async fn stop_provider_gateways_for_profile(profile_dir: &Path) {
             }
         }
     }
+}
+
+async fn stop_all_provider_gateways_for_app_shutdown() -> Vec<GatewayBindEndpoint> {
+    let _guard = provider_gateway_lifecycle_lock().lock().await;
+    let runtime_keys = {
+        let runtimes = provider_gateway_runtime_store().lock().await;
+        runtimes.keys().cloned().collect::<Vec<_>>()
+    };
+    if !runtime_keys.is_empty() {
+        logger::log_codex_api_info(&format!(
+            "[CodexLocalAccess][provider-gateway] 应用关闭前停止全部 sidecar: count={}",
+            runtime_keys.len()
+        ));
+    }
+
+    let mut endpoints = Vec::new();
+    for runtime_key in runtime_keys {
+        if let Some(endpoint) = stop_provider_gateway_runtime(&runtime_key).await {
+            endpoints.push(endpoint);
+        }
+    }
+    endpoints
 }
 
 pub async fn ensure_provider_gateway_for_dir(
@@ -13065,10 +13095,7 @@ pub async fn clear_local_access_stats() -> Result<CodexLocalAccessState, String>
 
 pub async fn prepare_local_access_gateway_for_restart() -> Result<CodexLocalAccessState, String> {
     ensure_runtime_loaded_without_start().await?;
-    let stopped_endpoint = stop_gateway().await;
-    if let Some(endpoint) = stopped_endpoint {
-        wait_for_gateway_port_release(&endpoint.bind_host, endpoint.port).await?;
-    }
+    stop_all_sidecar_processes_for_app_shutdown().await?;
 
     let runtime = gateway_runtime().lock().await;
     Ok(build_state_snapshot(&runtime))
@@ -13179,16 +13206,67 @@ pub async fn restore_local_access_gateway() {
     }
 }
 
-pub async fn shutdown_local_access_gateway_for_app_exit() {
+#[cfg(target_os = "windows")]
+fn close_installed_sidecar_processes_by_path(timeout_secs: u64) -> Result<usize, String> {
+    let candidates = sidecar_binary_candidates()?
+        .into_iter()
+        .filter(|path| path.exists())
+        .collect::<Vec<_>>();
+    if candidates.is_empty() {
+        return Ok(0);
+    }
+    let closed = process::close_processes_by_exact_exe_paths(&candidates, timeout_secs)?;
+    if closed > 0 {
+        logger::log_codex_api_info(&format!(
+            "[CodexLocalAccess][sidecar] Windows 更新前已关闭安装目录 sidecar 残留进程: count={}",
+            closed
+        ));
+    }
+    Ok(closed)
+}
+
+async fn stop_all_sidecar_processes_for_app_shutdown() -> Result<(), String> {
+    let mut errors = Vec::new();
+
     let stopped_endpoint = stop_gateway().await;
     if let Some(endpoint) = stopped_endpoint {
         if let Err(error) = wait_for_gateway_port_release(&endpoint.bind_host, endpoint.port).await
         {
-            logger::log_codex_api_warn(&format!(
-                "[CodexLocalAccess] 应用退出时等待 API 服务 sidecar 释放端口失败: {}",
-                error
+            errors.push(format!("等待 API 服务 sidecar 释放端口失败: {}", error));
+        }
+    }
+
+    let provider_endpoints = stop_all_provider_gateways_for_app_shutdown().await;
+    for endpoint in provider_endpoints {
+        if let Err(error) = wait_for_gateway_port_release(&endpoint.bind_host, endpoint.port).await
+        {
+            errors.push(format!(
+                "等待 provider gateway sidecar 释放端口失败: bind={}:{} error={}",
+                endpoint.bind_host, endpoint.port, error
             ));
         }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Err(error) = close_installed_sidecar_processes_by_path(5) {
+            errors.push(format!("关闭安装目录 sidecar 残留进程失败: {}", error));
+        }
+    }
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors.join("; "))
+    }
+}
+
+pub async fn shutdown_local_access_gateway_for_app_exit() {
+    if let Err(error) = stop_all_sidecar_processes_for_app_shutdown().await {
+        logger::log_codex_api_warn(&format!(
+            "[CodexLocalAccess] 应用退出时关闭 sidecar 失败: {}",
+            error
+        ));
     }
 }
 
@@ -17717,6 +17795,7 @@ mod tests {
         parse_responses_payload_from_upstream, parse_websocket_upstream_error,
         prepare_gateway_request, prepare_gateway_request_with_default_service_tier,
         prepare_websocket_initial_request, profile_base_url_matches,
+        provider_gateway_bound_oauth_account_id_for_account,
         provider_gateway_default_model_for_account, provider_gateway_models_for_account,
         read_http_request, recover_invalid_stats_file, remove_account_refs_from_collection,
         remove_codex_local_access_config, resolve_plan_rank, resolve_supported_model_alias,
@@ -21156,6 +21235,27 @@ data: {"error":{"code":"server_error","type":"upstream","message":"stream aborte
     }
 
     #[test]
+    fn provider_gateway_inherits_api_key_bound_oauth_account() {
+        let mut account = CodexAccount::new_api_key(
+            "api-1".to_string(),
+            "api-key@example.com".to_string(),
+            "sk-test".to_string(),
+            CodexApiProviderMode::Custom,
+            Some("https://api.deepseek.com/v1".to_string()),
+            Some("deepseek".to_string()),
+            Some("DeepSeek".to_string()),
+            Vec::new(),
+        );
+        account.api_wire_api = Some("chat_completions".to_string());
+        account.bound_oauth_account_id = Some(" oauth-1 ".to_string());
+
+        assert_eq!(
+            provider_gateway_bound_oauth_account_id_for_account(&account).as_deref(),
+            Some("oauth-1")
+        );
+    }
+
+    #[test]
     fn sanitize_collection_keeps_provider_gateway_account_scope() {
         let mut account = CodexAccount::new_api_key(
             "api-1".to_string(),
@@ -21188,6 +21288,60 @@ data: {"error":{"code":"server_error","type":"upstream","message":"stream aborte
         sanitize_collection_with_accounts(&mut collection, &[account])
             .expect("collection should sanitize");
 
+        assert!(collection.account_ids.is_empty());
+        assert_eq!(collection.api_keys.len(), 1);
+        assert_eq!(collection.api_keys[0].account_ids, vec![account_id]);
+    }
+
+    #[test]
+    fn sanitize_collection_keeps_provider_gateway_bound_oauth_account() {
+        let mut account = CodexAccount::new_api_key(
+            "api-1".to_string(),
+            "api-key@example.com".to_string(),
+            "sk-test".to_string(),
+            CodexApiProviderMode::Custom,
+            Some("https://api.deepseek.com/v1".to_string()),
+            Some("deepseek".to_string()),
+            Some("DeepSeek".to_string()),
+            Vec::new(),
+        );
+        account.api_wire_api = Some("chat_completions".to_string());
+        account.bound_oauth_account_id = Some("oauth-1".to_string());
+        let account_id = account.id.clone();
+        let oauth_account = CodexAccount::new(
+            "oauth-1".to_string(),
+            "oauth@example.com".to_string(),
+            CodexTokens {
+                id_token: "id-token".to_string(),
+                access_token: "access-token".to_string(),
+                refresh_token: Some("refresh-token".to_string()),
+            },
+        );
+
+        let mut collection = test_local_access_collection(vec![account_id.clone()]);
+        collection.bound_oauth_account_id =
+            provider_gateway_bound_oauth_account_id_for_account(&account);
+        let mut api_key = build_local_access_api_key(Some("Provider Gateway"));
+        api_key.provider_gateway = Some(CodexLocalAccessProviderGateway {
+            base_url: "https://api.deepseek.com/v1".to_string(),
+            api_key: "sk-test".to_string(),
+            upstream_model: "deepseek-v4-pro".to_string(),
+            upstream_models: vec!["deepseek-v4-pro".to_string()],
+            wire_api: Some("chat_completions".to_string()),
+            supports_vision: false,
+            model_capabilities: HashMap::new(),
+            vision_routing_model: None,
+        });
+        api_key.account_ids = vec![account_id.clone()];
+        collection.api_keys = vec![api_key];
+
+        sanitize_collection_with_accounts(&mut collection, &[account, oauth_account])
+            .expect("collection should sanitize");
+
+        assert_eq!(
+            collection.bound_oauth_account_id.as_deref(),
+            Some("oauth-1")
+        );
         assert!(collection.account_ids.is_empty());
         assert_eq!(collection.api_keys.len(), 1);
         assert_eq!(collection.api_keys[0].account_ids, vec![account_id]);

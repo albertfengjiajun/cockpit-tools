@@ -2631,7 +2631,17 @@
       "resetCreditNoCredits": "No reset credits available",
       "resetCreditConsumed": "5-hour quota reset",
       "resetCreditFailed": "Reset failed: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "Reset submitted, but quota refresh failed: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "Reset submitted, but quota refresh failed: {{error}}",
+      "resetCreditsTitleWithExpiry": "Resets left for the 5-hour window: {{count}}. Next expires: {{time}}",
+      "resetCreditTimeUnknown": "Time unknown",
+      "resetCreditStatusAvailable": "Available",
+      "resetCreditStatusRedeemed": "Used",
+      "resetCreditStatusExpired": "Expired",
+      "resetCreditStatusUnknown": "Unknown",
+      "resetCreditNextExpiry": "Next expires: {{time}}",
+      "resetCreditDetailsTitle": "Reset details",
+      "resetCreditGrantedAt": "Granted",
+      "resetCreditExpiresAt": "Expires"
     },
     "usage": {
       "open": "Open OpenAI usage",

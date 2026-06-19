@@ -2045,7 +2045,17 @@
       "resetCreditNoCredits": "Brak dostępnych resetów",
       "resetCreditConsumed": "Limit 5 godzin zresetowany",
       "resetCreditFailed": "Reset nieudany: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "Reset wysłany, ale odświeżenie limitu nieudane: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "Reset wysłany, ale odświeżenie limitu nieudane: {{error}}",
+      "resetCreditsTitleWithExpiry": "Pozostałe resety okna 5 godzin: {{count}}. Najbliższe wygaśnięcie: {{time}}",
+      "resetCreditTimeUnknown": "Czas nieznany",
+      "resetCreditStatusAvailable": "Dostępne",
+      "resetCreditStatusRedeemed": "Użyte",
+      "resetCreditStatusExpired": "Wygasłe",
+      "resetCreditStatusUnknown": "Nieznane",
+      "resetCreditNextExpiry": "Najbliższe wygaśnięcie: {{time}}",
+      "resetCreditDetailsTitle": "Szczegóły resetów",
+      "resetCreditGrantedAt": "Przyznano",
+      "resetCreditExpiresAt": "Wygasa"
     },
     "quotaError": {
       "badge": "Błąd limitu",

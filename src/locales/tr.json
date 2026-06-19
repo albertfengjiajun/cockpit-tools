@@ -2045,7 +2045,17 @@
       "resetCreditNoCredits": "Kullanılabilir sıfırlama yok",
       "resetCreditConsumed": "5 saatlik kota sıfırlandı",
       "resetCreditFailed": "Sıfırlama başarısız: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "Sıfırlama gönderildi, ancak kota yenileme başarısız: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "Sıfırlama gönderildi, ancak kota yenileme başarısız: {{error}}",
+      "resetCreditsTitleWithExpiry": "5 saatlik pencere için kalan sıfırlama: {{count}}. En yakın bitiş: {{time}}",
+      "resetCreditTimeUnknown": "Zaman bilinmiyor",
+      "resetCreditStatusAvailable": "Kullanılabilir",
+      "resetCreditStatusRedeemed": "Kullanıldı",
+      "resetCreditStatusExpired": "Süresi doldu",
+      "resetCreditStatusUnknown": "Bilinmiyor",
+      "resetCreditNextExpiry": "En yakın bitiş: {{time}}",
+      "resetCreditDetailsTitle": "Sıfırlama ayrıntıları",
+      "resetCreditGrantedAt": "Verildi",
+      "resetCreditExpiresAt": "Biter"
     },
     "quotaError": {
       "badge": "Kota hatası",

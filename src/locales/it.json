@@ -2045,7 +2045,17 @@
       "resetCreditNoCredits": "Nessun reset disponibile",
       "resetCreditConsumed": "Quota di 5 ore reimpostata",
       "resetCreditFailed": "Reimpostazione non riuscita: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "Reset inviato, ma aggiornamento quota non riuscito: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "Reset inviato, ma aggiornamento quota non riuscito: {{error}}",
+      "resetCreditsTitleWithExpiry": "Reimpostazioni rimaste per la finestra di 5 ore: {{count}}. Prossima scadenza: {{time}}",
+      "resetCreditTimeUnknown": "Ora sconosciuta",
+      "resetCreditStatusAvailable": "Disponibile",
+      "resetCreditStatusRedeemed": "Usata",
+      "resetCreditStatusExpired": "Scaduta",
+      "resetCreditStatusUnknown": "Sconosciuta",
+      "resetCreditNextExpiry": "Prossima scadenza: {{time}}",
+      "resetCreditDetailsTitle": "Dettagli reimpostazioni",
+      "resetCreditGrantedAt": "Concessa",
+      "resetCreditExpiresAt": "Scade"
     },
     "quotaError": {
       "badge": "Errore quota",

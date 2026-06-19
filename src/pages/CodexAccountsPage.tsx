@@ -89,12 +89,15 @@ import {
   getCodexPlanFilterKey,
   getCodexSubscriptionPresentation,
   hasCodexAccountName,
+  formatCodexResetTime,
+  formatCodexResetTimeAbsolute,
   isCodexApiKeyAccount,
   isCodexChatCompletionsApiKeyAccount,
   isCodexNewApiAccount,
   isCodexTeamLikePlan,
   type CodexApiProviderMode,
   type CodexQuotaErrorInfo,
+  type CodexResetCredit,
 } from "../types/codex";
 import { filterCodexLocalAccessAccountIds } from "../utils/codexLocalAccessAccounts";
 import { isBlockingCodexQuotaError } from "../utils/codexQuotaError";
@@ -2178,6 +2181,147 @@ export function CodexAccountsPage() {
     return typeof value === "number" && Number.isFinite(value) ? value : null;
   }, []);
 
+  const isAvailableResetCredit = useCallback((credit: CodexResetCredit) => {
+    const normalizedStatus = (credit.status || credit.raw_status || "available")
+      .trim()
+      .toLowerCase();
+    if (
+      normalizedStatus === "redeemed" ||
+      normalizedStatus === "used" ||
+      normalizedStatus === "consumed" ||
+      normalizedStatus === "expired"
+    ) {
+      return false;
+    }
+    return !(
+      typeof credit.expires_at === "number" &&
+      Number.isFinite(credit.expires_at) &&
+      credit.expires_at <= Math.floor(Date.now() / 1000)
+    );
+  }, []);
+
+  const getResetCreditDetails = useCallback((account: CodexAccount) => {
+    return Array.isArray(account.quota?.reset_credits)
+      ? account.quota.reset_credits
+      : [];
+  }, []);
+
+  const getResetCreditNextExpiresAt = useCallback(
+    (account: CodexAccount) => {
+      const explicit = account.quota?.reset_credits_next_expires_at;
+      if (typeof explicit === "number" && Number.isFinite(explicit)) {
+        return explicit;
+      }
+
+      const next = getResetCreditDetails(account)
+        .filter(isAvailableResetCredit)
+        .map((credit) => credit.expires_at)
+        .filter(
+          (value): value is number =>
+            typeof value === "number" && Number.isFinite(value),
+        )
+        .sort((a, b) => a - b)[0];
+      return next ?? null;
+    },
+    [getResetCreditDetails, isAvailableResetCredit],
+  );
+
+  const formatResetCreditTime = useCallback(
+    (timestamp: number | null | undefined) => {
+      return timestamp
+        ? formatCodexResetTime(timestamp, t)
+        : t("codex.quota.resetCreditTimeUnknown", "时间未知");
+    },
+    [t],
+  );
+
+  const formatResetCreditAbsoluteTime = useCallback(
+    (timestamp: number | null | undefined) => {
+      return timestamp
+        ? formatCodexResetTimeAbsolute(timestamp)
+        : t("codex.quota.resetCreditTimeUnknown", "时间未知");
+    },
+    [t],
+  );
+
+  const getResetCreditStatusLabel = useCallback(
+    (credit: CodexResetCredit) => {
+      const normalizedStatus = (credit.status || credit.raw_status || "")
+        .trim()
+        .toLowerCase();
+      if (
+        normalizedStatus === "redeemed" ||
+        normalizedStatus === "used" ||
+        normalizedStatus === "consumed"
+      ) {
+        return t("codex.quota.resetCreditStatusRedeemed", "已使用");
+      }
+      if (normalizedStatus === "available") {
+        return isAvailableResetCredit(credit)
+          ? t("codex.quota.resetCreditStatusAvailable", "可用")
+          : t("codex.quota.resetCreditStatusExpired", "已过期");
+      }
+      if (normalizedStatus === "expired") {
+        return t("codex.quota.resetCreditStatusExpired", "已过期");
+      }
+      if (!isAvailableResetCredit(credit)) {
+        return t("codex.quota.resetCreditStatusExpired", "已过期");
+      }
+      return (
+        credit.raw_status ||
+        credit.status ||
+        t("codex.quota.resetCreditStatusUnknown", "未知")
+      );
+    },
+    [isAvailableResetCredit, t],
+  );
+
+  const getResetCreditStatusTone = useCallback(
+    (credit: CodexResetCredit) => {
+      const normalizedStatus = (credit.status || credit.raw_status || "")
+        .trim()
+        .toLowerCase();
+      if (normalizedStatus === "available" && isAvailableResetCredit(credit)) {
+        return "is-available";
+      }
+      if (
+        normalizedStatus === "redeemed" ||
+        normalizedStatus === "used" ||
+        normalizedStatus === "consumed"
+      ) {
+        return "is-redeemed";
+      }
+      if (normalizedStatus === "expired" || !isAvailableResetCredit(credit)) {
+        return "is-expired";
+      }
+      return "is-unknown";
+    },
+    [isAvailableResetCredit],
+  );
+
+  const buildResetCreditsTitle = useCallback(
+    (account: CodexAccount, availableCount: number) => {
+      if (availableCount <= 0) {
+        return t("codex.quota.resetCreditNoCredits", "没有可用的主动重置次数");
+      }
+
+      const nextExpiresAt = getResetCreditNextExpiresAt(account);
+      if (nextExpiresAt) {
+        return t("codex.quota.resetCreditsTitleWithExpiry", {
+          count: availableCount,
+          time: formatResetCreditTime(nextExpiresAt),
+          defaultValue:
+            "可用于重置当前 5 小时窗口的剩余次数：{{count}}，最近到期：{{time}}",
+        });
+      }
+
+      return t("codex.quota.resetCreditsTitle", {
+        count: availableCount,
+      });
+    },
+    [formatResetCreditTime, getResetCreditNextExpiresAt, t],
+  );
+
   const resetCreditConfirmAccount = useMemo(
     () =>
       resetCreditConfirmAccountId
@@ -2189,6 +2333,12 @@ export function CodexAccountsPage() {
 
   const resetCreditConfirmAvailableCount = resetCreditConfirmAccount
     ? getResetCreditsAvailable(resetCreditConfirmAccount)
+    : null;
+  const resetCreditConfirmCredits = resetCreditConfirmAccount
+    ? getResetCreditDetails(resetCreditConfirmAccount)
+    : [];
+  const resetCreditConfirmNextExpiresAt = resetCreditConfirmAccount
+    ? getResetCreditNextExpiresAt(resetCreditConfirmAccount)
     : null;
   const isResetCreditConfirmSubmitting = resetCreditConfirmAccount
     ? resettingResetCreditAccountId === resetCreditConfirmAccount.id
@@ -7625,12 +7775,7 @@ export function CodexAccountsPage() {
 
     const isResetting = resettingResetCreditAccountId === account.id;
     const isDisabled = isResetting || availableCount <= 0;
-    const titleText =
-      availableCount <= 0
-        ? t("codex.quota.resetCreditNoCredits", "没有可用的主动重置次数")
-        : t("codex.quota.resetCreditsTitle", {
-            count: availableCount,
-          });
+    const titleText = buildResetCreditsTitle(account, availableCount);
 
     return (
       <div className="codex-reset-credit-row inline">
@@ -13374,6 +13519,52 @@ export function CodexAccountsPage() {
                       )}
                     </strong>
                   </div>
+                  {resetCreditConfirmNextExpiresAt && (
+                    <div className="codex-reset-credit-confirm-expiry">
+                      <Clock size={14} />
+                      <span>
+                        {t("codex.quota.resetCreditNextExpiry", {
+                          time: formatResetCreditTime(
+                            resetCreditConfirmNextExpiresAt,
+                          ),
+                          defaultValue: "最近到期：{{time}}",
+                        })}
+                      </span>
+                    </div>
+                  )}
+                  {resetCreditConfirmCredits.length > 0 && (
+                    <div className="codex-reset-credit-confirm-details">
+                      <div className="codex-reset-credit-confirm-details-title">
+                        {t("codex.quota.resetCreditDetailsTitle", "重置次数明细")}
+                      </div>
+                      {resetCreditConfirmCredits.map((credit, index) => (
+                        <div
+                          className="codex-reset-credit-confirm-detail"
+                          key={credit.id || `${credit.status || "credit"}-${index}`}
+                        >
+                          <span
+                            className={`codex-reset-credit-confirm-detail-status ${getResetCreditStatusTone(credit)}`}
+                          >
+                            {getResetCreditStatusLabel(credit)}
+                          </span>
+                          <span>
+                            {t("codex.quota.resetCreditGrantedAt", "发放")}
+                            ：
+                            <strong>
+                              {formatResetCreditAbsoluteTime(credit.granted_at)}
+                            </strong>
+                          </span>
+                          <span>
+                            {t("codex.quota.resetCreditExpiresAt", "到期")}
+                            ：
+                            <strong>
+                              {formatResetCreditTime(credit.expires_at)}
+                            </strong>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <ModalErrorMessage
                     message={resetCreditConfirmError}
                     scrollKey={resetCreditConfirmErrorScrollKey}

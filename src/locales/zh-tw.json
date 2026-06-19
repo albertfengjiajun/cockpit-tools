@@ -2156,7 +2156,17 @@
       "resetCreditNoCredits": "沒有可用的主動重置次數",
       "resetCreditConsumed": "已重置 5 小時額度",
       "resetCreditFailed": "重置失敗：{{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "已送出重置，但重新整理配額失敗：{{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "已送出重置，但重新整理配額失敗：{{error}}",
+      "resetCreditsTitleWithExpiry": "可用於重置目前 5 小時視窗的剩餘次數：{{count}}，最近到期：{{time}}",
+      "resetCreditTimeUnknown": "時間未知",
+      "resetCreditStatusAvailable": "可用",
+      "resetCreditStatusRedeemed": "已使用",
+      "resetCreditStatusExpired": "已過期",
+      "resetCreditStatusUnknown": "未知",
+      "resetCreditNextExpiry": "最近到期：{{time}}",
+      "resetCreditDetailsTitle": "重置次數明細",
+      "resetCreditGrantedAt": "發放",
+      "resetCreditExpiresAt": "到期"
     },
     "quotaError": {
       "badge": "配額異常",

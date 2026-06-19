@@ -2045,7 +2045,17 @@
       "resetCreditNoCredits": "Aucune réinitialisation disponible",
       "resetCreditConsumed": "Quota de 5 heures réinitialisé",
       "resetCreditFailed": "Échec de la réinitialisation : {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "Réinitialisation envoyée, mais actualisation du quota échouée : {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "Réinitialisation envoyée, mais actualisation du quota échouée : {{error}}",
+      "resetCreditsTitleWithExpiry": "Réinitialisations restantes pour la fenêtre de 5 h : {{count}}. Prochaine expiration : {{time}}",
+      "resetCreditTimeUnknown": "Heure inconnue",
+      "resetCreditStatusAvailable": "Disponible",
+      "resetCreditStatusRedeemed": "Utilisé",
+      "resetCreditStatusExpired": "Expiré",
+      "resetCreditStatusUnknown": "Inconnu",
+      "resetCreditNextExpiry": "Prochaine expiration : {{time}}",
+      "resetCreditDetailsTitle": "Détails des réinitialisations",
+      "resetCreditGrantedAt": "Attribué",
+      "resetCreditExpiresAt": "Expire"
     },
     "quotaError": {
       "badge": "Erreur de quota",

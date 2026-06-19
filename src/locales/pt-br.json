@@ -2045,7 +2045,17 @@
       "resetCreditNoCredits": "Nenhum reset disponível",
       "resetCreditConsumed": "Cota de 5 horas redefinida",
       "resetCreditFailed": "Falha ao redefinir: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "Reset enviado, mas a atualização da cota falhou: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "Reset enviado, mas a atualização da cota falhou: {{error}}",
+      "resetCreditsTitleWithExpiry": "Redefinições restantes para a janela de 5 horas: {{count}}. Próximo vencimento: {{time}}",
+      "resetCreditTimeUnknown": "Hora desconhecida",
+      "resetCreditStatusAvailable": "Disponível",
+      "resetCreditStatusRedeemed": "Usada",
+      "resetCreditStatusExpired": "Expirada",
+      "resetCreditStatusUnknown": "Desconhecida",
+      "resetCreditNextExpiry": "Próximo vencimento: {{time}}",
+      "resetCreditDetailsTitle": "Detalhes das redefinições",
+      "resetCreditGrantedAt": "Concedida",
+      "resetCreditExpiresAt": "Expira"
     },
     "quotaError": {
       "badge": "Erro de cota",

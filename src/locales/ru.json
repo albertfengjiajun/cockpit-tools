@@ -2045,7 +2045,17 @@
       "resetCreditNoCredits": "Нет доступных сбросов",
       "resetCreditConsumed": "5-часовая квота сброшена",
       "resetCreditFailed": "Сбой сброса: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "Сброс отправлен, но обновление квоты не удалось: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "Сброс отправлен, но обновление квоты не удалось: {{error}}",
+      "resetCreditsTitleWithExpiry": "Осталось сбросов для 5-часового окна: {{count}}. Ближайшее истечение: {{time}}",
+      "resetCreditTimeUnknown": "Время неизвестно",
+      "resetCreditStatusAvailable": "Доступно",
+      "resetCreditStatusRedeemed": "Использовано",
+      "resetCreditStatusExpired": "Истекло",
+      "resetCreditStatusUnknown": "Неизвестно",
+      "resetCreditNextExpiry": "Ближайшее истечение: {{time}}",
+      "resetCreditDetailsTitle": "Детали сбросов",
+      "resetCreditGrantedAt": "Выдано",
+      "resetCreditExpiresAt": "Истекает"
     },
     "quotaError": {
       "badge": "Ошибка квоты",

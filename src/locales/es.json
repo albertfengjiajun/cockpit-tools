@@ -2045,7 +2045,17 @@
       "resetCreditNoCredits": "No hay reinicios disponibles",
       "resetCreditConsumed": "Cuota de 5 horas reiniciada",
       "resetCreditFailed": "Error al reiniciar: {{error}}",
-      "resetCreditRefreshAfterConsumeFailed": "Reinicio enviado, pero falló la actualización de cuota: {{error}}"
+      "resetCreditRefreshAfterConsumeFailed": "Reinicio enviado, pero falló la actualización de cuota: {{error}}",
+      "resetCreditsTitleWithExpiry": "Reinicios restantes para la ventana de 5 horas: {{count}}. Próximo vencimiento: {{time}}",
+      "resetCreditTimeUnknown": "Hora desconocida",
+      "resetCreditStatusAvailable": "Disponible",
+      "resetCreditStatusRedeemed": "Usado",
+      "resetCreditStatusExpired": "Vencido",
+      "resetCreditStatusUnknown": "Desconocido",
+      "resetCreditNextExpiry": "Próximo vencimiento: {{time}}",
+      "resetCreditDetailsTitle": "Detalles de reinicios",
+      "resetCreditGrantedAt": "Concedido",
+      "resetCreditExpiresAt": "Vence"
     },
     "quotaError": {
       "badge": "Error de cuota",

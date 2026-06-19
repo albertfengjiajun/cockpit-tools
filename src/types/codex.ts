@@ -87,8 +87,22 @@ export interface CodexQuota {
   weekly_window_present?: boolean;
   /** 主动重置次数（rate-limit reset credits） */
   reset_credits_available?: number;
+  /** 主动重置明细（rate-limit reset credits） */
+  reset_credits?: CodexResetCredit[];
+  /** 最近一张可用主动重置次数的到期时间 (Unix timestamp) */
+  reset_credits_next_expires_at?: number;
   /** 原始响应数据 */
   raw_data?: unknown;
+}
+
+export interface CodexResetCredit {
+  id?: string;
+  status?: string;
+  reset_type?: string;
+  granted_at?: number;
+  expires_at?: number;
+  redeemed_at?: number;
+  raw_status?: string;
 }
 
 const COCKPIT_API_BASE_URL = "https://chongcodex.cn/v1";

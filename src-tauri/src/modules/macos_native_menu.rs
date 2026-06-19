@@ -4370,6 +4370,8 @@ mod imp {
             weekly_window_minutes: None,
             weekly_window_present: Some(false),
             reset_credits_available: None,
+            reset_credits: Vec::new(),
+            reset_credits_next_expires_at: None,
             raw_data: Some(raw_data),
         });
         account.quota_error = None;
