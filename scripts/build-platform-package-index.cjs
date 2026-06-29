@@ -84,6 +84,39 @@ function readJson(filePath, label) {
   }
 }
 
+function readPackageManifests() {
+  const packageRoot = path.join(ROOT, 'platform-packages');
+  const manifestsById = new Map();
+  for (const entry of fs.readdirSync(packageRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const manifestPath = path.join(packageRoot, entry.name, 'manifest.json');
+    if (!fs.existsSync(manifestPath)) continue;
+    const manifest = readJson(manifestPath, `${entry.name} manifest`);
+    manifestsById.set(manifest.id || entry.name, manifest);
+  }
+  return manifestsById;
+}
+
+function mergePackageManifests(baseIndex) {
+  const manifestsById = readPackageManifests();
+  const packages = [];
+
+  for (const pkg of baseIndex.packages || []) {
+    const manifest = manifestsById.get(pkg.id);
+    if (!manifest) {
+      packages.push(pkg);
+      continue;
+    }
+    packages.push({ ...pkg, ...manifest });
+    manifestsById.delete(pkg.id);
+  }
+
+  return {
+    ...baseIndex,
+    packages,
+  };
+}
+
 function sha256(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
@@ -175,7 +208,7 @@ function collectMetadata(args) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
-  const baseIndex = readJson(args.baseIndex, 'base platform package index');
+  const baseIndex = mergePackageManifests(readJson(args.baseIndex, 'base platform package index'));
   const byPackage = collectMetadata(args);
   const rows = [];
 
