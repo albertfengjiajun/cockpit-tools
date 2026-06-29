@@ -58,6 +58,15 @@ export async function installPlatformPackage(platformId: PlatformId): Promise<Pl
   );
 }
 
+export async function installPlatformPackageFromLocalZip(
+  platformId: PlatformId,
+  zipPath: string,
+): Promise<PlatformPackageState> {
+  return await invokePlatformPackage('install_platform_package_from_local_zip', () =>
+    invoke('install_platform_package_from_local_zip', { platformId, zipPath }),
+  );
+}
+
 export async function updatePlatformPackage(platformId: PlatformId): Promise<PlatformPackageState> {
   return await invokePlatformPackage('update_platform_package', () =>
     invoke('update_platform_package', { platformId }),

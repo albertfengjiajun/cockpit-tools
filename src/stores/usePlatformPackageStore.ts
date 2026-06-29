@@ -4,6 +4,7 @@ import type { PlatformPackageState } from '../types/platformPackage';
 import {
   checkPlatformPackageUpdate,
   installPlatformPackage,
+  installPlatformPackageFromLocalZip,
   listPlatformPackages,
   preparePlatformPackageUpdates,
   reloadPlatformPackage,
@@ -333,6 +334,7 @@ interface PlatformPackageStoreState {
   prepareUpdates: () => Promise<PlatformPackageState[] | null>;
   checkUpdate: (platformId: PlatformId) => Promise<PlatformPackageState>;
   installPackage: (platformId: PlatformId) => Promise<PlatformPackageState>;
+  installPackageFromLocalZip: (platformId: PlatformId, zipPath: string) => Promise<PlatformPackageState>;
   updatePackage: (platformId: PlatformId) => Promise<PlatformPackageState>;
   reloadPackage: (platformId: PlatformId) => Promise<PlatformPackageState>;
   uninstallPackage: (platformId: PlatformId) => Promise<PlatformPackageState>;
@@ -482,6 +484,16 @@ export const usePlatformPackageStore = create<PlatformPackageStoreState>((set, g
 
   installPackage: async (platformId) => {
     const nextPackage = await installPlatformPackage(platformId);
+    set((state) => ({
+      packages: upsertPackage(state.packages, nextPackage),
+      initialized: true,
+      error: null,
+    }));
+    return nextPackage;
+  },
+
+  installPackageFromLocalZip: async (platformId, zipPath) => {
+    const nextPackage = await installPlatformPackageFromLocalZip(platformId, zipPath);
     set((state) => ({
       packages: upsertPackage(state.packages, nextPackage),
       initialized: true,

@@ -3619,6 +3619,103 @@ pub fn install_platform_package(
     install_platform_package_with_operation(app, platform_id, PlatformPackageOperation::Install)
 }
 
+pub fn install_platform_package_from_local_zip(
+    app: &AppHandle,
+    platform_id: &str,
+    zip_path: &str,
+) -> Result<PlatformPackageState, String> {
+    ensure_supported_platform(platform_id)?;
+    let trimmed_zip_path = zip_path.trim();
+    if trimmed_zip_path.is_empty() {
+        return Err("本地平台包路径为空".to_string());
+    }
+
+    let zip_path = PathBuf::from(trimmed_zip_path);
+    let metadata = fs::metadata(&zip_path).map_err(|err| {
+        format!(
+            "读取本地平台包失败: path={}, error={}",
+            zip_path.display(),
+            err
+        )
+    })?;
+    if !metadata.is_file() {
+        return Err(format!("本地平台包不是文件: {}", zip_path.display()));
+    }
+    if zip_path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| !value.eq_ignore_ascii_case("zip"))
+        .unwrap_or(true)
+    {
+        return Err(format!(
+            "本地平台包必须是 .zip 文件: {}",
+            zip_path.display()
+        ));
+    }
+
+    let operation = if package_current_dir(platform_id)?
+        .join(MANIFEST_FILE)
+        .exists()
+    {
+        PlatformPackageOperation::Update
+    } else {
+        PlatformPackageOperation::Install
+    };
+    logger::log_info(&format!(
+        "[PlatformPackage] 从本地包{}开始: platform={}, path={}, size={}",
+        if operation == PlatformPackageOperation::Update {
+            "更新"
+        } else {
+            "安装"
+        },
+        platform_id,
+        zip_path.display(),
+        metadata.len()
+    ));
+    emit_platform_package_progress(
+        app,
+        platform_id,
+        operation,
+        PlatformPackageProgressPhase::Resolving,
+        Some(0),
+        None,
+        Some(metadata.len()),
+        None,
+    );
+
+    let result =
+        install_platform_package_from_local_zip_inner(app, platform_id, &zip_path, operation);
+    match result {
+        Ok(state) => {
+            emit_platform_package_progress(
+                app,
+                platform_id,
+                operation,
+                PlatformPackageProgressPhase::Completed,
+                Some(100),
+                None,
+                Some(metadata.len()),
+                None,
+            );
+            logger::log_info(&format!(
+                "[PlatformPackage] 从本地包{}完成: platform={}, version={}",
+                if operation == PlatformPackageOperation::Update {
+                    "更新"
+                } else {
+                    "安装"
+                },
+                platform_id,
+                state.installed_version.as_deref().unwrap_or("--")
+            ));
+            Ok(state)
+        }
+        Err(error) => {
+            emit_platform_package_failure(app, platform_id, operation, &error);
+            Err(error)
+        }
+    }
+}
+
 fn stop_platform_runtime_before_package_mutation(
     platform_id: &str,
     operation: PlatformPackageOperation,
@@ -3800,6 +3897,93 @@ fn install_platform_package_inner(
         Some(installed_manifest),
         Some(source_manifest),
         source_root,
+        None,
+    )
+}
+
+fn cleanup_extracted_package_root(platform_id: &str, extracted_root: &Path) {
+    if extracted_root.exists() {
+        let _ = remove_path_if_exists(extracted_root);
+    }
+    if let (Ok(platform_dir), Some(parent)) = (package_dir(platform_id), extracted_root.parent()) {
+        if parent != platform_dir
+            && parent
+                .file_name()
+                .and_then(|item| item.to_str())
+                .map(|name| name.starts_with(".extracting."))
+                .unwrap_or(false)
+        {
+            let _ = remove_path_if_exists(parent);
+        }
+    }
+}
+
+fn install_platform_package_from_local_zip_inner(
+    app: &AppHandle,
+    platform_id: &str,
+    zip_path: &Path,
+    operation: PlatformPackageOperation,
+) -> Result<PlatformPackageState, String> {
+    let zip_size = fs::metadata(zip_path).ok().map(|metadata| metadata.len());
+    emit_platform_package_progress(
+        app,
+        platform_id,
+        operation,
+        PlatformPackageProgressPhase::Verifying,
+        Some(5),
+        None,
+        zip_size,
+        None,
+    );
+
+    let extracted_root = extract_remote_package_zip(app, platform_id, zip_path, operation)?;
+    let mut source_manifest = match validate_manifest(platform_id, &extracted_root) {
+        Ok(manifest) => manifest,
+        Err(error) => {
+            cleanup_extracted_package_root(platform_id, &extracted_root);
+            return Err(error);
+        }
+    };
+    if source_manifest.download_size_bytes.is_none() {
+        source_manifest.download_size_bytes = zip_size;
+    }
+    stop_platform_runtime_before_package_mutation(platform_id, operation);
+    let installed_manifest =
+        match replace_current_with_prepared(app, platform_id, &extracted_root, operation) {
+            Ok(manifest) => manifest,
+            Err(error) => {
+                cleanup_extracted_package_root(platform_id, &extracted_root);
+                return Err(error);
+            }
+        };
+
+    let mut registry = read_registry()?;
+    upsert_record(
+        &mut registry,
+        PersistedPlatformPackage {
+            platform_id: platform_id.to_string(),
+            installed: true,
+            runtime_ready: true,
+            installed_version: Some(installed_manifest.version.clone()),
+            last_checked_at: Some(now_ts_ms()),
+            error_message: None,
+            explicitly_uninstalled: false,
+        },
+    );
+    write_registry(&registry)?;
+    if let Err(error) = cleanup_platform_package_cache(platform_id, None) {
+        logger::log_warn(&format!(
+            "[PlatformPackage] 本地包安装后清理平台包缓存失败: platform={}, error={}",
+            platform_id, error
+        ));
+    }
+
+    build_state(
+        platform_id,
+        get_record(&registry, platform_id),
+        Some(installed_manifest),
+        Some(source_manifest),
+        None,
         None,
     )
 }

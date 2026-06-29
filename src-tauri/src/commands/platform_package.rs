@@ -49,6 +49,26 @@ pub async fn install_platform_package(
 }
 
 #[tauri::command]
+pub async fn install_platform_package_from_local_zip(
+    app: AppHandle,
+    platform_id: String,
+    zip_path: String,
+) -> Result<PlatformPackageState, String> {
+    let app_for_task = app.clone();
+    let state = tauri::async_runtime::spawn_blocking(move || {
+        platform_package::install_platform_package_from_local_zip(
+            &app_for_task,
+            platform_id.as_str(),
+            zip_path.as_str(),
+        )
+    })
+    .await
+    .map_err(|err| format!("从本地包安装平台包任务失败: {}", err))??;
+    let _ = crate::modules::tray::update_tray_menu(&app);
+    Ok(state)
+}
+
+#[tauri::command]
 pub async fn update_platform_package(
     app: AppHandle,
     platform_id: String,

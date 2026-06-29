@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { BookOpenText, Download, MoreHorizontal, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
+import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
+import { Archive, BookOpenText, Download, MoreHorizontal, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import type { PlatformId } from '../types/platform';
@@ -539,6 +540,7 @@ export function PlatformPackageToolbar({
   const loading = usePlatformPackageStore((state) => state.loading);
   const checkUpdate = usePlatformPackageStore((state) => state.checkUpdate);
   const installPackage = usePlatformPackageStore((state) => state.installPackage);
+  const installPackageFromLocalZip = usePlatformPackageStore((state) => state.installPackageFromLocalZip);
   const updatePackage = usePlatformPackageStore((state) => state.updatePackage);
   const reloadPackage = usePlatformPackageStore((state) => state.reloadPackage);
   const uninstallPackage = usePlatformPackageStore((state) => state.uninstallPackage);
@@ -556,6 +558,12 @@ export function PlatformPackageToolbar({
   );
 
   const platformName = getPlatformLabel(platformId, t);
+  const isHotUpdate = platformPackage?.packageMode === 'hotUpdate';
+  const hasInstalledPackage = Boolean(isHotUpdate && (
+    platformPackage?.runtimeReady
+    || platformPackage?.installedVersion
+    || platformPackage?.installedSizeBytes
+  ));
 
   const runAction = useCallback(async (
     action: PackageAction,
@@ -636,6 +644,82 @@ export function PlatformPackageToolbar({
     actionPromisesRef.current.set(key, promise);
     return await promise;
   }, [installPackage, platformId, refreshPackages, t, uninstallPackage, updatePackage]);
+
+  const runLocalZipInstall = useCallback(async (
+    zipPath: string,
+    action: Extract<PackageAction, 'install' | 'update'>,
+  ): Promise<PlatformPackageState> => {
+    const key = `${platformId}:local-${action}`;
+    const existing = actionPromisesRef.current.get(key);
+    if (existing) {
+      return await existing;
+    }
+
+    const promise = (async () => {
+      setActionKey(key);
+      setOperationError(null);
+      dispatchPlatformPackageProgress({
+        platformId,
+        operation: action,
+        phase: 'resolving',
+        percent: 0,
+        downloadedBytes: null,
+        totalBytes: null,
+        message: null,
+      });
+      let nextState = await installPackageFromLocalZip(platformId, zipPath);
+      dispatchPlatformPackageChanged(nextState);
+      if (!nextState.runtimeReady) {
+        try {
+          const refreshedPackages = await refreshPackages();
+          const refreshedState = getPlatformPackageFromPackages(refreshedPackages, platformId);
+          if (refreshedState) {
+            nextState = refreshedState;
+            dispatchPlatformPackageChanged(nextState);
+          }
+        } catch {
+          // Keep the local install result; the runtime-ready check below will surface the error.
+        }
+      }
+      if (!nextState.runtimeReady) {
+        throw new Error(
+          nextState.errorMessage || t('platformLayout.packageInstallNotReady', '平台包已处理，但运行组件尚未就绪'),
+        );
+      }
+      dispatchPlatformPackageProgress({
+        platformId,
+        operation: action,
+        phase: 'completed',
+        percent: 100,
+        downloadedBytes: null,
+        totalBytes: null,
+        message: null,
+      });
+      return nextState;
+    })()
+      .catch((error) => {
+        const message = normalizeErrorMessage(error);
+        const displayError = formatPlatformPackageOperationError(message, t);
+        setOperationError(displayError.summary);
+        dispatchPlatformPackageProgress({
+          platformId,
+          operation: action,
+          phase: 'failed',
+          percent: null,
+          downloadedBytes: null,
+          totalBytes: null,
+          message,
+        });
+        throw new Error(displayError.summary);
+      })
+      .finally(() => {
+        actionPromisesRef.current.delete(key);
+        setActionKey((current) => (current === key ? null : current));
+      });
+
+    actionPromisesRef.current.set(key, promise);
+    return await promise;
+  }, [installPackageFromLocalZip, platformId, refreshPackages, t]);
 
   const confirmAction = useCallback((action: PackageAction) => {
     if (!platformPackage) {
@@ -736,6 +820,97 @@ export function PlatformPackageToolbar({
       ],
     });
   }, [platformId, platformName, platformPackage, runAction, showModal, t]);
+
+  const selectAndConfirmLocalZip = useCallback(async () => {
+    if (!platformPackage || actionKey) {
+      return;
+    }
+
+    setMenuOpen(false);
+    setOperationError(null);
+
+    let selected: string | string[] | null;
+    try {
+      selected = await openFileDialog({
+        multiple: false,
+        directory: false,
+        filters: [
+          {
+            name: t('platformLayout.packageLocalZipFilter', '平台包 ZIP'),
+            extensions: ['zip'],
+          },
+        ],
+      });
+    } catch (error) {
+      setOperationError(normalizeErrorMessage(error));
+      return;
+    }
+
+    const zipPath = Array.isArray(selected) ? selected[0] : selected;
+    if (!zipPath) {
+      return;
+    }
+
+    const action: Extract<PackageAction, 'install' | 'update'> = hasInstalledPackage ? 'update' : 'install';
+    const title = action === 'update'
+      ? t('platformLayout.packageLocalZipUpdateConfirmTitle', {
+          platform: platformName,
+          defaultValue: '从本地包更新 {{platform}}',
+        })
+      : t('platformLayout.packageLocalZipInstallConfirmTitle', {
+          platform: platformName,
+          defaultValue: '从本地包安装 {{platform}}',
+        });
+    const description = action === 'update'
+      ? t('platformLayout.packageLocalZipUpdateConfirmDesc', {
+          platform: platformName,
+          defaultValue: '将用本地 ZIP 覆盖当前 {{platform}} 平台运行组件。账号数据不会删除；后续检查更新仍会使用远端索引。',
+        })
+      : t('platformLayout.packageLocalZipInstallConfirmDesc', {
+          platform: platformName,
+          defaultValue: '将从本地 ZIP 安装 {{platform}} 平台包。账号数据不会删除；后续检查更新仍会使用远端索引。',
+        });
+    const actionLabel = action === 'update'
+      ? t('platformLayout.packageLocalZipUpdateAction', '更新本地包')
+      : t('platformLayout.packageLocalZipInstallAction', '安装本地包');
+
+    showModal({
+      title,
+      description,
+      content: (
+        <PlatformPackageOperationProgress
+          platformId={platformId}
+          operation={action}
+        />
+      ),
+      width: 'sm',
+      actions: [
+        {
+          id: 'cancel',
+          label: t('common.cancel', '取消'),
+          variant: 'secondary',
+        },
+        {
+          id: 'platform-package-local-zip',
+          label: actionLabel,
+          variant: 'primary',
+          suppressError: true,
+          onClick: async () => {
+            await runLocalZipInstall(zipPath, action);
+          },
+        },
+      ],
+    });
+  }, [
+    actionKey,
+    hasInstalledPackage,
+    platformId,
+    platformName,
+    platformPackage,
+    runLocalZipInstall,
+    showModal,
+    t,
+  ]);
 
   const handleCheckUpdate = useCallback(async () => {
     if (!platformPackage || actionKey) {
@@ -1019,7 +1194,6 @@ export function PlatformPackageToolbar({
     return null;
   }
 
-  const isHotUpdate = platformPackage.packageMode === 'hotUpdate';
   const operating = loading || Boolean(actionKey);
   const statusText = getPlatformPackageStatusText(platformPackage, t);
   const canInstall = isHotUpdate && (platformPackage.installStatus === 'notInstalled'
@@ -1029,11 +1203,6 @@ export function PlatformPackageToolbar({
   const shouldShowRepairAction = isHotUpdate && (
     platformPackage.installStatus === 'error'
     || (!platformPackage.runtimeReady && platformPackage.installStatus !== 'notInstalled')
-  );
-  const hasInstalledPackage = isHotUpdate && Boolean(
-    platformPackage.runtimeReady
-    || platformPackage.installedVersion
-    || platformPackage.installedSizeBytes,
   );
   const canReloadLocalPackage = isHotUpdate && hasInstalledPackage && localReloadEnabled;
   const currentVersion = platformPackage.installedVersion || '--';
@@ -1192,6 +1361,19 @@ export function PlatformPackageToolbar({
               >
                 <BookOpenText size={14} />
                 <span>{t('platformLayout.packageChangelogShort', '日志')}</span>
+              </button>
+              <button
+                type="button"
+                className="platform-package-menu-action"
+                onClick={selectAndConfirmLocalZip}
+                disabled={operating}
+                role="menuitem"
+                title={hasInstalledPackage
+                  ? t('platformLayout.packageUpdateFromLocalZip', '从本地包更新...')
+                  : t('platformLayout.packageInstallFromLocalZip', '从本地包安装...')}
+              >
+                <Archive size={14} />
+                <span>{t('platformLayout.packageLocalZipShort', '本地包')}</span>
               </button>
               {canInstall && (
                 <button
