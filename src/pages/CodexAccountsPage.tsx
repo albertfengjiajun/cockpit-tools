@@ -4202,6 +4202,20 @@ export function CodexAccountsPage() {
   const { setAddStatus, setAddMessage, resetAddModalState, setShowAddModal } =
     page;
 
+  const handlePendingOAuthEmailInputChange = useCallback(
+    (value: string) => {
+      setPendingOAuthEmailInput(value);
+      setPendingOAuthFieldErrors((prev) => ({
+        ...prev,
+        email: undefined,
+      }));
+      setAccountNoteError(null);
+      setAddStatus("idle");
+      setAddMessage("");
+    },
+    [setAccountNoteError, setAddMessage, setAddStatus],
+  );
+
   const buildPendingOAuthNoteUpdate = useCallback(() => {
     const rawTwoFactorSecret = pendingOAuthNoteForm.twoFactorSecret.trim();
     const parsedTwoFactorSecret = rawTwoFactorSecret
@@ -13332,13 +13346,9 @@ export function CodexAccountsPage() {
                                 type="email"
                                 value={pendingOAuthEmailInput}
                                 onChange={(event) => {
-                                  setPendingOAuthEmailInput(event.target.value);
-                                  setPendingOAuthFieldErrors((prev) => ({
-                                    ...prev,
-                                    email: undefined,
-                                  }));
-                                  setAddStatus("idle");
-                                  setAddMessage("");
+                                  handlePendingOAuthEmailInputChange(
+                                    event.target.value,
+                                  );
                                 }}
                                 placeholder={t(
                                   "codex.pendingAuth.emailPlaceholder",
@@ -15724,35 +15734,88 @@ export function CodexAccountsPage() {
                   </p>
                   <div className="codex-account-note-field">
                     <span>{t("common.shared.columns.email", "邮箱")}</span>
-                    <div className="codex-account-note-readonly-row">
-                      <span
-                        className={`codex-account-note-readonly-value ${
-                          activeAccountNoteEmail ? "" : "is-empty"
-                        }`}
-                        title={activeAccountNoteEmail}
-                      >
-                        {activeAccountNoteEmail || "-"}
-                      </span>
-                      <button
-                        type="button"
-                        className="codex-account-note-icon-btn"
-                        onClick={() =>
-                          void copyAccountNoteValue(
-                            "modal:email",
-                            activeAccountNoteEmail,
-                          )
-                        }
-                        disabled={activeAccountNoteSaving || !activeAccountNoteEmail}
-                        aria-label={t("common.copy", "复制")}
-                        title={t("common.copy", "复制")}
-                      >
-                        {accountNoteCopiedKey === "modal:email" ? (
-                          <Check size={14} />
-                        ) : (
-                          <Copy size={14} />
-                        )}
-                      </button>
-                    </div>
+                    {activeAccountNoteMode === "pendingOAuth" ? (
+                      <>
+                        <div className="codex-account-note-input-row">
+                          <input
+                            className={`codex-account-note-input ${
+                              pendingOAuthFieldErrors.email ? "has-error" : ""
+                            }`}
+                            type="email"
+                            value={pendingOAuthEmailInput}
+                            onChange={(event) => {
+                              handlePendingOAuthEmailInputChange(
+                                event.target.value,
+                              );
+                            }}
+                            placeholder={t(
+                              "codex.pendingAuth.emailPlaceholder",
+                              "输入 OpenAI 账号邮箱",
+                            )}
+                            disabled={activeAccountNoteSaving}
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            className="codex-account-note-icon-btn"
+                            onClick={() =>
+                              void copyAccountNoteValue(
+                                "modal:email",
+                                activeAccountNoteEmail,
+                              )
+                            }
+                            disabled={
+                              activeAccountNoteSaving || !activeAccountNoteEmail
+                            }
+                            aria-label={t("common.copy", "复制")}
+                            title={t("common.copy", "复制")}
+                          >
+                            {accountNoteCopiedKey === "modal:email" ? (
+                              <Check size={14} />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                        </div>
+                        {pendingOAuthFieldErrors.email ? (
+                          <span className="codex-account-note-field-error">
+                            {pendingOAuthFieldErrors.email}
+                          </span>
+                        ) : null}
+                      </>
+                    ) : (
+                      <div className="codex-account-note-readonly-row">
+                        <span
+                          className={`codex-account-note-readonly-value ${
+                            activeAccountNoteEmail ? "" : "is-empty"
+                          }`}
+                          title={activeAccountNoteEmail}
+                        >
+                          {activeAccountNoteEmail || "-"}
+                        </span>
+                        <button
+                          type="button"
+                          className="codex-account-note-icon-btn"
+                          onClick={() =>
+                            void copyAccountNoteValue(
+                              "modal:email",
+                              activeAccountNoteEmail,
+                            )
+                          }
+                          disabled={
+                            activeAccountNoteSaving || !activeAccountNoteEmail
+                          }
+                          aria-label={t("common.copy", "复制")}
+                          title={t("common.copy", "复制")}
+                        >
+                          {accountNoteCopiedKey === "modal:email" ? (
+                            <Check size={14} />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <label className="codex-account-note-field">
                     <span>
@@ -15773,7 +15836,7 @@ export function CodexAccountsPage() {
                           "登录密码或临时密码",
                         )}
                         disabled={activeAccountNoteSaving}
-                        autoFocus
+                        autoFocus={activeAccountNoteMode !== "pendingOAuth"}
                       />
                       <button
                         type="button"
