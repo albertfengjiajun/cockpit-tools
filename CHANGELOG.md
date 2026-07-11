@@ -7,6 +7,13 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [1.1.10] - 2026-07-11
+
+### Fixed
+
+- **Client Key usage ranges now follow local calendar boundaries**: daily usage starts at local midnight, weekly usage starts Monday at local midnight, and monthly usage starts on the first day of the month instead of using rolling 24-hour, 7-day, and 30-day windows. The range labels now read Today, This week, and This month.
+
+---
 ## [1.1.9] - 2026-07-11
 
 ### Changed

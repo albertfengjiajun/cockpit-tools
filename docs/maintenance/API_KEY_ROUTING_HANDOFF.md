@@ -287,3 +287,55 @@ The build emitted existing Rust unused/dead-code warnings and a Tauri warning
 that `__TAURI_BUNDLE_TYPE` was not found while patching MSI/NSIS binaries.
 Both local bundles were still produced successfully; updater artifacts were
 disabled for this unsigned local build.
+
+## Calendar Period Fix And Local Package 1.1.10
+
+Follow-up performed on 2026-07-11:
+
+- Replaced rolling 24-hour, 7-day, and 30-day usage ranges with local calendar
+  periods: today from local midnight, the current week from Monday at local
+  midnight, and the current month from its first day at local midnight.
+- Centralized the boundary calculation for empty snapshots, request-log range
+  filters, in-memory window recomputation, and request-log loading from disk.
+- Updated client-key range labels to Today, This week, and This month, with
+  Simplified and Traditional Chinese translations.
+- Added boundary regression coverage for events immediately before and after
+  day, week, and month starts, plus refresh behavior after crossing midnight.
+- Published the fix to the official contribution branch in commit `ff6ce7a7`.
+  Pull request: <https://github.com/jlcodes99/cockpit-tools/pull/1514>.
+
+Verification results on `feature/api-key-routing-usage`:
+
+- `npm run typecheck`: passed.
+- `npm run test:codex-api-key-scope`: 5 passed.
+- `node --test src/utils/codexApiServiceCompatibility.test.ts`: 2 passed.
+- `api_key_usage_stats_are_isolated_by_time_window`: 1 passed.
+- `custom_api_key_scope_filters_duplicates_and_updates_manifest_scope`: 1
+  passed.
+- `rustfmt --edition 2021 --check
+  src-tauri/src/modules/codex_local_access.rs`: passed.
+- Tauri build with `COCKPIT_SKIP_CLIPROXY_BUILD=1` and
+  `src-tauri/tauri.ci.conf.json`: passed.
+
+Packaged artifacts:
+
+```text
+target/release/bundle/nsis/Cockpit Tools_1.1.10_x64-setup.exe
+size: 26353318 bytes
+time: 2026-07-11 20:23:45 +08:00
+sha256: 9CF947D2A7C625ECB15C4FCE48D87D4E6677526482AB1D70E6DEAFC180442EF1
+
+target/release/bundle/msi/Cockpit Tools_1.1.10_x64_en-US.msi
+size: 35921920 bytes
+time: 2026-07-11 20:22:50 +08:00
+sha256: AD2171C1C6218D474B302B6140E42065D0F478FF8E359A47C9697DD7F125D3D8
+```
+
+The existing compatible sidecar was reused without a Go rebuild:
+
+```text
+sidecars/cockpit-cliproxy/bin/cockpit-cliproxy-x86_64-pc-windows-msvc.exe
+size: 19277824 bytes
+time: 2026-07-11 12:29:46 +08:00
+sha256: 007AF7AA6D49F2A8DFAA6EDABD3A8FF4F0A95566060988EAF95C70F6C74C8ED7
+```
