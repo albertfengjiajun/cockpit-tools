@@ -12,6 +12,7 @@
     "enabled": "Đã bật",
     "disabled": "Đã tắt",
     "close": "Đóng",
+    "back": "Quay lại",
     "open": "Open​",
     "copy": "Copy​",
     "copied": "Đã sao chép",
@@ -176,7 +177,9 @@
         "resetDone": "Đã đặt lại",
         "hourly": "Hạn mức 5 giờ",
         "weekly": "Hạn mức tuần",
-        "resetAt": "Đặt lại: {{time}}"
+        "resetAt": "Đặt lại: {{time}}",
+        "expiresAt": "Hết hạn lúc: {{time}}",
+        "leftPercent": "Còn {{value}}%"
       },
       "subtitle": "Quản lý các tài khoản GitHub Copilot",
       "time": {
@@ -948,7 +951,7 @@
       "importModalDesc": "Chọn nội dung cần nhập. Bản sao lưu tài khoản kiểu cũ sẽ được xử lý như chỉ nhập dữ liệu tài khoản.",
       "selectionTitle": "Phạm vi dữ liệu",
       "accountsOptionTitle": "Dữ liệu tài khoản",
-      "accountsOptionDesc": "Bao gồm bản sao lưu tài khoản nền tảng và vẫn tương thích với JSON tài khoản kiểu cũ.",
+      "accountsOptionDesc": "Bao gồm bản sao lưu tài khoản nền tảng có thể khôi phục và vẫn tương thích với JSON cũ. Thông tin đăng nhập Grok CLI không được bao gồm; hãy nhập riêng tệp auth.json chính thức.",
       "configOptionTitle": "Dữ liệu cấu hình",
       "configOptionDesc": "Bao gồm cài đặt ứng dụng, nhóm, instance, tác vụ wakeup và cấu hình nhà cung cấp mô hình.",
       "exportConfirm": "Xuất dữ liệu",
@@ -1960,6 +1963,9 @@
       "customRoutingEdit": "Sửa định tuyến tùy chỉnh",
       "customRoutingTitle": "Định tuyến tùy chỉnh",
       "customRoutingDesc": "Đặt ưu tiên và trọng số cho từng tài khoản để kiểm soát thứ tự chọn tài khoản và phân bổ tải cùng mức ưu tiên.",
+      "customRoutingBackupTitle": "Tài khoản dự phòng",
+      "customRoutingBackupDesc": "Chỉ dùng khi mọi tài khoản thường đều không khả dụng. Yêu cầu mới sẽ tự động chuyển lại khi một tài khoản thường phục hồi.",
+      "customRoutingBackupShort": "Dự phòng",
       "customRoutingPriorityTitle": "Ưu tiên",
       "customRoutingPriorityDesc": "Giá trị cao hơn được chọn trước; tài khoản ưu tiên thấp chỉ được thử khi nhóm ưu tiên cao không khả dụng.",
       "customRoutingWeightTitle": "Trọng số",
@@ -3276,6 +3282,15 @@
       "renameSuccess": "Đã đổi tên",
       "renameFailed": "Đổi tên thất bại"
     },
+    "importApiService": {
+      "toggle": "Thêm vào dịch vụ API",
+      "description": "Thêm các tài khoản đã nhập đủ điều kiện vào nhóm tài khoản dịch vụ API.",
+      "syncFailed": "Tài khoản đã được nhập nhưng không thể thêm vào dịch vụ API: {{error}}",
+      "guideTitle": "Đã thêm tài khoản vào dịch vụ API",
+      "guideDescription": "Đã thêm {{count}} tài khoản vào dịch vụ API. Chọn “Khởi động dịch vụ API” để chuyển đổi và sử dụng.",
+      "later": "Để sau",
+      "startAction": "Khởi động dịch vụ API"
+    },
     "batchImport": {
       "title": "Nhập hàng loạt Codex",
       "resultSubtitle": "Kết quả nhập",
@@ -3587,6 +3602,14 @@
       "syncWslDesc": "Tự động ghi đè cấu hình .gemini trong WSL khi chuyển tài khoản"
     },
     "geminiRefreshInterval": "Tự động làm mới hạn ngạch",
+    "grok": {
+      "title": "Cài đặt Grok CLI",
+      "appPath": "Đường dẫn Grok CLI",
+      "cliPath": "Đường dẫn CLI",
+      "cliDetected": "Đã phát hiện: {{version}} · {{path}}",
+      "cliMissing": "Không tìm thấy Grok CLI. Hãy nhập đường dẫn riêng."
+    },
+    "grokRefreshInterval": "Tự động làm mới hạn ngạch",
     "codebuddy": {
       "title": "Cài đặt CodeBuddy",
       "appPath": "Đường dẫn CodeBuddy"
@@ -4768,6 +4791,7 @@
     "errors": {
       "refreshFailed": "Làm mới thất bại: {{error}}",
       "switchFailed": "Chuyển đổi thất bại: {{error}}",
+      "stopInstanceBeforeSwitch": "Dừng phiên bản trước khi chuyển tài khoản",
       "pinFailed": "Không thể cập nhật trạng thái ghim: {{error}}",
       "closeFailed": "Đóng thất bại: {{error}}"
     },
@@ -5030,6 +5054,76 @@
     },
     "copyKey": "Copy Key​",
     "clearKey": "Clear input​"
+  },
+  "grok": {
+    "search": "Tìm tài khoản Grok CLI...",
+    "flowNotice": {
+      "title": "Quản lý tài khoản Grok CLI",
+      "desc": "Cockpit quản lý tài khoản theo định dạng thông tin xác thực chính thức của Grok CLI để thực sự chuyển tài khoản mặc định và liên kết các phiên bản cách ly.",
+      "permission": "Phạm vi cục bộ: đọc ~/.grok/auth.json mặc định và quản lý các thư mục tài khoản Grok cùng GROK_HOME riêng biệt trong dữ liệu cục bộ của Cockpit.",
+      "network": "Phạm vi mạng: ủy quyền OAuth, làm mới thông tin xác thực và truy vấn mức sử dụng tài khoản. Thông tin xác thực không được tải lên dịch vụ Cockpit."
+    },
+    "empty": "Chưa có tài khoản Grok CLI",
+    "addAccount": "Thêm tài khoản Grok CLI",
+    "oauth": {
+      "desc": "Mở trang ủy quyền xAI và nhập mã thiết bị. Tài khoản sẽ được lưu tự động sau đó.",
+      "title": "OAuth thiết bị Grok",
+      "item1": "Dùng luồng thiết bị chính thức của Grok CLI mà không chiếm cổng gọi lại cục bộ.",
+      "item2": "Lưu GROK_HOME riêng sau khi ủy quyền và duy trì hiệu lực của thông tin xác thực.",
+      "item3": "Tài khoản có thể chuyển CLI mặc định hoặc chạy trong các phiên bản cách ly lẫn nhau.",
+      "urlPlaceholder": "Địa chỉ ủy quyền OAuth Grok",
+      "waiting": "Đang chờ ủy quyền OAuth Grok...",
+      "openWindow": "Mở trang ủy quyền",
+      "success": "Đăng nhập OAuth Grok thành công"
+    },
+    "import": {
+      "pasteTab": "Dán JSON",
+      "pasteDesc": "Dán auth.json chính thức của Grok CLI. Thông tin xác thực chỉ được xử lý trong backend cục bộ. Cockpit chỉ xuất siêu dữ liệu đã che, không thể dùng để khôi phục đăng nhập.",
+      "pastePlaceholder": "Dán JSON tài khoản Grok",
+      "pasteAction": "Nhập JSON",
+      "localDesc": "Nhập tài khoản hiện tại từ ~/.grok/auth.json mặc định. Khi chọn tệp, hãy dùng auth.json chính thức của Grok CLI.",
+      "localClient": "Nhập từ Grok CLI cục bộ"
+    },
+    "instances": {
+      "unsupported": "Đa phiên bản Grok CLI chỉ được hỗ trợ trên macOS, Windows và Linux.",
+      "launchDialogTitle": "Chạy phiên bản",
+      "launchHint": "Sao chép lệnh để chạy thủ công hoặc thực thi trực tiếp trong terminal.",
+      "runInTerminal": "Chạy trong terminal",
+      "cliReady": "Đã phát hiện",
+      "cliMissingShort": "Chưa phát hiện",
+      "cliPathInvalid": "Đường dẫn Grok CLI đã cấu hình không hợp lệ: {{path}}",
+      "saveAndRetry": "Lưu và thử lại",
+      "installCommand": "Lệnh cài đặt chính thức",
+      "installHint": "Chạy lệnh chính thức sau trong terminal, rồi nhấn Làm mới sau khi cài đặt xong."
+    },
+    "switch": {
+      "success": "Đã chuyển tài khoản"
+    },
+    "usageNormal": "Ổn định",
+    "usageAbnormal": "Bất thường",
+    "usageViewDetail": "Xem chi tiết",
+    "usageDetailTitle": "Chi tiết sử dụng",
+    "usage": "Mức sử dụng",
+    "quotaQuery": {
+      "failedRefreshCompact": "Truy vấn hạn ngạch thất bại",
+      "empty": "Không có dữ liệu hạn ngạch",
+      "sectionTitle": "Hạn ngạch"
+    },
+    "quota": {
+      "weekly": "Mức dùng hằng tuần",
+      "onDemand": "Mức dùng theo nhu cầu",
+      "balance": "Số dư và tín dụng",
+      "included": "Mức dùng trong gói",
+      "promotional": "Hạn ngạch khuyến mãi",
+      "frequent": "Tác vụ thường xuyên",
+      "occasional": "Tác vụ thông thường"
+    },
+    "quotaAlert": {
+      "hint": "Khi bất kỳ mục hạn mức nào của tài khoản hiện tại xuống dưới ngưỡng, hãy gửi thông báo hệ thống và hiển thị thao tác chuyển nhanh trong ứng dụng.",
+      "thresholdDesc": "Kích hoạt cảnh báo khi bất kỳ mục hạn mức nào xuống dưới tỷ lệ này",
+      "items": "Mục hạn mức",
+      "unknownItem": "Mục hạn mức không xác định"
+    }
   },
   "claude": {
     "import": {

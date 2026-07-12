@@ -12,6 +12,7 @@
     "enabled": "Włączone",
     "disabled": "Wyłączone",
     "close": "Zamknij",
+    "back": "Wstecz",
     "open": "Otwórz",
     "copy": "Kopiuj",
     "copied": "Skopiowano",
@@ -176,7 +177,9 @@
         "resetDone": "Zresetowano",
         "hourly": "Limit 5 godzin",
         "weekly": "Limit tygodniowy",
-        "resetAt": "Odnowienie: {{time}}"
+        "resetAt": "Odnowienie: {{time}}",
+        "expiresAt": "Wygasa: {{time}}",
+        "leftPercent": "Pozostało {{value}}%"
       },
       "subtitle": "Zarządzaj kontami GitHub Copilot",
       "time": {
@@ -948,7 +951,7 @@
       "importModalDesc": "Wybierz, co chcesz zaimportować. Starsze kopie kont są obsługiwane jako import tylko danych kont.",
       "selectionTitle": "Zakres danych",
       "accountsOptionTitle": "Dane kont",
-      "accountsOptionDesc": "Zawiera kopie zapasowe kont platform i zachowuje zgodność ze starszym JSON-em kont.",
+      "accountsOptionDesc": "Zawiera odtwarzalne kopie zapasowe kont platform i zachowuje zgodność ze starszym JSON-em. Dane logowania Grok CLI są wykluczone; oficjalny plik auth.json zaimportuj osobno.",
       "configOptionTitle": "Dane konfiguracji",
       "configOptionDesc": "Zawiera ustawienia aplikacji, grupy, instancje, zadania wakeup i konfigurację dostawców modeli.",
       "exportConfirm": "Eksportuj dane",
@@ -1960,6 +1963,9 @@
       "customRoutingEdit": "Edytuj niestandardowe routowanie",
       "customRoutingTitle": "Niestandardowe routowanie",
       "customRoutingDesc": "Ustaw priorytet i wagę dla konta, aby sterować kolejnością wyboru oraz rozkładem obciążenia przy tym samym priorytecie.",
+      "customRoutingBackupTitle": "Konto zapasowe",
+      "customRoutingBackupDesc": "Jest używane tylko wtedy, gdy wszystkie zwykłe konta są niedostępne. Nowe żądania automatycznie wracają po odzyskaniu zwykłego konta.",
+      "customRoutingBackupShort": "Zapasowe",
       "customRoutingPriorityTitle": "Priorytet",
       "customRoutingPriorityDesc": "Wyższe wartości są wybierane wcześniej; konta o niższym priorytecie są próbowane dopiero, gdy wyższe są niedostępne.",
       "customRoutingWeightTitle": "Waga",
@@ -3276,6 +3282,15 @@
       "renameSuccess": "Zmieniono nazwę",
       "renameFailed": "Nie udało się zmienić nazwy"
     },
+    "importApiService": {
+      "toggle": "Dodaj do usługi API",
+      "description": "Dodaje kwalifikujące się zaimportowane konta do puli usługi API.",
+      "syncFailed": "Konta zaimportowano, ale nie udało się dodać ich do usługi API: {{error}}",
+      "guideTitle": "Konta dodane do usługi API",
+      "guideDescription": "Dodano {{count}} kont do usługi API. Wybierz „Uruchom usługę API”, aby się przełączyć i ich używać.",
+      "later": "Później",
+      "startAction": "Uruchom usługę API"
+    },
     "batchImport": {
       "title": "Import zbiorczy Codex",
       "resultSubtitle": "Wynik importu",
@@ -3587,6 +3602,14 @@
       "syncWslDesc": "Podczas przełączania konta automatycznie nadpisz konfigurację .gemini w WSL"
     },
     "geminiRefreshInterval": "Automatyczne odświeżanie limitu",
+    "grok": {
+      "title": "Ustawienia Grok CLI",
+      "appPath": "Ścieżka Grok CLI",
+      "cliPath": "Ścieżka CLI",
+      "cliDetected": "Wykryto: {{version}} · {{path}}",
+      "cliMissing": "Nie wykryto Grok CLI. Podaj własną ścieżkę."
+    },
+    "grokRefreshInterval": "Automatyczne odświeżanie limitu",
     "codebuddy": {
       "title": "Ustawienia CodeBuddy",
       "appPath": "Ścieżka CodeBuddy"
@@ -4768,6 +4791,7 @@
     "errors": {
       "refreshFailed": "Odświeżanie nie powiodło się: {{error}}",
       "switchFailed": "Przełączenie nie powiodło się: {{error}}",
+      "stopInstanceBeforeSwitch": "Zatrzymaj instancję przed zmianą konta",
       "pinFailed": "Nie udało się zaktualizować stanu przypięcia: {{error}}",
       "closeFailed": "Nie udało się zamknąć: {{error}}"
     },
@@ -5030,6 +5054,76 @@
     },
     "copyKey": "Copy Key​",
     "clearKey": "Clear input​"
+  },
+  "grok": {
+    "search": "Szukaj kont Grok CLI...",
+    "flowNotice": {
+      "title": "Zarządzanie kontami Grok CLI",
+      "desc": "Cockpit zarządza kontami w oficjalnym formacie poświadczeń Grok CLI, aby rzeczywiście przełączać konto domyślne i wiązać odizolowane instancje.",
+      "permission": "Zakres lokalny: odczytuje domyślny plik ~/.grok/auth.json i zarządza oddzielnymi katalogami kont Grok oraz GROK_HOME w lokalnych danych Cockpit.",
+      "network": "Zakres sieciowy: autoryzacja OAuth, odnawianie poświadczeń i sprawdzanie użycia konta. Poświadczenia nie są wysyłane do usług Cockpit."
+    },
+    "empty": "Brak kont Grok CLI",
+    "addAccount": "Dodaj konto Grok CLI",
+    "oauth": {
+      "desc": "Otwórz stronę autoryzacji xAI i wpisz kod urządzenia. Konto zostanie automatycznie zapisane.",
+      "title": "OAuth urządzenia Grok",
+      "item1": "Korzysta z oficjalnego przepływu urządzenia Grok CLI bez zajmowania lokalnego portu zwrotnego.",
+      "item2": "Po autoryzacji zapisuje oddzielny GROK_HOME i utrzymuje ważność poświadczeń.",
+      "item3": "Konta mogą przełączać domyślną CLI lub działać w odizolowanych od siebie instancjach.",
+      "urlPlaceholder": "Adres autoryzacji OAuth Grok",
+      "waiting": "Oczekiwanie na autoryzację OAuth Grok...",
+      "openWindow": "Otwórz autoryzację",
+      "success": "Logowanie OAuth Grok zakończone"
+    },
+    "import": {
+      "pasteTab": "Wklej JSON",
+      "pasteDesc": "Wklej oficjalny plik auth.json z Grok CLI. Poświadczenia są przetwarzane wyłącznie przez lokalny backend. Cockpit eksportuje tylko ukryte metadane, które nie pozwalają odtworzyć logowania.",
+      "pastePlaceholder": "Wklej JSON konta Grok",
+      "pasteAction": "Importuj JSON",
+      "localDesc": "Zaimportuj bieżące konto z domyślnego ~/.grok/auth.json. Przy wyborze pliku użyj oficjalnego auth.json z Grok CLI.",
+      "localClient": "Importuj z lokalnego Grok CLI"
+    },
+    "instances": {
+      "unsupported": "Wiele instancji Grok CLI jest obsługiwanych tylko w macOS, Windows i Linux.",
+      "launchDialogTitle": "Uruchom instancję",
+      "launchHint": "Skopiuj polecenie i uruchom je ręcznie albo wykonaj bezpośrednio w terminalu.",
+      "runInTerminal": "Uruchom w terminalu",
+      "cliReady": "Wykryto",
+      "cliMissingShort": "Nie wykryto",
+      "cliPathInvalid": "Skonfigurowana ścieżka Grok CLI jest nieprawidłowa: {{path}}",
+      "saveAndRetry": "Zapisz i ponów",
+      "installCommand": "Oficjalne polecenie instalacji",
+      "installHint": "Uruchom poniższe oficjalne polecenie w terminalu, a po instalacji kliknij Odśwież."
+    },
+    "switch": {
+      "success": "Konto przełączone"
+    },
+    "usageNormal": "Prawidłowe",
+    "usageAbnormal": "Nieprawidłowe",
+    "usageViewDetail": "Pokaż szczegóły",
+    "usageDetailTitle": "Szczegóły użycia",
+    "usage": "Użycie",
+    "quotaQuery": {
+      "failedRefreshCompact": "Nie udało się sprawdzić limitu",
+      "empty": "Brak danych o limicie",
+      "sectionTitle": "Limit"
+    },
+    "quota": {
+      "weekly": "Użycie tygodniowe",
+      "onDemand": "Użycie na żądanie",
+      "balance": "Saldo i kredyty",
+      "included": "Użycie w pakiecie",
+      "promotional": "Limit promocyjny",
+      "frequent": "Częste zadania",
+      "occasional": "Okazjonalne zadania"
+    },
+    "quotaAlert": {
+      "hint": "Gdy dowolna pozycja limitu bieżącego konta spadnie poniżej progu, zostanie wysłane powiadomienie systemowe, a w aplikacji pojawi się szybkie przełączenie.",
+      "thresholdDesc": "Wywołaj alert, gdy dowolna pozycja limitu spadnie poniżej tego procentu",
+      "items": "Pozycje limitu",
+      "unknownItem": "Nieznana pozycja limitu"
+    }
   },
   "claude": {
     "import": {

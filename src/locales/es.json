@@ -12,6 +12,7 @@
     "enabled": "Habilitado",
     "disabled": "Deshabilitado",
     "close": "Cerrar",
+    "back": "Volver",
     "open": "Abrir",
     "copy": "Copiar",
     "copied": "Copiado",
@@ -176,7 +177,9 @@
         "resetDone": "Reiniciado",
         "hourly": "Sugerencias en línea",
         "weekly": "Mensajes de chat",
-        "resetAt": "Restablece: {{time}}"
+        "resetAt": "Restablece: {{time}}",
+        "expiresAt": "Vence el: {{time}}",
+        "leftPercent": "Queda un {{value}} %"
       },
       "subtitle": "Supervisa en tiempo real el estado de cuota de todas las cuentas.",
       "time": {
@@ -948,7 +951,7 @@
       "importModalDesc": "Elige qué importar. Las copias antiguas de cuentas se procesan como importación solo de cuentas.",
       "selectionTitle": "Alcance de los datos",
       "accountsOptionTitle": "Datos de cuentas",
-      "accountsOptionDesc": "Incluye copias de seguridad de cuentas de las plataformas y mantiene compatibilidad con el JSON heredado de cuentas.",
+      "accountsOptionDesc": "Incluye copias de seguridad restaurables de las cuentas y mantiene la compatibilidad con el JSON heredado. Las credenciales de Grok CLI se excluyen; importa el auth.json oficial por separado.",
       "configOptionTitle": "Datos de configuración",
       "configOptionDesc": "Incluye ajustes de la app, grupos, instancias, tareas de activación y configuración de proveedores de modelos.",
       "exportConfirm": "Exportar datos",
@@ -1960,6 +1963,9 @@
       "customRoutingEdit": "Editar enrutamiento personalizado",
       "customRoutingTitle": "Enrutamiento personalizado",
       "customRoutingDesc": "Define prioridad y peso por cuenta para controlar el orden de selección y el reparto de carga dentro del mismo nivel.",
+      "customRoutingBackupTitle": "Cuenta de reserva",
+      "customRoutingBackupDesc": "Solo se usa cuando todas las cuentas normales no están disponibles. Las solicitudes nuevas vuelven automáticamente cuando se recupera una cuenta normal.",
+      "customRoutingBackupShort": "Reserva",
       "customRoutingPriorityTitle": "Prioridad",
       "customRoutingPriorityDesc": "Los valores más altos se eligen antes; las cuentas de menor prioridad solo se prueban cuando las superiores no están disponibles.",
       "customRoutingWeightTitle": "Peso",
@@ -3276,6 +3282,15 @@
       "renameSuccess": "Renombrado",
       "renameFailed": "Error al renombrar"
     },
+    "importApiService": {
+      "toggle": "Añadir al servicio API",
+      "description": "Añade las cuentas importadas aptas al grupo de cuentas del servicio API.",
+      "syncFailed": "Las cuentas se importaron, pero no se pudieron añadir al servicio API: {{error}}",
+      "guideTitle": "Cuentas añadidas al servicio API",
+      "guideDescription": "Se añadieron {{count}} cuenta(s) al servicio API. Pulsa «Iniciar servicio API» para cambiar y usarlas.",
+      "later": "Más tarde",
+      "startAction": "Iniciar servicio API"
+    },
     "batchImport": {
       "title": "Importación por lotes de Codex",
       "resultSubtitle": "Resultado de importación",
@@ -3587,6 +3602,14 @@
       "syncWslDesc": "Sobrescribir automáticamente la configuración de .gemini en WSL al cambiar de cuenta"
     },
     "geminiRefreshInterval": "Actualización automática de cuota",
+    "grok": {
+      "title": "Ajustes de Grok CLI",
+      "appPath": "Ruta de Grok CLI",
+      "cliPath": "Ruta de CLI",
+      "cliDetected": "Detectado: {{version}} · {{path}}",
+      "cliMissing": "No se encontró Grok CLI. Indica una ruta."
+    },
+    "grokRefreshInterval": "Actualización automática de cuota",
     "codebuddy": {
       "title": "Configuración de CodeBuddy",
       "appPath": "Ruta de CodeBuddy"
@@ -4644,7 +4667,7 @@
       "localDesc": "Importa credenciales locales cifradas de ZCode o un archivo JSON.",
       "localClient": "Importar desde ZCode local"
     },
-  "usageNormal": "Correcto",
+    "usageNormal": "Correcto",
     "usageAbnormal": "Error",
     "usageViewDetail": "Detalles",
     "usageDetailTitle": "Detalles de uso",
@@ -4768,6 +4791,7 @@
     "errors": {
       "refreshFailed": "Error al actualizar: {{error}}",
       "switchFailed": "Error al cambiar: {{error}}",
+      "stopInstanceBeforeSwitch": "Detén la instancia antes de cambiar de cuenta",
       "pinFailed": "No se pudo actualizar el estado de fijación: {{error}}",
       "closeFailed": "Error al cerrar: {{error}}"
     },
@@ -5030,6 +5054,76 @@
     },
     "copyKey": "Copy Key​",
     "clearKey": "Clear input​"
+  },
+  "grok": {
+    "search": "Buscar cuentas de Grok CLI...",
+    "flowNotice": {
+      "title": "Gestión de cuentas de Grok CLI",
+      "desc": "Cockpit gestiona las cuentas con el formato oficial de credenciales de Grok CLI para cambiar realmente la cuenta predeterminada y vincular instancias aisladas.",
+      "permission": "Ámbito local: lee el archivo ~/.grok/auth.json predeterminado y gestiona directorios independientes de cuentas Grok y GROK_HOME en los datos locales de Cockpit.",
+      "network": "Ámbito de red: autorización OAuth, renovación de credenciales y consulta de uso. Las credenciales no se suben a los servicios de Cockpit."
+    },
+    "empty": "Aún no hay cuentas de Grok CLI",
+    "addAccount": "Añadir cuenta de Grok CLI",
+    "oauth": {
+      "desc": "Abre la página de autorización de xAI e introduce el código del dispositivo. La cuenta se guardará automáticamente.",
+      "title": "OAuth de dispositivo de Grok",
+      "item1": "Usa el flujo de dispositivo oficial de Grok CLI sin ocupar un puerto de retorno local.",
+      "item2": "Guarda un GROK_HOME independiente tras autorizar y mantiene vigentes las credenciales.",
+      "item3": "Las cuentas permiten cambiar la CLI predeterminada o ejecutar instancias aisladas entre sí.",
+      "urlPlaceholder": "Dirección de autorización OAuth de Grok",
+      "waiting": "Esperando la autorización OAuth de Grok...",
+      "openWindow": "Abrir autorización",
+      "success": "Inicio de sesión OAuth de Grok completado"
+    },
+    "import": {
+      "pasteTab": "Pegar JSON",
+      "pasteDesc": "Pega el auth.json oficial de Grok CLI. Las credenciales solo se procesan en el backend local. Cockpit exporta únicamente metadatos ocultos que no permiten restaurar una sesión.",
+      "pastePlaceholder": "Pegar JSON de cuenta Grok",
+      "pasteAction": "Importar JSON",
+      "localDesc": "Importa la cuenta actual desde ~/.grok/auth.json. Al elegir un archivo, usa el auth.json oficial de Grok CLI.",
+      "localClient": "Importar desde Grok CLI local"
+    },
+    "instances": {
+      "unsupported": "Las instancias múltiples de Grok CLI solo están disponibles en macOS, Windows y Linux.",
+      "launchDialogTitle": "Iniciar instancia",
+      "launchHint": "Copia el comando para ejecutarlo manualmente o inícialo directamente en una terminal.",
+      "runInTerminal": "Ejecutar en terminal",
+      "cliReady": "Detectado",
+      "cliMissingShort": "No detectado",
+      "cliPathInvalid": "La ruta configurada de Grok CLI no es válida: {{path}}",
+      "saveAndRetry": "Guardar y reintentar",
+      "installCommand": "Comando oficial de instalación",
+      "installHint": "Ejecuta el siguiente comando oficial en la terminal y, cuando termine la instalación, pulsa Actualizar."
+    },
+    "switch": {
+      "success": "Cuenta cambiada"
+    },
+    "usageNormal": "Correcto",
+    "usageAbnormal": "Anómalo",
+    "usageViewDetail": "Ver detalles",
+    "usageDetailTitle": "Detalles de uso",
+    "usage": "Uso",
+    "quotaQuery": {
+      "failedRefreshCompact": "Error al consultar la cuota",
+      "empty": "No hay datos de cuota",
+      "sectionTitle": "Cuota"
+    },
+    "quota": {
+      "weekly": "Uso semanal",
+      "onDemand": "Uso bajo demanda",
+      "balance": "Saldo y créditos",
+      "included": "Uso incluido",
+      "promotional": "Cuota promocional",
+      "frequent": "Tareas frecuentes",
+      "occasional": "Tareas ocasionales"
+    },
+    "quotaAlert": {
+      "hint": "Cuando cualquier elemento de cuota de la cuenta actual caiga por debajo del umbral, se enviará una notificación nativa y se mostrará un cambio rápido en la aplicación.",
+      "thresholdDesc": "Activar una alerta cuando cualquier elemento de cuota caiga por debajo de este porcentaje",
+      "items": "Elementos de cuota",
+      "unknownItem": "Elemento de cuota desconocido"
+    }
   },
   "claude": {
     "import": {

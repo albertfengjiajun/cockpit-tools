@@ -313,11 +313,10 @@ pub fn run() {
                         "[SyncSettings] 启动时合并语言设置: {} -> {}",
                         current_config.language, merged_language
                     );
-                    let new_config = modules::config::UserConfig {
-                        language: merged_language,
-                        ..current_config
-                    };
-                    if let Err(e) = modules::config::save_user_config(&new_config) {
+                    if let Err(e) = modules::config::patch_user_config(|config| {
+                        config.language = merged_language;
+                        Ok(())
+                    }) {
                         logger::log_error(&format!("[SyncSettings] 保存合并后的配置失败: {}", e));
                     }
                 }
@@ -335,20 +334,6 @@ pub fn run() {
 
             tauri::async_runtime::spawn(async {
                 modules::codex_local_access::restore_local_access_gateway().await;
-            });
-
-            std::thread::spawn(|| {
-                match modules::codex_account::cleanup_managed_model_catalogs_on_startup() {
-                    Ok(cleaned) if cleaned > 0 => info!(
-                        "[Codex Model Catalog] 启动时已清理旧受管模型目录: count={}",
-                        cleaned
-                    ),
-                    Ok(_) => {}
-                    Err(error) => logger::log_warn(&format!(
-                        "[Codex Model Catalog] 启动时清理旧受管模型目录失败: {}",
-                        error
-                    )),
-                }
             });
 
             {
@@ -617,7 +602,8 @@ pub fn run() {
             commands::system::diagnostics_capture_event,
             commands::system::get_general_config,
             commands::system::get_available_terminals,
-            commands::system::save_general_config,
+            commands::system::patch_general_config,
+            commands::system::save_refresh_interval_config,
             commands::system::save_tray_platform_layout,
             commands::system::set_app_path,
             commands::system::set_claude_app_scan_roots,
@@ -669,7 +655,7 @@ pub fn run() {
             commands::update::should_check_updates,
             commands::update::update_last_check_time,
             commands::update::get_update_settings,
-            commands::update::save_update_settings,
+            commands::update::patch_update_settings,
             commands::update::save_pending_update_notes,
             commands::update::check_version_jump,
             commands::update::get_release_history,
@@ -771,6 +757,7 @@ pub fn run() {
             commands::codex::codex_query_model_provider_usage,
             commands::codex::codex_local_access_get_state,
             commands::codex::codex_local_access_save_accounts,
+            commands::codex::codex_local_access_append_accounts,
             commands::codex::codex_local_access_remove_account,
             commands::codex::codex_local_access_rotate_api_key,
             commands::codex::codex_local_access_update_bound_oauth_account,
@@ -1085,6 +1072,37 @@ pub fn run() {
             commands::gemini::update_gemini_account_tags,
             commands::gemini::get_gemini_accounts_index_path,
             commands::gemini::inject_gemini_account,
+            // Grok Commands
+            commands::grok::grok_get_cli_status,
+            commands::grok::grok_update_cli_runtime_config,
+            commands::grok::list_grok_accounts,
+            commands::grok::delete_grok_account,
+            commands::grok::delete_grok_accounts,
+            commands::grok::import_grok_from_json,
+            commands::grok::import_grok_from_local,
+            commands::grok::export_grok_accounts,
+            commands::grok::grok_oauth_login_start,
+            commands::grok::grok_oauth_login_complete,
+            commands::grok::grok_oauth_login_cancel,
+            commands::grok::refresh_grok_account,
+            commands::grok::force_refresh_grok_account,
+            commands::grok::refresh_all_grok_accounts,
+            commands::grok::switch_grok_account,
+            commands::grok::update_grok_account_tags,
+            commands::grok::get_grok_current_account_id,
+            commands::grok::get_grok_accounts_index_path,
+            // Grok Instance Commands
+            commands::grok_instance::grok_get_instance_defaults,
+            commands::grok_instance::grok_list_instances,
+            commands::grok_instance::grok_create_instance,
+            commands::grok_instance::grok_update_instance,
+            commands::grok_instance::grok_delete_instance,
+            commands::grok_instance::grok_start_instance,
+            commands::grok_instance::grok_stop_instance,
+            commands::grok_instance::grok_close_all_instances,
+            commands::grok_instance::grok_open_instance_window,
+            commands::grok_instance::grok_get_instance_launch_command,
+            commands::grok_instance::grok_execute_instance_launch_command,
             // Gemini Instance Commands
             commands::gemini_instance::gemini_get_instance_defaults,
             commands::gemini_instance::gemini_list_instances,

@@ -12,6 +12,7 @@
     "enabled": "有効",
     "disabled": "無効",
     "close": "閉じる",
+    "back": "戻る",
     "open": "開く",
     "copy": "コピー",
     "copied": "コピー済み",
@@ -176,7 +177,9 @@
         "resetDone": "リセット済み",
         "hourly": "5 時間クォータ",
         "weekly": "週次クォータ",
-        "resetAt": "リセット: {{time}}"
+        "resetAt": "リセット: {{time}}",
+        "expiresAt": "有効期限：{{time}}",
+        "leftPercent": "残り {{value}}%"
       },
       "subtitle": "GitHub Copilot アカウントを管理します",
       "time": {
@@ -948,7 +951,7 @@
       "importModalDesc": "インポートする内容を選択してください。旧形式のアカウントバックアップは「アカウントデータのみ」として扱われます。",
       "selectionTitle": "データ範囲",
       "accountsOptionTitle": "アカウントデータ",
-      "accountsOptionDesc": "各プラットフォームのアカウントバックアップを含み、旧形式のアカウント JSON との互換性も維持します。",
+      "accountsOptionDesc": "復元可能な各プラットフォームのアカウントバックアップを含み、旧形式の JSON との互換性も維持します。Grok CLI の認証情報は含まれないため、公式の auth.json を別途インポートしてください。",
       "configOptionTitle": "設定データ",
       "configOptionDesc": "アプリ設定、グループ、インスタンス、Wakeup タスク、モデルプロバイダー設定を含みます。",
       "exportConfirm": "データをエクスポート",
@@ -1960,6 +1963,9 @@
       "customRoutingEdit": "カスタムルーティングを編集",
       "customRoutingTitle": "カスタムルーティング",
       "customRoutingDesc": "アカウントごとに優先度と重みを設定し、選択順と同じ優先度内の負荷配分を制御します。",
+      "customRoutingBackupTitle": "予備アカウント",
+      "customRoutingBackupDesc": "通常アカウントがすべて利用できない場合のみ使用します。通常アカウントが復旧すると、新しいリクエストは自動的に切り戻されます。",
+      "customRoutingBackupShort": "予備",
       "customRoutingPriorityTitle": "優先度",
       "customRoutingPriorityDesc": "値が高いほど先に選ばれます。高優先度のアカウントが使えない場合にのみ低優先度を試します。",
       "customRoutingWeightTitle": "重み",
@@ -3276,6 +3282,15 @@
       "renameSuccess": "名前を変更しました",
       "renameFailed": "名前の変更に失敗しました"
     },
+    "importApiService": {
+      "toggle": "API サービスに追加",
+      "description": "条件を満たすインポート済みアカウントを API サービスのアカウントプールに追加します。",
+      "syncFailed": "アカウントはインポートされましたが、API サービスへの追加に失敗しました：{{error}}",
+      "guideTitle": "API サービスに追加しました",
+      "guideDescription": "{{count}} 件のアカウントを API サービスに追加しました。「API サービスを起動」をクリックすると切り替えて使用できます。",
+      "later": "後で",
+      "startAction": "API サービスを起動"
+    },
     "batchImport": {
       "title": "Codex 一括インポート",
       "resultSubtitle": "インポート結果",
@@ -3587,6 +3602,14 @@
       "syncWslDesc": "アカウント切り替え時に WSL 内の .gemini 設定を自動で上書きします"
     },
     "geminiRefreshInterval": "クォータ自動更新",
+    "grok": {
+      "title": "Grok CLI 設定",
+      "appPath": "Grok CLI のパス",
+      "cliPath": "CLI のパス",
+      "cliDetected": "検出済み: {{version}} · {{path}}",
+      "cliMissing": "Grok CLI が見つかりません。任意のパスを入力してください。"
+    },
+    "grokRefreshInterval": "クォータ自動更新",
     "codebuddy": {
       "title": "CodeBuddy 設定",
       "appPath": "CodeBuddy パス"
@@ -4768,6 +4791,7 @@
     "errors": {
       "refreshFailed": "更新に失敗しました: {{error}}",
       "switchFailed": "切り替えに失敗しました: {{error}}",
+      "stopInstanceBeforeSwitch": "アカウントを切り替える前にインスタンスを停止してください",
       "pinFailed": "固定状態の更新に失敗しました: {{error}}",
       "closeFailed": "閉じる操作に失敗しました: {{error}}"
     },
@@ -5030,6 +5054,76 @@
     },
     "copyKey": "Copy Key​",
     "clearKey": "Clear input​"
+  },
+  "grok": {
+    "search": "Grok CLI アカウントを検索...",
+    "flowNotice": {
+      "title": "Grok CLI アカウント管理",
+      "desc": "Cockpit は Grok CLI 公式の認証情報形式でアカウントを管理し、既定アカウントの実切り替えと分離インスタンスへの割り当てに使用します。",
+      "permission": "ローカル範囲: 既定の ~/.grok/auth.json を読み取り、Cockpit のローカルデータ内で個別の Grok アカウントと GROK_HOME ディレクトリを管理します。",
+      "network": "ネットワーク範囲: OAuth 認証、認証情報の更新、アカウント使用量の照会。認証情報を Cockpit サービスへアップロードすることはありません。"
+    },
+    "empty": "Grok CLI アカウントはありません",
+    "addAccount": "Grok CLI アカウントを追加",
+    "oauth": {
+      "desc": "xAI の認証ページを開いてデバイスコードを入力します。完了後、アカウントは自動保存されます。",
+      "title": "Grok デバイス OAuth",
+      "item1": "ローカルのコールバックポートを使わず、Grok CLI 公式のデバイスフローを使用します。",
+      "item2": "認証後に個別の GROK_HOME を保存し、認証情報の有効性を維持します。",
+      "item3": "既定 CLI の切り替えや、相互に分離された複数インスタンスで使用できます。",
+      "urlPlaceholder": "Grok OAuth 認証 URL",
+      "waiting": "Grok OAuth 認証を待機中...",
+      "openWindow": "認証ページを開く",
+      "success": "Grok OAuth ログインに成功しました"
+    },
+    "import": {
+      "pasteTab": "JSON を貼り付け",
+      "pasteDesc": "Grok CLI 公式の auth.json を貼り付けます。認証情報はローカルバックエンド内だけで処理されます。Cockpit のエクスポートはマスク済みメタデータのみで、ログインの復元には使えません。",
+      "pastePlaceholder": "Grok アカウントの JSON を貼り付け",
+      "pasteAction": "JSON をインポート",
+      "localDesc": "既定の ~/.grok/auth.json から現在のアカウントをインポートします。ファイルを選ぶ場合は Grok CLI 公式の auth.json を使用してください。",
+      "localClient": "ローカルの Grok CLI からインポート"
+    },
+    "instances": {
+      "unsupported": "Grok CLI の複数インスタンスは macOS、Windows、Linux のみ対応しています。",
+      "launchDialogTitle": "インスタンスを起動",
+      "launchHint": "コマンドをコピーして手動実行するか、ターミナルで直接実行できます。",
+      "runInTerminal": "ターミナルで実行",
+      "cliReady": "検出済み",
+      "cliMissingShort": "未検出",
+      "cliPathInvalid": "設定された Grok CLI のパスが無効です：{{path}}",
+      "saveAndRetry": "保存して再試行",
+      "installCommand": "公式インストールコマンド",
+      "installHint": "ターミナルで次の公式コマンドを実行し、インストール完了後に更新してください。"
+    },
+    "switch": {
+      "success": "アカウントを切り替えました"
+    },
+    "usageNormal": "正常",
+    "usageAbnormal": "異常",
+    "usageViewDetail": "詳細を表示",
+    "usageDetailTitle": "使用量の詳細",
+    "usage": "使用量",
+    "quotaQuery": {
+      "failedRefreshCompact": "クォータの照会に失敗しました",
+      "empty": "クォータデータがありません",
+      "sectionTitle": "クォータ"
+    },
+    "quota": {
+      "weekly": "週間使用量",
+      "onDemand": "従量使用量",
+      "balance": "残高とクレジット",
+      "included": "プラン内使用量",
+      "promotional": "キャンペーン枠",
+      "frequent": "高頻度タスク",
+      "occasional": "通常タスク"
+    },
+    "quotaAlert": {
+      "hint": "現在のアカウントのいずれかのクォータ項目がしきい値を下回った場合、ネイティブ通知を送信し、アプリにクイック切り替え操作を表示します。",
+      "thresholdDesc": "いずれかのクォータ項目がこの割合を下回ったときに警告します",
+      "items": "対象クォータ項目",
+      "unknownItem": "不明なクォータ項目"
+    }
   },
   "claude": {
     "import": {

@@ -357,10 +357,42 @@
   filter: brightness(0.96);
 }
 
+.codex-import-api-service-guide-anchor {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.codex-import-api-service-anchor-guide {
+  right: 0;
+  bottom: calc(100% + 12px);
+  left: auto;
+  top: auto;
+  width: min(270px, calc(100vw - 48px));
+}
+
+.codex-import-api-service-anchor-guide::before {
+  right: 10px;
+  bottom: -7px;
+  left: auto;
+  top: auto;
+  transform: rotate(225deg);
+}
+
 @media (max-width: 640px) {
   .codex-local-access-gateway-guide {
     left: -4px;
     width: min(272px, calc(100vw - 32px));
+  }
+
+  .codex-import-api-service-anchor-guide {
+    right: -4px;
+    left: auto;
+    width: min(260px, calc(100vw - 32px));
+  }
+
+  .codex-import-api-service-anchor-guide::before {
+    right: 14px;
   }
 }
 
@@ -946,6 +978,11 @@
 
 .codex-local-access-footer {
   margin-top: 0;
+}
+
+.codex-account-card .codex-local-access-footer.has-import-guide,
+.codex-account-card .codex-local-access-footer.has-import-guide .card-actions {
+  overflow: visible;
 }
 
 .codex-local-access-card .quota-error-inline {

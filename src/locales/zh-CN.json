@@ -12,6 +12,7 @@
     "enabled": "已启用",
     "disabled": "已禁用",
     "close": "关闭",
+    "back": "返回",
     "open": "打开",
     "copy": "复制",
     "copied": "已复制",
@@ -183,7 +184,9 @@
         "resetDone": "已重置",
         "hourly": "Inline Suggestions",
         "weekly": "Chat messages",
-        "resetAt": "重置：{{time}}"
+        "resetAt": "重置：{{time}}",
+        "expiresAt": "到期时间：{{time}}",
+        "leftPercent": "剩余 {{value}}%"
       },
       "subtitle": "实时监控所有账号的配额状态。",
       "time": {
@@ -262,6 +265,7 @@
     "errors": {
       "refreshFailed": "刷新失败：{{error}}",
       "switchFailed": "切换失败：{{error}}",
+      "stopInstanceBeforeSwitch": "请先停止实例再切换账号",
       "pinFailed": "置顶设置失败：{{error}}",
       "closeFailed": "关闭失败：{{error}}"
     },
@@ -842,7 +846,7 @@
       "importModalDesc": "选择要导入的数据类型。旧版账号备份会自动按“仅账号数据”处理。",
       "selectionTitle": "数据范围",
       "accountsOptionTitle": "账号数据",
-      "accountsOptionDesc": "包含各平台账号备份，并继续兼容旧版账号 JSON。",
+      "accountsOptionDesc": "包含可恢复的平台账号备份，并继续兼容旧版账号 JSON。Grok CLI 凭据不在其中，需单独导入官方 auth.json。",
       "configOptionTitle": "配置数据",
       "configOptionDesc": "包含应用设置、分组、实例、唤醒任务与模型 Provider 配置。",
       "exportConfirm": "导出数据",
@@ -2281,7 +2285,10 @@
       },
       "customRoutingEdit": "编辑自定义调度",
       "customRoutingTitle": "自定义调度",
-      "customRoutingDesc": "按账号设置优先级和权重，用于控制 API 服务选择账号的顺序和同级负载分配。",
+      "customRoutingDesc": "设置账号的优先级、权重和备用角色，控制账号选择顺序与负载分配。",
+      "customRoutingBackupTitle": "备用账号",
+      "customRoutingBackupDesc": "仅在所有普通账号不可用时使用；普通账号恢复后，新请求会自动切回。",
+      "customRoutingBackupShort": "备用",
       "customRoutingPriorityTitle": "优先级",
       "customRoutingPriorityDesc": "数值越高越先被选中；高优先级账号不可用时，才会继续尝试低优先级账号。",
       "customRoutingWeightTitle": "权重",
@@ -3486,6 +3493,15 @@
       "renameSuccess": "已重命名",
       "renameFailed": "重命名失败"
     },
+    "importApiService": {
+      "toggle": "同步加入 API 服务",
+      "description": "导入成功后，将符合条件的账号加入 API 服务账号池。",
+      "syncFailed": "账号已导入，但加入 API 服务失败：{{error}}",
+      "guideTitle": "账号已加入 API 服务",
+      "guideDescription": "已将 {{count}} 个账号加入 API 服务。点击“启动 API 服务”即可切换并使用。",
+      "later": "稍后",
+      "startAction": "启动 API 服务"
+    },
     "batchImport": {
       "title": "Codex 批量导入",
       "resultSubtitle": "导入结果",
@@ -3894,6 +3910,14 @@
       "syncWslDesc": "切换账号时自动覆盖 WSL 下的 .gemini 配置"
     },
     "geminiRefreshInterval": "配额自动刷新",
+    "grok": {
+      "title": "Grok CLI 设置",
+      "appPath": "Grok CLI 路径",
+      "cliPath": "CLI 路径",
+      "cliDetected": "已检测 {{version}} · {{path}}",
+      "cliMissing": "未检测到 Grok CLI，可填写自定义路径"
+    },
+    "grokRefreshInterval": "配额自动刷新",
     "error": {
       "loadFailed": "加载配置失败：{{error}}",
       "saveFailed": "保存配置失败：{{error}}",
@@ -5030,6 +5054,76 @@
     "importErrorMsg": "导入失败，请检查文件格式是否为您之前导出的格式 (JSON Array)。",
     "btnImportTitle": "导入本地的 JSON 文件",
     "btnExportTitle": "导出已保存为 JSON"
+  },
+  "grok": {
+    "search": "搜索 Grok CLI 账号...",
+    "flowNotice": {
+      "title": "Grok CLI 账号管理说明",
+      "desc": "Cockpit 按 Grok CLI 官方凭据格式管理账号，用于默认客户端真实切号和独立实例绑定。",
+      "permission": "本地范围：读取默认 ~/.grok/auth.json，并管理 Cockpit 本地数据中的独立 Grok 账号与 GROK_HOME 目录。",
+      "network": "网络范围：OAuth 授权、凭据刷新及账号用量查询；不会上传凭据到 Cockpit 服务。"
+    },
+    "empty": "暂无 Grok CLI 账号",
+    "addAccount": "添加 Grok CLI 账号",
+    "oauth": {
+      "desc": "打开 xAI 授权页并输入设备验证码，完成后账号会自动保存。",
+      "title": "Grok 设备 OAuth",
+      "item1": "使用 Grok CLI 官方 device flow，不占用本地回调端口。",
+      "item2": "授权成功后保存独立 GROK_HOME，并维护凭据有效状态。",
+      "item3": "账号可用于默认 CLI 切号和相互隔离的多开实例。",
+      "urlPlaceholder": "Grok OAuth 授权地址",
+      "waiting": "等待 Grok OAuth 授权...",
+      "openWindow": "打开授权页",
+      "success": "Grok OAuth 登录成功"
+    },
+    "import": {
+      "pasteTab": "粘贴 JSON",
+      "pasteDesc": "粘贴 Grok CLI 官方 auth.json；凭据仅在本机后端处理。Cockpit 导出仅含脱敏元数据，不能用于恢复登录。",
+      "pastePlaceholder": "粘贴 Grok 账号 JSON",
+      "pasteAction": "导入 JSON",
+      "localDesc": "从默认 ~/.grok/auth.json 导入当前账号；选择文件时应使用 Grok CLI 官方 auth.json。",
+      "localClient": "从本机 Grok CLI 导入"
+    },
+    "instances": {
+      "unsupported": "Grok CLI 多开仅支持 macOS、Windows 和 Linux。",
+      "launchDialogTitle": "启动实例",
+      "launchHint": "可复制命令手动执行，或点击下方按钮直接在终端执行。",
+      "runInTerminal": "终端执行",
+      "cliReady": "已检测",
+      "cliMissingShort": "未检测",
+      "cliPathInvalid": "配置的 Grok CLI 路径无效：{{path}}",
+      "saveAndRetry": "保存并重试",
+      "installCommand": "官方安装命令",
+      "installHint": "可在终端运行以下官方命令，安装完成后点击刷新。"
+    },
+    "switch": {
+      "success": "切号成功"
+    },
+    "usageNormal": "正常",
+    "usageAbnormal": "异常",
+    "usageViewDetail": "查看详情",
+    "usageDetailTitle": "用量状态详情",
+    "usage": "用量状态",
+    "quotaQuery": {
+      "failedRefreshCompact": "配额查询失败",
+      "empty": "暂无可用配额数据",
+      "sectionTitle": "配额查询"
+    },
+    "quota": {
+      "weekly": "每周用量",
+      "onDemand": "按量用量",
+      "balance": "余额与积分",
+      "included": "套餐用量",
+      "promotional": "活动额度",
+      "frequent": "高频任务",
+      "occasional": "普通任务"
+    },
+    "quotaAlert": {
+      "hint": "当当前账号任意配额项低于阈值时，发送原生通知并在页面提示快捷切号。",
+      "thresholdDesc": "任意配额项低于此百分比时触发预警",
+      "items": "触发配额项",
+      "unknownItem": "未知配额项"
+    }
   },
   "claude": {
     "import": {

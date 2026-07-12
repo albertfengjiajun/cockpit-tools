@@ -69,6 +69,7 @@ const PAGE_PLATFORM_MAP: Partial<Record<Page, PlatformId>> = {
   kiro: 'kiro',
   cursor: 'cursor',
   gemini: 'gemini',
+  grok: 'grok',
   codebuddy: 'codebuddy',
   'codebuddy-cn': 'codebuddy_cn',
   qoder: 'qoder',

@@ -43,6 +43,7 @@ import {
   parseFileCorruptedError,
   type FileCorruptedError,
 } from "./FileCorruptedModal";
+import { ModalErrorMessage, useModalErrorState } from "./ModalErrorMessage";
 import { useEscClose } from "../hooks/useEscClose";
 import type { InstanceStoreState } from "../stores/createInstanceStore";
 import { showInstanceFloatingCardWindow } from "../services/floatingCardService";
@@ -71,10 +72,7 @@ type AccountLike = {
 type InstanceSortField = "createdAt" | "lastLaunchedAt";
 type SortDirection = "asc" | "desc";
 type StartInstanceOutcome =
-  | "started"
-  | "already-running"
-  | "missing-path"
-  | "failed";
+  "started" | "already-running" | "missing-path" | "failed";
 type AccountSelectPortalPosition = {
   top: number;
   left: number;
@@ -161,6 +159,7 @@ interface InstancesManagerProps<TAccount extends AccountLike> {
     | "kiro"
     | "cursor"
     | "gemini"
+    | "grok"
     | "codebuddy"
     | "codebuddy_cn"
     | "qoder"
@@ -171,6 +170,10 @@ interface InstancesManagerProps<TAccount extends AccountLike> {
     | "workbuddy"
     | "zcode";
   onInstanceStarted?: (instance: InstanceProfile) => void | Promise<void>;
+  onInstanceStartError?: (
+    error: unknown,
+    instance: InstanceProfile,
+  ) => boolean | Promise<boolean>;
   resolveStartSuccessMessage?: (instance: InstanceProfile) => string;
   isAccountAllowedForLaunchMode?: (
     account: TAccount,
@@ -231,14 +234,18 @@ const resolveCodexQuickConfigPresetId = (
     return "default";
   }
   if (
-    modelContextWindow === CODEX_QUICK_CONFIG_PRESETS.preset_516k.modelContextWindow &&
-    autoCompactTokenLimit === CODEX_QUICK_CONFIG_PRESETS.preset_516k.autoCompactTokenLimit
+    modelContextWindow ===
+      CODEX_QUICK_CONFIG_PRESETS.preset_516k.modelContextWindow &&
+    autoCompactTokenLimit ===
+      CODEX_QUICK_CONFIG_PRESETS.preset_516k.autoCompactTokenLimit
   ) {
     return "preset_516k";
   }
   if (
-    modelContextWindow === CODEX_QUICK_CONFIG_PRESETS.preset_1m.modelContextWindow &&
-    autoCompactTokenLimit === CODEX_QUICK_CONFIG_PRESETS.preset_1m.autoCompactTokenLimit
+    modelContextWindow ===
+      CODEX_QUICK_CONFIG_PRESETS.preset_1m.modelContextWindow &&
+    autoCompactTokenLimit ===
+      CODEX_QUICK_CONFIG_PRESETS.preset_1m.autoCompactTokenLimit
   ) {
     return "preset_1m";
   }
@@ -285,9 +292,7 @@ const resolveAccountSelectPortalPosition = (
     ACCOUNT_SELECT_PORTAL_GAP -
     ACCOUNT_SELECT_PORTAL_SAFE_MARGIN;
   const spaceAbove =
-    rect.top -
-    ACCOUNT_SELECT_PORTAL_GAP -
-    ACCOUNT_SELECT_PORTAL_SAFE_MARGIN;
+    rect.top - ACCOUNT_SELECT_PORTAL_GAP - ACCOUNT_SELECT_PORTAL_SAFE_MARGIN;
   const placement: "top" | "bottom" =
     spaceBelow >= ACCOUNT_SELECT_PORTAL_MAX_HEIGHT || spaceBelow >= spaceAbove
       ? "bottom"
@@ -333,7 +338,7 @@ const isSameAccountSelectPortalPosition = (
   left?.maxHeight === right?.maxHeight &&
   left?.placement === right?.placement;
 
-const InlineAccountSelect = <TAccount extends AccountLike,>({
+const InlineAccountSelect = <TAccount extends AccountLike>({
   value,
   onChange,
   accounts,
@@ -639,6 +644,7 @@ export function InstancesManager<TAccount extends AccountLike>({
   getAccountSearchText,
   appType = "antigravity",
   onInstanceStarted,
+  onInstanceStartError,
   resolveStartSuccessMessage,
   isAccountAllowedForLaunchMode,
   toolbarExtraActions,
@@ -672,6 +678,12 @@ export function InstancesManager<TAccount extends AccountLike>({
     useState<InstanceProfile | null>(null);
   const [deleteConfirmInstance, setDeleteConfirmInstance] =
     useState<InstanceProfile | null>(null);
+  const {
+    message: deleteInstanceError,
+    scrollKey: deleteInstanceErrorScrollKey,
+    report: reportDeleteInstanceError,
+    clear: clearDeleteInstanceError,
+  } = useModalErrorState();
   const [restartingAll, setRestartingAll] = useState(false);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
@@ -684,21 +696,23 @@ export function InstancesManager<TAccount extends AccountLike>({
   const [formInitMode, setFormInitMode] = useState<InstanceInitMode>("copy");
   const [formLaunchMode, setFormLaunchMode] =
     useState<InstanceLaunchMode>("app");
-  const [formAppSpeed, setFormAppSpeed] =
-    useState<CodexAppSpeed>("standard");
+  const [formAppSpeed, setFormAppSpeed] = useState<CodexAppSpeed>("standard");
   const [formBindAccountId, setFormBindAccountId] = useState<string>("");
   const [formCodexQuickConfig, setFormCodexQuickConfig] =
     useState<CodexQuickConfig | null>(null);
   const [formCodexQuickConfigPresetId, setFormCodexQuickConfigPresetId] =
     useState<CodexQuickConfigPresetId>("default");
-  const [formCodexQuickContextWindowInput, setFormCodexQuickContextWindowInput] =
-    useState(String(CONTEXT_WINDOW_1M));
+  const [
+    formCodexQuickContextWindowInput,
+    setFormCodexQuickContextWindowInput,
+  ] = useState(String(CONTEXT_WINDOW_1M));
   const [formCodexQuickCompactLimitInput, setFormCodexQuickCompactLimitInput] =
     useState(String(DEFAULT_AUTO_COMPACT_TOKEN_LIMIT));
   const [formCodexQuickConfigLoading, setFormCodexQuickConfigLoading] =
     useState(false);
-  const [formCodexQuickConfigError, setFormCodexQuickConfigError] =
-    useState<string | null>(null);
+  const [formCodexQuickConfigError, setFormCodexQuickConfigError] = useState<
+    string | null
+  >(null);
   const [formCodexOpenConfigLoading, setFormCodexOpenConfigLoading] =
     useState(false);
   const [formCopySourceInstanceId, setFormCopySourceInstanceId] = useState("");
@@ -734,13 +748,16 @@ export function InstancesManager<TAccount extends AccountLike>({
     [stoppingInstanceIds],
   );
   const isGeminiApp = appType === "gemini";
+  const isGrokApp = appType === "grok";
+  const supportsInstanceInitialization = !isGrokApp;
+  const isCliOnlyApp = isGeminiApp || isGrokApp;
   const isCodexApp = appType === "codex";
   const isClaudeApp = appType === "claude";
   const supportsLaunchModeSelect = isCodexApp || isClaudeApp;
   const resolveInstanceLaunchMode = (
     instance?: InstanceProfile | null,
   ): InstanceLaunchMode => {
-    if (isGeminiApp) {
+    if (isCliOnlyApp) {
       return "cli";
     }
     if (isCodexApp || isClaudeApp) {
@@ -749,13 +766,15 @@ export function InstancesManager<TAccount extends AccountLike>({
     return "app";
   };
   const usesTerminalLaunch = (instance: InstanceProfile) =>
-    isGeminiApp ||
-    ((isCodexApp || isClaudeApp) && resolveInstanceLaunchMode(instance) === "cli");
-  const supportsStopControl =
-    !isGeminiApp && instances.some((item) => !usesTerminalLaunch(item));
-  const hidePathFieldInEditModal = isGeminiApp && Boolean(editing?.isDefault);
+    isCliOnlyApp ||
+    ((isCodexApp || isClaudeApp) &&
+      resolveInstanceLaunchMode(instance) === "cli");
+  const supportsStopControl = instances.some(
+    (item) => !usesTerminalLaunch(item) || isGrokApp,
+  );
+  const hidePathFieldInEditModal = isCliOnlyApp && Boolean(editing?.isDefault);
   const showWorkingDirField =
-    isGeminiApp || (supportsLaunchModeSelect && formLaunchMode === "cli");
+    isCliOnlyApp || (supportsLaunchModeSelect && formLaunchMode === "cli");
   const floatingCardPlatformId = useMemo(
     () => resolveFloatingCardPlatformId(appType),
     [appType],
@@ -774,7 +793,9 @@ export function InstancesManager<TAccount extends AccountLike>({
       if (!isCodexApp) return null;
       const trimmed = value?.trim() || "";
       if (!trimmed.startsWith(CODEX_PROVIDER_GATEWAY_BIND_PREFIX)) return null;
-      const accountId = trimmed.slice(CODEX_PROVIDER_GATEWAY_BIND_PREFIX.length).trim();
+      const accountId = trimmed
+        .slice(CODEX_PROVIDER_GATEWAY_BIND_PREFIX.length)
+        .trim();
       return accountId || null;
     },
     [isCodexApp],
@@ -824,7 +845,8 @@ export function InstancesManager<TAccount extends AccountLike>({
           isProviderGateway: false,
         };
       }
-      const providerGatewayAccountId = parseProviderGatewayBindAccountId(bindAccountId);
+      const providerGatewayAccountId =
+        parseProviderGatewayBindAccountId(bindAccountId);
       const targetAccountId = providerGatewayAccountId || bindAccountId;
       const account =
         accounts.find((item) => item.id === targetAccountId) || null;
@@ -1027,14 +1049,16 @@ export function InstancesManager<TAccount extends AccountLike>({
     setFormPath(showRoot && defaultRoot ? defaultRoot : "");
     setFormWorkingDir("");
     setFormExtraArgs("");
-    setFormInitMode("copy");
-    setFormLaunchMode(isGeminiApp ? "cli" : "app");
+    setFormInitMode(isGrokApp ? "empty" : "copy");
+    setFormLaunchMode(isCliOnlyApp ? "cli" : "app");
     setFormAppSpeed("standard");
     setFormBindAccountId("");
     setFormCodexQuickConfig(null);
     setFormCodexQuickConfigPresetId("default");
     setFormCodexQuickContextWindowInput(String(CONTEXT_WINDOW_1M));
-    setFormCodexQuickCompactLimitInput(String(DEFAULT_AUTO_COMPACT_TOKEN_LIMIT));
+    setFormCodexQuickCompactLimitInput(
+      String(DEFAULT_AUTO_COMPACT_TOKEN_LIMIT),
+    );
     setFormCodexQuickConfigLoading(false);
     setFormCodexQuickConfigError(null);
     setFormCodexOpenConfigLoading(false);
@@ -1099,7 +1123,9 @@ export function InstancesManager<TAccount extends AccountLike>({
     setFormCodexQuickConfig(null);
     setFormCodexQuickConfigPresetId("default");
     setFormCodexQuickContextWindowInput(String(CONTEXT_WINDOW_1M));
-    setFormCodexQuickCompactLimitInput(String(DEFAULT_AUTO_COMPACT_TOKEN_LIMIT));
+    setFormCodexQuickCompactLimitInput(
+      String(DEFAULT_AUTO_COMPACT_TOKEN_LIMIT),
+    );
     setFormCodexQuickConfigLoading(isCodexApp);
     setFormCodexQuickConfigError(null);
     setFormCodexOpenConfigLoading(false);
@@ -1115,9 +1141,21 @@ export function InstancesManager<TAccount extends AccountLike>({
     setEditing(null);
   };
 
+  const clearDeleteConfirm = useCallback(() => {
+    setDeleteConfirmInstance(null);
+    clearDeleteInstanceError();
+  }, [clearDeleteInstanceError]);
+
+  const dismissDeleteConfirm = useCallback(() => {
+    if (deleteConfirmInstance && actionLoading === deleteConfirmInstance.id) {
+      return;
+    }
+    clearDeleteConfirm();
+  }, [actionLoading, clearDeleteConfirm, deleteConfirmInstance]);
+
   useEscClose(showModal, closeModal);
   useEscClose(!!initGuideInstance, () => setInitGuideInstance(null));
-  useEscClose(!!deleteConfirmInstance, () => setDeleteConfirmInstance(null));
+  useEscClose(!!deleteConfirmInstance, dismissDeleteConfirm);
   useEscClose(!!runningNoticeInstance, () => setRunningNoticeInstance(null));
 
   const handleNameChange = (value: string) => {
@@ -1165,7 +1203,8 @@ export function InstancesManager<TAccount extends AccountLike>({
     setFormError(null);
     setMessage(null);
     const isEditingDefault = Boolean(editing?.isDefault);
-    const isCreateEmpty = !editing && formInitMode === "empty";
+    const isCreateEmpty =
+      !editing && supportsInstanceInitialization && formInitMode === "empty";
 
     if (!isEditingDefault) {
       if (!formName.trim()) {
@@ -1180,10 +1219,14 @@ export function InstancesManager<TAccount extends AccountLike>({
       }
     }
 
-    const isExistingDir = !editing && formInitMode === "existingDir";
+    const isExistingDir =
+      !editing &&
+      supportsInstanceInitialization &&
+      formInitMode === "existingDir";
 
     if (
       !editing &&
+      supportsInstanceInitialization &&
       !isCreateEmpty &&
       !isExistingDir &&
       !formCopySourceInstanceId
@@ -1195,7 +1238,13 @@ export function InstancesManager<TAccount extends AccountLike>({
       return;
     }
 
-    if (!editing && !isCreateEmpty && !isExistingDir && !formBindAccountId) {
+    if (
+      !editing &&
+      supportsInstanceInitialization &&
+      !isCreateEmpty &&
+      !isExistingDir &&
+      !formBindAccountId
+    ) {
       setFormError(t("instances.form.bindRequired", "请选择要绑定的账号"));
       setFormErrorTick((prev) => prev + 1);
       return;
@@ -1238,9 +1287,8 @@ export function InstancesManager<TAccount extends AccountLike>({
         if (!isEditingDefault) {
           updatePayload.name = formName.trim();
         }
-        const canEditBind = !(
-          editing.initialized === false && !isEditingDefault
-        );
+        const canEditBind =
+          isGrokApp || !(editing.initialized === false && !isEditingDefault);
         if (canEditBind) {
           const nextBindId = resolveBindAccountValue(formBindAccountId);
           updatePayload.bindAccountId = nextBindId;
@@ -1265,7 +1313,7 @@ export function InstancesManager<TAccount extends AccountLike>({
           userDataDir: formPath.trim(),
           workingDir: nextWorkingDir,
           extraArgs: formExtraArgs,
-          initMode: formInitMode,
+          initMode: isGrokApp ? "empty" : formInitMode,
           launchMode: nextLaunchMode,
           appSpeed: isCodexApp ? formAppSpeed : undefined,
           bindAccountId: isCreateEmpty
@@ -1291,19 +1339,24 @@ export function InstancesManager<TAccount extends AccountLike>({
   };
 
   const handleDelete = (instance: InstanceProfile) => {
+    clearDeleteInstanceError();
     setDeleteConfirmInstance(instance);
   };
 
   const handleConfirmDelete = async () => {
     if (!deleteConfirmInstance) return;
     const target = deleteConfirmInstance;
+    clearDeleteInstanceError();
     setActionLoading(target.id);
     try {
       await deleteInstance(target.id);
       setMessage({ text: t("instances.messages.deleted", "实例已删除") });
-      setDeleteConfirmInstance(null);
+      clearDeleteConfirm();
     } catch (e) {
-      setMessage({ text: String(e), tone: "error" });
+      const errorMessage = String(e)
+        .replace(/^Error:\s*/, "")
+        .trim();
+      reportDeleteInstanceError(errorMessage || t("common.failed", "失败"));
     } finally {
       setActionLoading(null);
     }
@@ -1314,7 +1367,9 @@ export function InstancesManager<TAccount extends AccountLike>({
     const missingPathPrefix = "APP_PATH_NOT_FOUND:";
     const multiInstanceExePrefix = "CLAUDE_MULTI_INSTANCE_REQUIRES_EXE:";
     const isMissingPath = message.startsWith(missingPathPrefix);
-    const isMultiInstanceExeRequired = message.startsWith(multiInstanceExePrefix);
+    const isMultiInstanceExeRequired = message.startsWith(
+      multiInstanceExePrefix,
+    );
     if (!isMissingPath && !isMultiInstanceExeRequired) {
       return false;
     }
@@ -1330,6 +1385,7 @@ export function InstancesManager<TAccount extends AccountLike>({
       rawApp === "kiro" ||
       rawApp === "cursor" ||
       rawApp === "gemini" ||
+      rawApp === "grok" ||
       rawApp === "codebuddy" ||
       rawApp === "codebuddy_cn" ||
       rawApp === "qoder" ||
@@ -1406,6 +1462,16 @@ export function InstancesManager<TAccount extends AccountLike>({
         }
         return "started";
       } catch (e) {
+        if (onInstanceStartError) {
+          try {
+            if (await onInstanceStartError(e, instance)) {
+              return "failed";
+            }
+          } catch (callbackError) {
+            setMessage({ text: String(callbackError), tone: "error" });
+            return "failed";
+          }
+        }
         if (handleMissingPathError(e, instance.id)) {
           return "missing-path";
         }
@@ -1425,6 +1491,7 @@ export function InstancesManager<TAccount extends AccountLike>({
     [
       handleMissingPathError,
       markInstanceStarting,
+      onInstanceStartError,
       onInstanceStarted,
       resolveStartSuccessMessage,
       startInstance,
@@ -1436,7 +1503,8 @@ export function InstancesManager<TAccount extends AccountLike>({
 
   const handleStart = async (instance: InstanceProfile) => {
     await startStoppedInstance(instance, {
-      showRunningNotice: supportsStopControl && !usesTerminalLaunch(instance),
+      showRunningNotice:
+        supportsStopControl && (!usesTerminalLaunch(instance) || isGrokApp),
       showSuccessMessage: true,
     });
   };
@@ -1715,26 +1783,32 @@ export function InstancesManager<TAccount extends AccountLike>({
     [t],
   );
 
-  const applyFormCodexQuickConfig = useCallback((nextConfig: CodexQuickConfig) => {
-    const detectedModelContextWindow =
-      nextConfig.detected_model_context_window ?? null;
-    const detectedAutoCompactTokenLimit =
-      nextConfig.detected_auto_compact_token_limit ?? null;
-    const presetId = resolveCodexQuickConfigPresetId(
-      detectedModelContextWindow,
-      detectedAutoCompactTokenLimit,
-    );
-    setFormCodexQuickConfig(nextConfig);
-    setFormCodexQuickConfigPresetId(presetId);
-    setFormCodexQuickContextWindowInput(
-      String(detectedModelContextWindow ?? CONTEXT_WINDOW_1M),
-    );
-    setFormCodexQuickCompactLimitInput(
-      String(detectedAutoCompactTokenLimit ?? DEFAULT_AUTO_COMPACT_TOKEN_LIMIT),
-    );
-  }, []);
+  const applyFormCodexQuickConfig = useCallback(
+    (nextConfig: CodexQuickConfig) => {
+      const detectedModelContextWindow =
+        nextConfig.detected_model_context_window ?? null;
+      const detectedAutoCompactTokenLimit =
+        nextConfig.detected_auto_compact_token_limit ?? null;
+      const presetId = resolveCodexQuickConfigPresetId(
+        detectedModelContextWindow,
+        detectedAutoCompactTokenLimit,
+      );
+      setFormCodexQuickConfig(nextConfig);
+      setFormCodexQuickConfigPresetId(presetId);
+      setFormCodexQuickContextWindowInput(
+        String(detectedModelContextWindow ?? CONTEXT_WINDOW_1M),
+      );
+      setFormCodexQuickCompactLimitInput(
+        String(
+          detectedAutoCompactTokenLimit ?? DEFAULT_AUTO_COMPACT_TOKEN_LIMIT,
+        ),
+      );
+    },
+    [],
+  );
 
-  const formCodexQuickIsCustomPreset = formCodexQuickConfigPresetId === "custom";
+  const formCodexQuickIsCustomPreset =
+    formCodexQuickConfigPresetId === "custom";
   const formCodexQuickDetectedModelContextWindow =
     formCodexQuickConfig?.detected_model_context_window ?? null;
   const formCodexQuickDetectedAutoCompactTokenLimit =
@@ -1909,13 +1983,7 @@ export function InstancesManager<TAccount extends AccountLike>({
     return () => {
       active = false;
     };
-  }, [
-    applyFormCodexQuickConfig,
-    editing,
-    isCodexApp,
-    showModal,
-    t,
-  ]);
+  }, [applyFormCodexQuickConfig, editing, isCodexApp, showModal, t]);
 
   const renderAccountMenuItems = ({
     visibleAccounts,
@@ -2226,7 +2294,7 @@ export function InstancesManager<TAccount extends AccountLike>({
     instance: InstanceProfile,
     nextId: string | null,
   ) => {
-    if (instance.initialized === false) {
+    if (!isGrokApp && instance.initialized === false) {
       setInitGuideInstance(instance);
       return;
     }
@@ -2344,15 +2412,17 @@ export function InstancesManager<TAccount extends AccountLike>({
           >
             <Plus size={16} />
           </button>
-          <button
-            className="btn btn-secondary icon-only"
-            onClick={handleStartAll}
-            disabled={bulkActionLoading || restartingAll}
-            title={t("instances.actions.startAll", "全部启动")}
-            aria-label={t("instances.actions.startAll", "全部启动")}
-          >
-            <Play size={16} />
-          </button>
+          {!isGrokApp && (
+            <button
+              className="btn btn-secondary icon-only"
+              onClick={handleStartAll}
+              disabled={bulkActionLoading || restartingAll}
+              title={t("instances.actions.startAll", "全部启动")}
+              aria-label={t("instances.actions.startAll", "全部启动")}
+            >
+              <Play size={16} />
+            </button>
+          )}
           {supportsStopControl && (
             <button
               className="btn btn-secondary icon-only"
@@ -2429,7 +2499,9 @@ export function InstancesManager<TAccount extends AccountLike>({
               isApiService: accountIsApiService,
             } = resolveAccount(instance);
             const accountDisabledByInit =
-              !instance.isDefault && instance.initialized === false;
+              !isGrokApp &&
+              !instance.isDefault &&
+              instance.initialized === false;
             const isInstanceStarting = startingInstanceIdSet.has(instance.id);
             const isInstanceStopping = stoppingInstanceIdSet.has(instance.id);
             const isInstanceBusy =
@@ -2542,7 +2614,9 @@ export function InstancesManager<TAccount extends AccountLike>({
                       maskAccountText={maskAccountText}
                       resolveApiServiceLabel={resolveApiServiceLabel}
                       renderAccountMenuItems={renderAccountMenuItems}
-                      disabled={isInstanceBusy}
+                      disabled={
+                        isInstanceBusy || (isGrokApp && instance.running)
+                      }
                       missing={accountMissing}
                       placeholder={t("instances.labels.unbound", "未绑定")}
                       unboundLabel={t("instances.form.unbound", "不绑定")}
@@ -2627,7 +2701,7 @@ export function InstancesManager<TAccount extends AccountLike>({
                       <ExternalLink size={16} />
                     </button>
                   )}
-                  {!isTerminalLaunchInstance && (
+                  {(!isTerminalLaunchInstance || isGrokApp) && (
                     <button
                       className="icon-button danger"
                       title={t("instances.actions.stop", "停止")}
@@ -2647,7 +2721,10 @@ export function InstancesManager<TAccount extends AccountLike>({
                     title={t("instances.actions.edit", "编辑")}
                     onClick={() => openEditModal(instance)}
                     disabled={
-                      isInstanceBusy || restartingAll || bulkActionLoading
+                      isInstanceBusy ||
+                      (isGrokApp && instance.running) ||
+                      restartingAll ||
+                      bulkActionLoading
                     }
                   >
                     <Pencil size={16} />
@@ -2658,6 +2735,7 @@ export function InstancesManager<TAccount extends AccountLike>({
                     onClick={() => handleDelete(instance)}
                     disabled={
                       instance.isDefault ||
+                      (isGrokApp && instance.running) ||
                       isInstanceBusy ||
                       restartingAll ||
                       bulkActionLoading
@@ -2673,15 +2751,20 @@ export function InstancesManager<TAccount extends AccountLike>({
       )}
 
       {initGuideInstance && (
-        <div
-          className="modal-overlay"
-        >
+        <div className="modal-overlay">
           <div
             className="modal instance-init-guide-modal"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="modal-header">
-              <button className="btn btn-secondary icon-only" onClick={() => setInitGuideInstance(null)} title={t("common.back", "返回")} aria-label={t("common.back", "返回")}><ChevronLeft size={14} /></button>
+              <button
+                className="btn btn-secondary icon-only"
+                onClick={() => setInitGuideInstance(null)}
+                title={t("common.back", "返回")}
+                aria-label={t("common.back", "返回")}
+              >
+                <ChevronLeft size={14} />
+              </button>
               <h2>{t("instances.initGuide.title", "实例尚未初始化")}</h2>
               <button
                 className="modal-close"
@@ -2738,21 +2821,24 @@ export function InstancesManager<TAccount extends AccountLike>({
       )}
 
       {deleteConfirmInstance && (
-        <div
-          className="modal-overlay"
-        >
+        <div className="modal-overlay">
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <h2>{t("instances.delete.title", "删除实例")}</h2>
               <button
                 className="modal-close"
-                onClick={() => setDeleteConfirmInstance(null)}
+                onClick={dismissDeleteConfirm}
+                disabled={actionLoading === deleteConfirmInstance.id}
                 aria-label={t("common.close", "关闭")}
               >
                 <X />
               </button>
             </div>
             <div className="modal-body">
+              <ModalErrorMessage
+                message={deleteInstanceError}
+                scrollKey={deleteInstanceErrorScrollKey}
+              />
               <p className="form-hint">
                 {t(
                   "instances.delete.message",
@@ -2766,7 +2852,8 @@ export function InstancesManager<TAccount extends AccountLike>({
             <div className="modal-footer">
               <button
                 className="btn btn-secondary"
-                onClick={() => setDeleteConfirmInstance(null)}
+                onClick={dismissDeleteConfirm}
+                disabled={actionLoading === deleteConfirmInstance.id}
               >
                 {t("common.cancel", "取消")}
               </button>
@@ -2783,9 +2870,7 @@ export function InstancesManager<TAccount extends AccountLike>({
       )}
 
       {runningNoticeInstance && (
-        <div
-          className="modal-overlay"
-        >
+        <div className="modal-overlay">
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <h2>{t("instances.runningDialog.title", "实例已在运行")}</h2>
@@ -2837,7 +2922,14 @@ export function InstancesManager<TAccount extends AccountLike>({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <button className="btn btn-secondary icon-only" onClick={closeModal} title={t("common.back", "返回")} aria-label={t("common.back", "返回")}><ChevronLeft size={14} /></button>
+              <button
+                className="btn btn-secondary icon-only"
+                onClick={closeModal}
+                title={t("common.back", "返回")}
+                aria-label={t("common.back", "返回")}
+              >
+                <ChevronLeft size={14} />
+              </button>
               <h2>
                 {editing
                   ? t("instances.modal.editTitle", "编辑实例")
@@ -2866,7 +2958,7 @@ export function InstancesManager<TAccount extends AccountLike>({
                 />
               </div>
 
-              {!editing && (
+              {!editing && supportsInstanceInitialization && (
                 <div className="form-group">
                   <label>{t("instances.form.initMode", "初始化方式")}</label>
                   <div className="instance-init-mode-group">
@@ -3051,31 +3143,33 @@ export function InstancesManager<TAccount extends AccountLike>({
                 </div>
               )}
 
-              {!editing && formInitMode === "copy" && (
-                <div className="form-group">
-                  <label>
-                    {t("instances.form.copySource", "复制来源实例")}
-                  </label>
-                  <InstanceSelect
-                    value={formCopySourceInstanceId}
-                    onChange={setFormCopySourceInstanceId}
-                  />
-                  <p className="form-hint">
-                    {t(
-                      "instances.form.copySourceDesc",
-                      "从指定实例复制配置与登录信息",
-                    )}
-                  </p>
-                  {selectedCopySourceInstance?.running && (
-                    <p className="form-hint warning">
+              {!editing &&
+                supportsInstanceInitialization &&
+                formInitMode === "copy" && (
+                  <div className="form-group">
+                    <label>
+                      {t("instances.form.copySource", "复制来源实例")}
+                    </label>
+                    <InstanceSelect
+                      value={formCopySourceInstanceId}
+                      onChange={setFormCopySourceInstanceId}
+                    />
+                    <p className="form-hint">
                       {t(
-                        "instances.form.copySourceRunningHint",
-                        "该实例正在运行，建议先关闭以避免数据不一致",
+                        "instances.form.copySourceDesc",
+                        "从指定实例复制配置与登录信息",
                       )}
                     </p>
-                  )}
-                </div>
-              )}
+                    {selectedCopySourceInstance?.running && (
+                      <p className="form-hint warning">
+                        {t(
+                          "instances.form.copySourceRunningHint",
+                          "该实例正在运行，建议先关闭以避免数据不一致",
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
 
               {!editing ? (
                 <div className="form-group">
@@ -3085,7 +3179,8 @@ export function InstancesManager<TAccount extends AccountLike>({
                       ? `（${t("instances.form.optional", "可选")}）`
                       : ""}
                   </label>
-                  {formInitMode === "empty" ? (
+                  {supportsInstanceInitialization &&
+                  formInitMode === "empty" ? (
                     <>
                       {renderFormAccountSelect({
                         value: null,
@@ -3113,7 +3208,9 @@ export function InstancesManager<TAccount extends AccountLike>({
               ) : (
                 <div className="form-group">
                   <label>{t("instances.form.bindAccount", "绑定账号")}</label>
-                  {editing?.initialized === false && !editing.isDefault ? (
+                  {!isGrokApp &&
+                  editing?.initialized === false &&
+                  !editing.isDefault ? (
                     <>
                       {renderFormAccountSelect({
                         value: null,
@@ -3178,7 +3275,8 @@ export function InstancesManager<TAccount extends AccountLike>({
                       className="btn btn-secondary instance-codex-quick-open-btn"
                       onClick={() => void handleOpenFormCodexConfigToml()}
                       disabled={
-                        formCodexOpenConfigLoading || formCodexQuickConfigLoading
+                        formCodexOpenConfigLoading ||
+                        formCodexQuickConfigLoading
                       }
                     >
                       <FolderOpen size={14} />
@@ -3191,7 +3289,9 @@ export function InstancesManager<TAccount extends AccountLike>({
                     </button>
                   </div>
                   {formCodexQuickConfigLoading ? (
-                    <p className="form-hint">{t("common.loading", "加载中...")}</p>
+                    <p className="form-hint">
+                      {t("common.loading", "加载中...")}
+                    </p>
                   ) : (
                     <>
                       <div
@@ -3207,7 +3307,9 @@ export function InstancesManager<TAccount extends AccountLike>({
                             key={option.id}
                             type="button"
                             role="radio"
-                            aria-checked={formCodexQuickConfigPresetId === option.id}
+                            aria-checked={
+                              formCodexQuickConfigPresetId === option.id
+                            }
                             className={`instance-codex-quick-preset-btn ${
                               formCodexQuickConfigPresetId === option.id
                                 ? "active"
@@ -3285,7 +3387,9 @@ export function InstancesManager<TAccount extends AccountLike>({
                               );
                             }}
                             disabled={!formCodexQuickIsCustomPreset}
-                            placeholder={String(DEFAULT_AUTO_COMPACT_TOKEN_LIMIT)}
+                            placeholder={String(
+                              DEFAULT_AUTO_COMPACT_TOKEN_LIMIT,
+                            )}
                           />
                           <p className="form-hint">
                             {t(

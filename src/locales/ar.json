@@ -12,6 +12,7 @@
     "enabled": "مفعل",
     "disabled": "معطل",
     "close": "إغلاق",
+    "back": "رجوع",
     "open": "فتح",
     "copy": "نسخ",
     "copied": "تم النسخ",
@@ -176,7 +177,9 @@
         "resetDone": "تمت إعادة الضبط",
         "hourly": "الاقتراحات المضمنة",
         "weekly": "رسائل الدردشة",
-        "resetAt": "إعادة الضبط: {{time}}"
+        "resetAt": "إعادة الضبط: {{time}}",
+        "expiresAt": "ينتهي في: {{time}}",
+        "leftPercent": "متبقي {{value}}٪"
       },
       "subtitle": "مراقبة حالة الحصة لجميع الحسابات في الوقت الفعلي.",
       "time": {
@@ -261,6 +264,7 @@
     "errors": {
       "refreshFailed": "فشل التحديث: {{error}}",
       "switchFailed": "فشل التبديل: {{error}}",
+      "stopInstanceBeforeSwitch": "أوقف المثيل قبل تبديل الحساب",
       "pinFailed": "فشل تحديث حالة التثبيت: {{error}}",
       "closeFailed": "فشل الإغلاق: {{error}}"
     },
@@ -994,7 +998,7 @@
       "importModalDesc": "اختر ما تريد استيراده. ستُعامل نسخ الحسابات الاحتياطية القديمة كاستيراد للحسابات فقط.",
       "selectionTitle": "نطاق البيانات",
       "accountsOptionTitle": "بيانات الحسابات",
-      "accountsOptionDesc": "تتضمن نسخًا احتياطية لحسابات المنصات وتحافظ على توافق JSON القديم للحسابات.",
+      "accountsOptionDesc": "تتضمن نسخًا احتياطية قابلة للاستعادة لحسابات المنصات وتحافظ على توافق JSON القديم للحسابات. لا تتضمن بيانات اعتماد Grok CLI؛ استورد ملف auth.json الرسمي بشكل منفصل.",
       "configOptionTitle": "بيانات الإعدادات",
       "configOptionDesc": "تتضمن إعدادات التطبيق والمجموعات والمثيلات ومهام الإيقاظ وإعدادات مزوّدي النماذج.",
       "exportConfirm": "تصدير البيانات",
@@ -2006,6 +2010,9 @@
       "customRoutingEdit": "تعديل التوجيه المخصص",
       "customRoutingTitle": "التوجيه المخصص",
       "customRoutingDesc": "عيّن الأولوية والوزن لكل حساب للتحكم في ترتيب اختيار الحسابات وتوزيع الحمل داخل الأولوية نفسها.",
+      "customRoutingBackupTitle": "حساب احتياطي",
+      "customRoutingBackupDesc": "يُستخدم فقط عند عدم توفر جميع الحسابات العادية؛ وتعود الطلبات الجديدة تلقائيًا عند استعادة حساب عادي.",
+      "customRoutingBackupShort": "احتياطي",
       "customRoutingPriorityTitle": "الأولوية",
       "customRoutingPriorityDesc": "تُختار القيم الأعلى أولاً؛ ولا تُجرّب الحسابات الأقل أولوية إلا عند عدم توفر الأعلى أولوية.",
       "customRoutingWeightTitle": "الوزن",
@@ -3322,6 +3329,15 @@
       "renameSuccess": "تمت إعادة التسمية",
       "renameFailed": "فشلت إعادة التسمية"
     },
+    "importApiService": {
+      "toggle": "إضافة إلى خدمة API",
+      "description": "إضافة الحسابات المستوردة المؤهلة إلى مجموعة حسابات خدمة API.",
+      "syncFailed": "تم استيراد الحسابات، لكن تعذرت إضافتها إلى خدمة API: {{error}}",
+      "guideTitle": "تمت إضافة الحسابات إلى خدمة API",
+      "guideDescription": "تمت إضافة {{count}} من الحسابات إلى خدمة API. اختر «تشغيل خدمة API» للتبديل إليها واستخدامها.",
+      "later": "لاحقًا",
+      "startAction": "تشغيل خدمة API"
+    },
     "batchImport": {
       "title": "استيراد Codex دفعة واحدة",
       "resultSubtitle": "نتيجة الاستيراد",
@@ -3633,6 +3649,14 @@
       "syncWslDesc": "استبدال إعدادات ‎.gemini‎ داخل WSL تلقائيًا عند تبديل الحساب"
     },
     "geminiRefreshInterval": "تحديث الحصة تلقائيًا",
+    "grok": {
+      "title": "إعدادات Grok CLI",
+      "appPath": "مسار Grok CLI",
+      "cliPath": "مسار CLI",
+      "cliDetected": "تم الاكتشاف: {{version}} · {{path}}",
+      "cliMissing": "لم يتم العثور على Grok CLI. أدخل مسارًا مخصصًا."
+    },
+    "grokRefreshInterval": "تحديث الحصة تلقائيًا",
     "codebuddy": {
       "title": "إعدادات CodeBuddy",
       "appPath": "مسار CodeBuddy"
@@ -5030,6 +5054,76 @@
     },
     "copyKey": "Copy Key​",
     "clearKey": "Clear input​"
+  },
+  "grok": {
+    "search": "البحث في حسابات Grok CLI...",
+    "flowNotice": {
+      "title": "إدارة حسابات Grok CLI",
+      "desc": "يدير Cockpit الحسابات بتنسيق بيانات الاعتماد الرسمي لـ Grok CLI لتبديل الحساب الافتراضي فعليًا وربط النسخ المعزولة.",
+      "permission": "النطاق المحلي: قراءة ملف ~/.grok/auth.json الافتراضي وإدارة أدلة منفصلة لحسابات Grok وGROK_HOME ضمن بيانات Cockpit المحلية.",
+      "network": "نطاق الشبكة: تفويض OAuth وتجديد بيانات الاعتماد والاستعلام عن استخدام الحساب. لا تُرفع بيانات الاعتماد إلى خدمات Cockpit."
+    },
+    "empty": "لا توجد حسابات Grok CLI بعد",
+    "addAccount": "إضافة حساب Grok CLI",
+    "oauth": {
+      "desc": "افتح صفحة تفويض xAI وأدخل رمز الجهاز. سيُحفظ الحساب تلقائيًا بعد ذلك.",
+      "title": "OAuth لجهاز Grok",
+      "item1": "يستخدم مسار الجهاز الرسمي لـ Grok CLI دون شغل منفذ رد اتصال محلي.",
+      "item2": "يحفظ GROK_HOME منفصلًا بعد التفويض ويحافظ على صلاحية بيانات الاعتماد.",
+      "item3": "يمكن للحسابات تبديل CLI الافتراضي أو العمل في نسخ معزولة عن بعضها.",
+      "urlPlaceholder": "عنوان تفويض OAuth لـ Grok",
+      "waiting": "في انتظار تفويض OAuth لـ Grok...",
+      "openWindow": "فتح صفحة التفويض",
+      "success": "تم تسجيل الدخول عبر OAuth لـ Grok"
+    },
+    "import": {
+      "pasteTab": "لصق JSON",
+      "pasteDesc": "ألصق ملف auth.json الرسمي من Grok CLI. تُعالج بيانات الاعتماد في الخلفية المحلية فقط. يصدّر Cockpit بيانات وصفية محجوبة لا يمكن استخدامها لاستعادة تسجيل الدخول.",
+      "pastePlaceholder": "لصق JSON لحساب Grok",
+      "pasteAction": "استيراد JSON",
+      "localDesc": "استورد الحساب الحالي من ~/.grok/auth.json الافتراضي. عند اختيار ملف، استخدم ملف auth.json الرسمي من Grok CLI.",
+      "localClient": "الاستيراد من Grok CLI المحلي"
+    },
+    "instances": {
+      "unsupported": "تتوافر نسخ Grok CLI المتعددة على macOS وWindows وLinux فقط.",
+      "launchDialogTitle": "تشغيل النسخة",
+      "launchHint": "انسخ الأمر لتشغيله يدويًا أو نفّذه مباشرة في الطرفية.",
+      "runInTerminal": "تشغيل في الطرفية",
+      "cliReady": "تم الاكتشاف",
+      "cliMissingShort": "غير مكتشف",
+      "cliPathInvalid": "مسار Grok CLI المحدد غير صالح: {{path}}",
+      "saveAndRetry": "حفظ وإعادة المحاولة",
+      "installCommand": "أمر التثبيت الرسمي",
+      "installHint": "شغّل الأمر الرسمي التالي في الطرفية، ثم انقر على التحديث بعد اكتمال التثبيت."
+    },
+    "switch": {
+      "success": "تم تبديل الحساب"
+    },
+    "usageNormal": "سليم",
+    "usageAbnormal": "غير طبيعي",
+    "usageViewDetail": "عرض التفاصيل",
+    "usageDetailTitle": "تفاصيل الاستخدام",
+    "usage": "الاستخدام",
+    "quotaQuery": {
+      "failedRefreshCompact": "فشل الاستعلام عن الحصة",
+      "empty": "لا توجد بيانات حصة",
+      "sectionTitle": "الحصة"
+    },
+    "quota": {
+      "weekly": "الاستخدام الأسبوعي",
+      "onDemand": "الاستخدام عند الطلب",
+      "balance": "الرصيد والنقاط",
+      "included": "الاستخدام المضمّن",
+      "promotional": "الحصة الترويجية",
+      "frequent": "مهام متكررة",
+      "occasional": "مهام عرضية"
+    },
+    "quotaAlert": {
+      "hint": "عندما ينخفض أي بند حصة للحساب الحالي عن الحد، أرسل إشعارًا أصليًا واعرض إجراء تبديل سريع داخل التطبيق.",
+      "thresholdDesc": "تشغيل تنبيه عندما ينخفض أي بند حصة عن هذه النسبة المئوية",
+      "items": "بنود الحصة",
+      "unknownItem": "بند حصة غير معروف"
+    }
   },
   "claude": {
     "import": {

@@ -552,6 +552,58 @@ func TestQuotaReserveSelectorFiltersCachedSessionAffinityAuth(t *testing.T) {
 	}
 }
 
+func TestBackupAccountSelectorOverridesCachedAffinityWhenRegularRecovers(t *testing.T) {
+	regularAccount := &accountSpec{ID: "regular", AuthID: "regular.json"}
+	backupAccount := &accountSpec{ID: "backup", AuthID: "backup.json"}
+	m := &manifest{
+		Accounts:        []accountSpec{*regularAccount, *backupAccount},
+		RoutingStrategy: "custom",
+		CustomRoutingRules: []customRoutingRule{
+			{AccountID: "regular", Priority: 0, Weight: 1},
+			{AccountID: "backup", Priority: 100, Weight: 1, IsBackup: true},
+		},
+		accountByID: map[string]*accountSpec{
+			"regular": regularAccount,
+			"backup":  backupAccount,
+		},
+		accountByAuthID: map[string]*accountSpec{
+			"regular.json": regularAccount,
+			"backup.json":  backupAccount,
+		},
+		originalIndexByID: map[string]int{"regular": 0, "backup": 1},
+	}
+	cfg := &config.Config{}
+	cfg.Routing.SessionAffinity = true
+	cfg.Routing.SessionAffinityTTL = time.Minute.String()
+	selector := buildCoreAuthSelector(cfg, &cockpitSelector{manifest: m}, m, nil)
+	if stoppable, ok := selector.(coreauth.StoppableSelector); ok {
+		defer stoppable.Stop()
+	}
+
+	regularAuth := &coreauth.Auth{
+		ID:             "regular.json",
+		Unavailable:    true,
+		NextRetryAfter: time.Now().Add(time.Minute),
+	}
+	backupAuth := &coreauth.Auth{ID: "backup.json"}
+	auths := []*coreauth.Auth{regularAuth, backupAuth}
+	opts := cliproxyexecutor.Options{
+		OriginalRequest: []byte(`{"metadata":{"user_id":"user_xxx_account__session_43d54db9-d7ba-4b2f-b09a-47f238dc78ac"}}`),
+	}
+
+	selected, err := selector.Pick(context.Background(), "codex", "gpt-5.4", opts, auths)
+	if err != nil || selected == nil || selected.ID != "backup.json" {
+		t.Fatalf("expected backup while regular is unavailable, got auth=%#v err=%v", selected, err)
+	}
+
+	regularAuth.Unavailable = false
+	regularAuth.NextRetryAfter = time.Time{}
+	selected, err = selector.Pick(context.Background(), "codex", "gpt-5.4", opts, auths)
+	if err != nil || selected == nil || selected.ID != "regular.json" {
+		t.Fatalf("expected recovered regular auth to override backup affinity, got auth=%#v err=%v", selected, err)
+	}
+}
+
 func int64PointerForTest(value int64) *int64 {
 	return &value
 }

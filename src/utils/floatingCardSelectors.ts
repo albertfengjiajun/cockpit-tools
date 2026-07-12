@@ -7,6 +7,8 @@ import type { CursorAccount } from '../types/cursor';
 import { getCursorUsage } from '../types/cursor';
 import type { GeminiAccount } from '../types/gemini';
 import { getGeminiTierQuotaSummary } from '../types/gemini';
+import type { GrokAccount } from '../types/grok';
+import { getGrokUsage } from '../types/grok';
 import type { GitHubCopilotAccount } from '../types/githubCopilot';
 import type { KiroAccount } from '../types/kiro';
 import { getKiroCreditsSummary, isKiroAccountBanned } from '../types/kiro';
@@ -28,6 +30,7 @@ export const WINDSURF_CURRENT_ACCOUNT_ID_KEY = 'agtools.windsurf.current_account
 export const KIRO_CURRENT_ACCOUNT_ID_KEY = 'agtools.kiro.current_account_id';
 export const CURSOR_CURRENT_ACCOUNT_ID_KEY = 'agtools.cursor.current_account_id';
 export const GEMINI_CURRENT_ACCOUNT_ID_KEY = 'agtools.gemini.current_account_id';
+export const GROK_CURRENT_ACCOUNT_ID_KEY = 'agtools.grok.current_account_id';
 export const CODEBUDDY_CURRENT_ACCOUNT_ID_KEY = 'agtools.codebuddy.current_account_id';
 export const CODEBUDDY_CN_CURRENT_ACCOUNT_ID_KEY = 'agtools.codebuddycn.current_account_id';
 export const QODER_CURRENT_ACCOUNT_ID_KEY = 'agtools.qoder.current_account_id';
@@ -51,6 +54,7 @@ export type StoredCurrentPlatformId =
   | 'kiro'
   | 'cursor'
   | 'gemini'
+  | 'grok'
   | 'codebuddy'
   | 'codebuddy_cn'
   | 'qoder'
@@ -68,6 +72,7 @@ const CURRENT_ACCOUNT_STORAGE_KEYS: Record<StoredCurrentPlatformId, string> = {
   kiro: KIRO_CURRENT_ACCOUNT_ID_KEY,
   cursor: CURSOR_CURRENT_ACCOUNT_ID_KEY,
   gemini: GEMINI_CURRENT_ACCOUNT_ID_KEY,
+  grok: GROK_CURRENT_ACCOUNT_ID_KEY,
   codebuddy: CODEBUDDY_CURRENT_ACCOUNT_ID_KEY,
   codebuddy_cn: CODEBUDDY_CN_CURRENT_ACCOUNT_ID_KEY,
   qoder: QODER_CURRENT_ACCOUNT_ID_KEY,
@@ -384,6 +389,38 @@ export function getRecommendedGeminiAccount(
     const candidateScore = getScore(candidate);
     if (candidateScore.remainingPercent !== bestScore.remainingPercent) {
       return candidateScore.remainingPercent > bestScore.remainingPercent ? candidate : best;
+    }
+    return candidateScore.freshness > bestScore.freshness ? candidate : best;
+  });
+}
+
+export function getRecommendedGrokAccount(
+  accounts: GrokAccount[],
+  currentId: string | null | undefined,
+): GrokAccount | null {
+  if (accounts.length <= 1) return null;
+  const others = accounts.filter((account) => {
+    if (account.id === currentId) return false;
+    const usage = getGrokUsage(account);
+    return (
+      usage.isNormal &&
+      !usage.exhausted &&
+      usage.totalUsedPercent != null
+    );
+  });
+  if (others.length === 0) return null;
+  const score = (account: GrokAccount) => {
+    const used = getGrokUsage(account).totalUsedPercent;
+    return {
+      remaining: 100 - (used ?? 100),
+      freshness: account.last_used || account.created_at || 0,
+    };
+  };
+  return others.reduce((best, candidate) => {
+    const bestScore = score(best);
+    const candidateScore = score(candidate);
+    if (candidateScore.remaining !== bestScore.remaining) {
+      return candidateScore.remaining > bestScore.remaining ? candidate : best;
     }
     return candidateScore.freshness > bestScore.freshness ? candidate : best;
   });

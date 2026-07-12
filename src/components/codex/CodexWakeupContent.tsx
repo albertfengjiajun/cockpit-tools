@@ -1707,18 +1707,8 @@ export function CodexWakeupContent({
     if (config.codex_auto_refresh_minutes === QUOTA_RESET_MIN_REFRESH_MINUTES) {
       return false;
     }
-    await invoke('save_general_config', {
-      language: config.language,
-      theme: config.theme,
-      autoRefreshMinutes: config.auto_refresh_minutes,
+    await invoke('save_refresh_interval_config', {
       codexAutoRefreshMinutes: QUOTA_RESET_MIN_REFRESH_MINUTES,
-      closeBehavior: config.close_behavior || 'ask',
-      opencodeAppPath: config.opencode_app_path ?? '',
-      antigravityAppPath: config.antigravity_app_path ?? '',
-      codexAppPath: config.codex_app_path ?? '',
-      vscodeAppPath: config.vscode_app_path ?? '',
-      opencodeSyncOnSwitch: config.opencode_sync_on_switch ?? false,
-      codexLaunchOnSwitch: config.codex_launch_on_switch ?? true,
     });
     window.dispatchEvent(new Event('config-updated'));
     return true;

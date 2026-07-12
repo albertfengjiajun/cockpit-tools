@@ -12,6 +12,7 @@
     "enabled": "Povoleno",
     "disabled": "Zakázáno",
     "close": "Zavřít",
+    "back": "Zpět",
     "open": "Otevřít",
     "copy": "Kopírovat",
     "copied": "Zkopírováno",
@@ -176,7 +177,9 @@
         "resetDone": "Resetováno",
         "hourly": "Kvóta 5 hodin",
         "weekly": "Týdenní kvóta",
-        "resetAt": "Obnovení: {{time}}"
+        "resetAt": "Obnovení: {{time}}",
+        "expiresAt": "Vyprší: {{time}}",
+        "leftPercent": "Zbývá {{value}} %"
       },
       "subtitle": "Spravujte své účty GitHub Copilot",
       "time": {
@@ -948,7 +951,7 @@
       "importModalDesc": "Vyberte, co chcete importovat. Starší zálohy účtů se zpracují jako import pouze účtů.",
       "selectionTitle": "Rozsah dat",
       "accountsOptionTitle": "Data účtů",
-      "accountsOptionDesc": "Obsahuje zálohy účtů jednotlivých platforem a zachovává kompatibilitu se starším JSON účtů.",
+      "accountsOptionDesc": "Obsahuje obnovitelné zálohy účtů jednotlivých platforem a zachovává kompatibilitu se starším JSON účtů. Přihlašovací údaje Grok CLI nejsou zahrnuty; oficiální soubor auth.json importujte samostatně.",
       "configOptionTitle": "Konfigurační data",
       "configOptionDesc": "Obsahuje nastavení aplikace, skupiny, instance, úlohy probuzení a konfiguraci poskytovatelů modelů.",
       "exportConfirm": "Exportovat data",
@@ -1960,6 +1963,9 @@
       "customRoutingEdit": "Upravit vlastní směrování",
       "customRoutingTitle": "Vlastní směrování",
       "customRoutingDesc": "Nastavte prioritu a váhu pro každý účet, abyste řídili pořadí výběru a rozdělení zátěže ve stejné prioritě.",
+      "customRoutingBackupTitle": "Záložní účet",
+      "customRoutingBackupDesc": "Použije se jen tehdy, když nejsou dostupné žádné běžné účty. Po obnovení běžného účtu se nové požadavky automaticky přepnou zpět.",
+      "customRoutingBackupShort": "Záložní",
       "customRoutingPriorityTitle": "Priorita",
       "customRoutingPriorityDesc": "Vyšší hodnoty se vybírají dříve; účty s nižší prioritou se zkoušejí až tehdy, když vyšší nejsou dostupné.",
       "customRoutingWeightTitle": "Váha",
@@ -3276,6 +3282,15 @@
       "renameSuccess": "Přejmenováno",
       "renameFailed": "Přejmenování selhalo"
     },
+    "importApiService": {
+      "toggle": "Přidat do služby API",
+      "description": "Přidá způsobilé importované účty do fondu služby API.",
+      "syncFailed": "Účty byly importovány, ale nepodařilo se je přidat do služby API: {{error}}",
+      "guideTitle": "Účty přidány do služby API",
+      "guideDescription": "Do služby API bylo přidáno {{count}} účtů. Kliknutím na „Spustit službu API“ je můžete přepnout a používat.",
+      "later": "Později",
+      "startAction": "Spustit službu API"
+    },
     "batchImport": {
       "title": "Hromadný import Codex",
       "resultSubtitle": "Výsledek importu",
@@ -3587,6 +3602,14 @@
       "syncWslDesc": "Při přepnutí účtu automaticky přepsat konfiguraci .gemini ve WSL"
     },
     "geminiRefreshInterval": "Automatická obnova kvóty",
+    "grok": {
+      "title": "Nastavení Grok CLI",
+      "appPath": "Cesta ke Grok CLI",
+      "cliPath": "Cesta k CLI",
+      "cliDetected": "Nalezeno: {{version}} · {{path}}",
+      "cliMissing": "Grok CLI nebylo nalezeno. Zadejte vlastní cestu."
+    },
+    "grokRefreshInterval": "Automatická obnova kvóty",
     "codebuddy": {
       "title": "Nastavení CodeBuddy",
       "appPath": "Cesta CodeBuddy"
@@ -4768,6 +4791,7 @@
     "errors": {
       "refreshFailed": "Obnovení selhalo: {{error}}",
       "switchFailed": "Přepnutí selhalo: {{error}}",
+      "stopInstanceBeforeSwitch": "Před přepnutím účtu zastavte instanci",
       "pinFailed": "Nepodařilo se změnit stav připnutí: {{error}}",
       "closeFailed": "Zavření se nezdařilo: {{error}}"
     },
@@ -5030,6 +5054,76 @@
     },
     "copyKey": "Copy Key​",
     "clearKey": "Clear input​"
+  },
+  "grok": {
+    "search": "Hledat účty Grok CLI...",
+    "flowNotice": {
+      "title": "Správa účtů Grok CLI",
+      "desc": "Cockpit spravuje účty v oficiálním formátu přihlašovacích údajů Grok CLI, aby skutečně přepínal výchozí účet a vázal izolované instance.",
+      "permission": "Místní rozsah: čte výchozí ~/.grok/auth.json a spravuje oddělené adresáře účtů Grok a GROK_HOME v místních datech Cockpit.",
+      "network": "Síťový rozsah: autorizace OAuth, obnova přihlašovacích údajů a dotazy na využití účtu. Přihlašovací údaje se do služeb Cockpit neodesílají."
+    },
+    "empty": "Zatím žádné účty Grok CLI",
+    "addAccount": "Přidat účet Grok CLI",
+    "oauth": {
+      "desc": "Otevřete autorizační stránku xAI a zadejte kód zařízení. Účet se poté automaticky uloží.",
+      "title": "OAuth zařízení Grok",
+      "item1": "Používá oficiální tok zařízení Grok CLI bez obsazení místního portu zpětného volání.",
+      "item2": "Po autorizaci uloží samostatný GROK_HOME a udržuje přihlašovací údaje platné.",
+      "item3": "Účty mohou přepínat výchozí CLI nebo běžet ve vzájemně izolovaných instancích.",
+      "urlPlaceholder": "Autorizační adresa OAuth Grok",
+      "waiting": "Čeká se na autorizaci OAuth Grok...",
+      "openWindow": "Otevřít autorizaci",
+      "success": "Přihlášení OAuth Grok proběhlo úspěšně"
+    },
+    "import": {
+      "pasteTab": "Vložit JSON",
+      "pasteDesc": "Vložte oficiální soubor auth.json z Grok CLI. Přihlašovací údaje zpracovává pouze místní backend. Cockpit exportuje jen skrytá metadata, ze kterých nelze obnovit přihlášení.",
+      "pastePlaceholder": "Vložit JSON účtu Grok",
+      "pasteAction": "Importovat JSON",
+      "localDesc": "Importujte aktuální účet z výchozího ~/.grok/auth.json. Při výběru souboru použijte oficiální auth.json z Grok CLI.",
+      "localClient": "Importovat z místního Grok CLI"
+    },
+    "instances": {
+      "unsupported": "Více instancí Grok CLI je podporováno jen v systémech macOS, Windows a Linux.",
+      "launchDialogTitle": "Spustit instanci",
+      "launchHint": "Příkaz zkopírujte a spusťte ručně, nebo jej spusťte přímo v terminálu.",
+      "runInTerminal": "Spustit v terminálu",
+      "cliReady": "Detekováno",
+      "cliMissingShort": "Nenalezeno",
+      "cliPathInvalid": "Nastavená cesta ke Grok CLI není platná: {{path}}",
+      "saveAndRetry": "Uložit a opakovat",
+      "installCommand": "Oficiální instalační příkaz",
+      "installHint": "Spusťte následující oficiální příkaz v terminálu a po dokončení instalace klikněte na Obnovit."
+    },
+    "switch": {
+      "success": "Účet přepnut"
+    },
+    "usageNormal": "V pořádku",
+    "usageAbnormal": "Nestandardní",
+    "usageViewDetail": "Zobrazit podrobnosti",
+    "usageDetailTitle": "Podrobnosti využití",
+    "usage": "Využití",
+    "quotaQuery": {
+      "failedRefreshCompact": "Dotaz na kvótu selhal",
+      "empty": "Nejsou dostupná data kvóty",
+      "sectionTitle": "Kvóta"
+    },
+    "quota": {
+      "weekly": "Týdenní využití",
+      "onDemand": "Využití na vyžádání",
+      "balance": "Zůstatek a kredity",
+      "included": "Zahrnuté využití",
+      "promotional": "Propagační kvóta",
+      "frequent": "Časté úlohy",
+      "occasional": "Občasné úlohy"
+    },
+    "quotaAlert": {
+      "hint": "Když libovolná položka kvóty aktuálního účtu klesne pod limit, odešle se systémové oznámení a v aplikaci se zobrazí rychlé přepnutí.",
+      "thresholdDesc": "Upozornit, když libovolná položka kvóty klesne pod toto procento",
+      "items": "Položky kvóty",
+      "unknownItem": "Neznámá položka kvóty"
+    }
   },
   "claude": {
     "import": {

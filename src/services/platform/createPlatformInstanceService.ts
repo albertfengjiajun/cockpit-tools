@@ -17,6 +17,7 @@ type PlatformInstanceCommandPrefix =
   | "kiro"
   | "cursor"
   | "gemini"
+  | "grok"
   | "codebuddy"
   | "codebuddy_cn"
   | "qoder"

@@ -418,6 +418,7 @@ mod imp {
             PlatformId::Kiro => "#8b92a1",
             PlatformId::Cursor => "#21c7b7",
             PlatformId::Gemini => "#a972ff",
+            PlatformId::Grok => "#6b7280",
             PlatformId::Codebuddy => "#4b74ff",
             PlatformId::CodebuddyCn => "#4b74ff",
             PlatformId::Qoder => "#5664ff",
@@ -2902,6 +2903,7 @@ mod imp {
             PlatformId::Kiro => build_kiro_cards(lang),
             PlatformId::Cursor => build_cursor_cards(lang),
             PlatformId::Gemini => build_gemini_cards(lang),
+            PlatformId::Grok => build_grok_cards(lang),
             PlatformId::Qoder => build_qoder_cards(lang),
             PlatformId::Zcode => build_zcode_cards(lang),
             PlatformId::Trae
@@ -3706,6 +3708,145 @@ mod imp {
                     id: account.id,
                     title: account.email,
                     plan: account.plan_name.or(account.tier_id),
+                    updated_at: display_updated_at(
+                        account.usage_updated_at,
+                        account.last_used,
+                        account.created_at,
+                    ),
+                    quota_rows: rows,
+                }
+            })
+            .collect();
+        (cards, current_id, recommended)
+    }
+
+    fn build_grok_cards(lang: &str) -> (Vec<AccountCard>, Option<String>, Option<String>) {
+        let mut accounts = modules::grok_account::list_accounts_checked().unwrap_or_default();
+        let current_id = modules::grok_account::current_account_id().ok().flatten();
+        accounts
+            .sort_by_key(|account| std::cmp::Reverse(account.last_used.max(account.created_at)));
+
+        let remaining_metrics = |account: &crate::models::grok::GrokAccountView| {
+            let Some(quota) = account.quota.as_ref() else {
+                return Vec::new();
+            };
+            let mut values = Vec::new();
+            if let Some(used) = quota.weekly_limit_percent {
+                values.push((100 - clamp_percent(used)).clamp(0, 100));
+            }
+            values.extend(quota.products.iter().filter_map(|product| {
+                product
+                    .usage_percent
+                    .map(|used| (100 - clamp_percent(used)).clamp(0, 100))
+            }));
+            if let (Some(used), Some(cap)) = (quota.on_demand_used, quota.on_demand_cap) {
+                if cap > 0.0 {
+                    values.push((100 - clamp_percent(used / cap * 100.0)).clamp(0, 100));
+                }
+            }
+            values
+        };
+
+        let recommended = current_id.as_deref().and_then(|id| {
+            accounts
+                .iter()
+                .filter(|account| account.id != id)
+                .filter(|account| {
+                    account.quota_query_last_error.is_none()
+                        && account
+                            .status
+                            .as_deref()
+                            .map(|status| matches!(status, "normal" | "ok"))
+                            .unwrap_or(true)
+                })
+                .filter_map(|account| {
+                    let minimum = remaining_metrics(account).into_iter().min()?;
+                    if minimum <= 0 {
+                        return None;
+                    }
+                    Some((account.id.clone(), minimum, account.last_used))
+                })
+                .max_by_key(|item| (item.1, item.2))
+                .map(|item| item.0)
+        });
+
+        let cards = accounts
+            .into_iter()
+            .map(|account| {
+                let mut rows = Vec::new();
+                if let Some(quota) = account.quota.as_ref() {
+                    let reset_at = quota
+                        .period_end
+                        .as_ref()
+                        .and_then(|value| parse_timestamp_like(&Value::String(value.clone())));
+                    let reset_subtext = format_reset_subtext(lang, reset_at);
+                    let left_value = |remaining: i32| {
+                        translate_or(
+                            lang,
+                            "common.shared.quota.leftPercent",
+                            "{{value}}% left",
+                            &[("value", &remaining.to_string())],
+                        )
+                    };
+
+                    if let Some(used) = quota.weekly_limit_percent {
+                        let remaining = (100 - clamp_percent(used)).clamp(0, 100);
+                        rows.push(make_progress_row(
+                            translate_or(lang, "grok.quota.weekly", "Weekly usage", &[]),
+                            left_value(remaining),
+                            remaining,
+                            reset_subtext.clone(),
+                            remaining_balance_tone(remaining),
+                        ));
+                    }
+                    for product in &quota.products {
+                        if let Some(used) = product.usage_percent {
+                            let remaining = (100 - clamp_percent(used)).clamp(0, 100);
+                            rows.push(make_progress_row(
+                                product.product.clone(),
+                                left_value(remaining),
+                                remaining,
+                                reset_subtext.clone(),
+                                remaining_balance_tone(remaining),
+                            ));
+                        }
+                    }
+                    if let (Some(used), Some(cap)) = (quota.on_demand_used, quota.on_demand_cap) {
+                        let remaining = if cap > 0.0 {
+                            (100 - clamp_percent(used / cap * 100.0)).clamp(0, 100)
+                        } else {
+                            0
+                        };
+                        rows.push(make_progress_row(
+                            translate_or(lang, "grok.quota.onDemand", "On-demand", &[]),
+                            format!(
+                                "{} / {}",
+                                format_quota_number(used),
+                                format_quota_number(cap)
+                            ),
+                            remaining,
+                            reset_subtext,
+                            remaining_balance_tone(remaining),
+                        ));
+                    }
+                    if let Some(balance) = quota.prepaid_balance {
+                        rows.push(make_text_row(
+                            translate_or(lang, "grok.quota.balance", "Balance", &[]),
+                            format_quota_number(balance),
+                            None,
+                        ));
+                    }
+                }
+
+                AccountCard {
+                    id: account.id,
+                    title: account.email,
+                    plan: account.plan_type.or_else(|| {
+                        account
+                            .quota
+                            .as_ref()
+                            .and_then(|quota| quota.subscription_tier.clone())
+                    }),
                     updated_at: display_updated_at(
                         account.usage_updated_at,
                         account.last_used,
@@ -4591,6 +4732,14 @@ mod imp {
                 (PlatformId::Gemini, None) => {
                     commands::gemini::refresh_all_gemini_tokens(app.clone()).await
                 }
+                (PlatformId::Grok, Some(account_id)) => {
+                    commands::grok::refresh_grok_account(app.clone(), account_id)
+                        .await
+                        .map(|_| 0)
+                }
+                (PlatformId::Grok, None) => {
+                    commands::grok::refresh_all_grok_accounts(app.clone()).await
+                }
                 (PlatformId::Codebuddy, Some(account_id)) => {
                     commands::codebuddy::refresh_codebuddy_token(app.clone(), account_id)
                         .await
@@ -4706,6 +4855,9 @@ mod imp {
                     .map(|_| ()),
                 PlatformId::Gemini => {
                     commands::gemini::inject_gemini_account(app, account_id).map(|_| ())
+                }
+                PlatformId::Grok => {
+                    commands::grok::switch_grok_account(app, account_id).map(|_| ())
                 }
                 PlatformId::Codebuddy => {
                     commands::codebuddy::inject_codebuddy_to_vscode(app, account_id)

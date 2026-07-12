@@ -1,0 +1,97 @@
+.grok-accounts-page .ghcp-accounts-grid {
+  align-items: start;
+}
+
+.grok-accounts-page .ghcp-account-card {
+  width: 100%;
+}
+
+.grok-accounts-page .tier-badge {
+  max-width: 132px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.grok-accounts-page .grok-usage-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.grok-accounts-page .grok-usage-detail-trigger {
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--primary);
+  padding: 2px 3px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.grok-accounts-page .grok-usage-detail-trigger:hover {
+  background: var(--primary-light);
+}
+
+.grok-accounts-page .grok-usage-detail-trigger:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.grok-accounts-page .grok-usage-detail-modal {
+  max-width: 560px;
+}
+
+.grok-accounts-page .quota-error-detail {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.grok-accounts-page .quota-query-state {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 11px;
+  text-align: left;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: transparent;
+}
+
+.grok-accounts-page .quota-query-state-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+.grok-accounts-page .quota-query-state-text {
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.grok-accounts-page .quota-query-state.error {
+  border-style: solid;
+  border-color: rgba(239, 68, 68, 0.24);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.grok-accounts-page .quota-query-state.error .quota-query-state-icon,
+.grok-accounts-page .quota-query-state.error .quota-query-state-text {
+  color: var(--danger);
+}
+
+.grok-accounts-page .grok-table-usage .quota-query-state {
+  min-height: 34px;
+  padding: 7px 9px;
+}

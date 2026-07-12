@@ -174,6 +174,7 @@ type customRoutingRule struct {
 	AccountID string `json:"accountId"`
 	Priority  int    `json:"priority"`
 	Weight    int    `json:"weight"`
+	IsBackup  bool   `json:"isBackup"`
 }
 
 type usagePayload struct {
@@ -1427,6 +1428,11 @@ type quotaReserveSelector struct {
 	quota    *quotaReserveStateStore
 }
 
+type backupAccountSelector struct {
+	manifest *manifest
+	fallback coreauth.Selector
+}
+
 func quotaReserveSnapshotsFromManifest(m *manifest) map[string]quotaReserveSnapshot {
 	snapshots := make(map[string]quotaReserveSnapshot)
 	if m == nil {
@@ -1581,6 +1587,57 @@ func (s *quotaReserveSelector) Pick(ctx context.Context, provider, model string,
 }
 
 func (s *quotaReserveSelector) Stop() {
+	if s == nil || s.fallback == nil {
+		return
+	}
+	if stoppable, ok := s.fallback.(coreauth.StoppableSelector); ok {
+		stoppable.Stop()
+	}
+}
+
+func (s *backupAccountSelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*coreauth.Auth) (*coreauth.Auth, error) {
+	if s == nil || s.fallback == nil {
+		return nil, fmt.Errorf("backup account selector is not initialized")
+	}
+	if s.manifest == nil || !strings.EqualFold(strings.TrimSpace(s.manifest.RoutingStrategy), "custom") {
+		return s.fallback.Pick(ctx, provider, model, opts, auths)
+	}
+
+	now := time.Now()
+	regular := make([]*coreauth.Auth, 0, len(auths))
+	backup := make([]*coreauth.Auth, 0)
+	regularAvailable := false
+	for _, auth := range auths {
+		if s.isBackupAuth(auth) {
+			backup = append(backup, auth)
+			continue
+		}
+		regular = append(regular, auth)
+		if authAvailable(auth, model, now) {
+			regularAvailable = true
+		}
+	}
+
+	if regularAvailable || len(backup) == 0 {
+		return s.fallback.Pick(ctx, provider, model, opts, regular)
+	}
+	return s.fallback.Pick(ctx, provider, model, opts, backup)
+}
+
+func (s *backupAccountSelector) isBackupAuth(auth *coreauth.Auth) bool {
+	account := accountForAuthInManifest(s.manifest, auth)
+	if account == nil {
+		return false
+	}
+	for _, rule := range s.manifest.CustomRoutingRules {
+		if rule.AccountID == account.ID {
+			return rule.IsBackup
+		}
+	}
+	return false
+}
+
+func (s *backupAccountSelector) Stop() {
 	if s == nil || s.fallback == nil {
 		return
 	}
@@ -2308,6 +2365,7 @@ func buildCoreAuthSelector(cfg *config.Config, selector coreauth.Selector, m *ma
 		})
 	}
 	if m != nil {
+		selector = &backupAccountSelector{manifest: m, fallback: selector}
 		selector = &quotaReserveSelector{manifest: m, fallback: selector, quota: quota}
 	}
 	return selector

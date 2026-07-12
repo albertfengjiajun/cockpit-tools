@@ -9,6 +9,7 @@ import type { GitHubCopilotAccount } from "../types/githubCopilot";
 import type { WindsurfAccount } from "../types/windsurf";
 import type { CursorAccount } from "../types/cursor";
 import type { GeminiAccount } from "../types/gemini";
+import type { GrokAccount } from "../types/grok";
 import type { KiroAccount, KiroAccountStatus } from "../types/kiro";
 import type { QoderAccount, QoderSubscriptionInfo } from "../types/qoder";
 import type { TraeAccount } from "../types/trae";
@@ -85,6 +86,11 @@ import {
   getGeminiPlanBadgeClass,
   getGeminiTierQuotaSummary,
 } from "../types/gemini";
+import {
+  getGrokAccountDisplayEmail,
+  getGrokPlanBadge,
+  getGrokQuotaGroups,
+} from "../types/grok";
 import {
   formatKiroResetTime,
   getKiroAccountDisplayEmail,
@@ -1715,6 +1721,47 @@ export function buildGeminiAccountPresentation(
     planLabel,
     planClass: getGeminiPlanBadgeClass(undefined, account),
     isBanned: false,
+    quotaItems,
+  };
+}
+
+export function buildGrokAccountPresentation(
+  account: GrokAccount,
+  t: Translate,
+): UnifiedAccountPresentation {
+  const quotaItems: UnifiedQuotaMetric[] = getGrokQuotaGroups(account, t)
+    .flatMap((group) => group.items)
+    .map((resource, index) => {
+      const remaining = resource.remainPercent == null
+        ? null
+        : clampPercent(resource.remainPercent);
+      const label = resource.packageName || resource.packageCode || `quota-${index + 1}`;
+      const valueText = resource.total > 0 && resource.total !== 100
+        ? `${resource.remain.toFixed(2)} / ${resource.total.toFixed(2)}`
+        : remaining == null
+          ? "--"
+          : t("common.shared.quota.leftPercent", "{{value}}% left", { value: Math.round(remaining) });
+      return {
+        key: resource.packageCode || `grok-${index}`,
+        label,
+        percentage: remaining ?? 0,
+        progressPercent: remaining ?? 0,
+        quotaClass: getRemainingQuotaClass(remaining),
+        valueText,
+        resetAt: resource.refreshAt,
+        resetText: formatMetricResetText(resource.refreshAt, t),
+        used: resource.used,
+        total: resource.total,
+        left: resource.remain,
+        showProgress: remaining != null,
+      };
+    });
+
+  return {
+    id: account.id,
+    displayName: getGrokAccountDisplayEmail(account),
+    planLabel: getGrokPlanBadge(account),
+    planClass: "plan-badge-default",
     quotaItems,
   };
 }

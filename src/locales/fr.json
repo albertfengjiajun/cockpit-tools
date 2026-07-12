@@ -12,6 +12,7 @@
     "enabled": "Activé",
     "disabled": "Désactivé",
     "close": "Fermer",
+    "back": "Retour",
     "open": "Ouvrir",
     "copy": "Copier",
     "copied": "Copié",
@@ -176,7 +177,9 @@
         "resetDone": "Réinitialisé",
         "hourly": "Quota de 5 heures",
         "weekly": "Quota hebdomadaire",
-        "resetAt": "Réinitialisation: {{time}}"
+        "resetAt": "Réinitialisation: {{time}}",
+        "expiresAt": "Expire le : {{time}}",
+        "leftPercent": "{{value}} % restants"
       },
       "subtitle": "Gérez vos comptes GitHub Copilot",
       "time": {
@@ -948,7 +951,7 @@
       "importModalDesc": "Choisissez ce que vous souhaitez importer. Les anciennes sauvegardes de comptes sont traitées comme un import comptes uniquement.",
       "selectionTitle": "Périmètre des données",
       "accountsOptionTitle": "Données des comptes",
-      "accountsOptionDesc": "Inclut les sauvegardes des comptes de chaque plateforme et conserve la compatibilité avec l'ancien JSON des comptes.",
+      "accountsOptionDesc": "Inclut les sauvegardes restaurables des comptes et conserve la compatibilité avec l'ancien JSON. Les identifiants Grok CLI sont exclus ; importez séparément le fichier auth.json officiel.",
       "configOptionTitle": "Données de configuration",
       "configOptionDesc": "Inclut les réglages de l'application, les groupes, les instances, les tâches de réveil et la configuration des fournisseurs de modèles.",
       "exportConfirm": "Exporter les données",
@@ -1960,6 +1963,9 @@
       "customRoutingEdit": "Modifier le routage personnalisé",
       "customRoutingTitle": "Routage personnalisé",
       "customRoutingDesc": "Définissez la priorité et le poids de chaque compte pour contrôler l’ordre de sélection et la répartition à priorité égale.",
+      "customRoutingBackupTitle": "Compte de secours",
+      "customRoutingBackupDesc": "Utilisé uniquement lorsque tous les comptes standard sont indisponibles. Les nouvelles requêtes reviennent automatiquement dès qu’un compte standard est rétabli.",
+      "customRoutingBackupShort": "Secours",
       "customRoutingPriorityTitle": "Priorité",
       "customRoutingPriorityDesc": "Les valeurs les plus élevées sont choisies en premier ; les priorités plus basses ne sont tentées que si les autres sont indisponibles.",
       "customRoutingWeightTitle": "Poids",
@@ -3276,6 +3282,15 @@
       "renameSuccess": "Renommé",
       "renameFailed": "Échec du renommage"
     },
+    "importApiService": {
+      "toggle": "Ajouter au service API",
+      "description": "Ajoute les comptes importés admissibles au pool du service API.",
+      "syncFailed": "Les comptes ont été importés, mais leur ajout au service API a échoué : {{error}}",
+      "guideTitle": "Comptes ajoutés au service API",
+      "guideDescription": "{{count}} compte(s) ont été ajoutés au service API. Cliquez sur « Démarrer le service API » pour basculer et les utiliser.",
+      "later": "Plus tard",
+      "startAction": "Démarrer le service API"
+    },
     "batchImport": {
       "title": "Import groupé Codex",
       "resultSubtitle": "Résultat de l’import",
@@ -3587,6 +3602,14 @@
       "syncWslDesc": "Remplacer automatiquement la configuration .gemini dans WSL lors du changement de compte"
     },
     "geminiRefreshInterval": "Actualisation auto du quota",
+    "grok": {
+      "title": "Paramètres de Grok CLI",
+      "appPath": "Chemin de Grok CLI",
+      "cliPath": "Chemin de la CLI",
+      "cliDetected": "Détecté : {{version}} · {{path}}",
+      "cliMissing": "Grok CLI introuvable. Indiquez un chemin."
+    },
+    "grokRefreshInterval": "Actualisation auto du quota",
     "codebuddy": {
       "title": "Parametres CodeBuddy",
       "appPath": "Chemin CodeBuddy"
@@ -4644,7 +4667,7 @@
       "localDesc": "Importez les identifiants locaux chiffrés de ZCode ou un fichier JSON.",
       "localClient": "Importer depuis ZCode local"
     },
-  "usageNormal": "Correct",
+    "usageNormal": "Correct",
     "usageAbnormal": "Erreur",
     "usageViewDetail": "Détails",
     "usageDetailTitle": "Détails d'utilisation",
@@ -4658,7 +4681,7 @@
     "quotaQuery": {
       "failedRefreshCompact": "Échec de la requête de quota",
       "empty": "Aucune donnée de quota",
-    "sectionTitle": "Crédits"
+      "sectionTitle": "Crédits"
     },
     "instances": {
       "unsupported": "Le mode multi-instance de ZCode est disponible uniquement sur macOS, Windows et Linux."
@@ -4768,6 +4791,7 @@
     "errors": {
       "refreshFailed": "Échec de l’actualisation : {{error}}",
       "switchFailed": "Échec du basculement : {{error}}",
+      "stopInstanceBeforeSwitch": "Arrêtez l’instance avant de changer de compte",
       "pinFailed": "Impossible de mettre à jour l’état d’épinglage : {{error}}",
       "closeFailed": "Échec de la fermeture : {{error}}"
     },
@@ -5030,6 +5054,76 @@
     },
     "copyKey": "Copy Key​",
     "clearKey": "Clear input​"
+  },
+  "grok": {
+    "search": "Rechercher des comptes Grok CLI...",
+    "flowNotice": {
+      "title": "Gestion des comptes Grok CLI",
+      "desc": "Cockpit gère les comptes au format officiel des identifiants Grok CLI afin de changer réellement le compte par défaut et de lier des instances isolées.",
+      "permission": "Périmètre local : lit le fichier ~/.grok/auth.json par défaut et gère des dossiers distincts pour les comptes Grok et GROK_HOME dans les données locales de Cockpit.",
+      "network": "Périmètre réseau : autorisation OAuth, renouvellement des identifiants et consultation de l'utilisation. Les identifiants ne sont pas envoyés aux services Cockpit."
+    },
+    "empty": "Aucun compte Grok CLI",
+    "addAccount": "Ajouter un compte Grok CLI",
+    "oauth": {
+      "desc": "Ouvrez la page d'autorisation xAI et saisissez le code de l'appareil. Le compte sera ensuite enregistré automatiquement.",
+      "title": "OAuth sur appareil Grok",
+      "item1": "Utilise le flux d'appareil officiel de Grok CLI sans occuper de port de rappel local.",
+      "item2": "Enregistre un GROK_HOME distinct après autorisation et maintient la validité des identifiants.",
+      "item3": "Les comptes peuvent changer la CLI par défaut ou s'exécuter dans des instances isolées.",
+      "urlPlaceholder": "Adresse d'autorisation OAuth de Grok",
+      "waiting": "En attente de l'autorisation OAuth de Grok...",
+      "openWindow": "Ouvrir l'autorisation",
+      "success": "Connexion OAuth de Grok réussie"
+    },
+    "import": {
+      "pasteTab": "Coller du JSON",
+      "pasteDesc": "Collez le fichier auth.json officiel de Grok CLI. Les identifiants sont traités uniquement par le backend local. Cockpit n'exporte que des métadonnées masquées, inutilisables pour restaurer une connexion.",
+      "pastePlaceholder": "Coller le JSON du compte Grok",
+      "pasteAction": "Importer le JSON",
+      "localDesc": "Importez le compte actuel depuis ~/.grok/auth.json. Pour choisir un fichier, utilisez le fichier auth.json officiel de Grok CLI.",
+      "localClient": "Importer depuis Grok CLI local"
+    },
+    "instances": {
+      "unsupported": "Les instances multiples de Grok CLI sont disponibles uniquement sous macOS, Windows et Linux.",
+      "launchDialogTitle": "Lancer l'instance",
+      "launchHint": "Copiez la commande pour l'exécuter manuellement ou lancez-la directement dans un terminal.",
+      "runInTerminal": "Lancer dans le terminal",
+      "cliReady": "Détecté",
+      "cliMissingShort": "Non détecté",
+      "cliPathInvalid": "Le chemin Grok CLI configuré n’est pas valide : {{path}}",
+      "saveAndRetry": "Enregistrer et réessayer",
+      "installCommand": "Commande d’installation officielle",
+      "installHint": "Exécutez la commande officielle ci-dessous dans le terminal, puis actualisez après l’installation."
+    },
+    "switch": {
+      "success": "Compte changé"
+    },
+    "usageNormal": "Opérationnel",
+    "usageAbnormal": "Anormal",
+    "usageViewDetail": "Voir les détails",
+    "usageDetailTitle": "Détails d'utilisation",
+    "usage": "Utilisation",
+    "quotaQuery": {
+      "failedRefreshCompact": "Échec de la consultation",
+      "empty": "Aucune donnée de quota",
+      "sectionTitle": "Crédits"
+    },
+    "quota": {
+      "weekly": "Utilisation hebdomadaire",
+      "onDemand": "Utilisation à la demande",
+      "balance": "Solde et crédits",
+      "included": "Utilisation incluse",
+      "promotional": "Crédits promotionnels",
+      "frequent": "Tâches fréquentes",
+      "occasional": "Tâches occasionnelles"
+    },
+    "quotaAlert": {
+      "hint": "Lorsqu’un élément de quota du compte actuel passe sous le seuil, une notification native est envoyée et une action de changement rapide s’affiche dans l’application.",
+      "thresholdDesc": "Déclencher une alerte lorsqu’un élément de quota passe sous ce pourcentage",
+      "items": "Éléments de quota",
+      "unknownItem": "Élément de quota inconnu"
+    }
   },
   "claude": {
     "import": {

@@ -20,6 +20,7 @@ type InstancesAppType =
   | 'kiro'
   | 'cursor'
   | 'gemini'
+  | 'grok'
   | 'codebuddy'
   | 'codebuddy_cn'
   | 'qoder'
@@ -45,6 +46,10 @@ interface PlatformInstancesContentProps<TAccount extends AccountLike> {
   unsupportedDescKey: string;
   unsupportedDescDefault: string;
   onInstanceStarted?: (instance: InstanceProfile) => void | Promise<void>;
+  onInstanceStartError?: (
+    error: unknown,
+    instance: InstanceProfile,
+  ) => boolean | Promise<boolean>;
   resolveStartSuccessMessage?: (instance: InstanceProfile) => string;
   isAccountAllowedForLaunchMode?: (account: TAccount, launchMode: InstanceLaunchMode) => boolean;
   toolbarExtraActions?: ReactNode;
@@ -65,6 +70,7 @@ export function PlatformInstancesContent<TAccount extends AccountLike>({
   unsupportedDescKey,
   unsupportedDescDefault,
   onInstanceStarted,
+  onInstanceStartError,
   resolveStartSuccessMessage,
   isAccountAllowedForLaunchMode,
   toolbarExtraActions,
@@ -98,6 +104,7 @@ export function PlatformInstancesContent<TAccount extends AccountLike>({
         getAccountSearchText={getAccountSearchText}
         appType={appType}
         onInstanceStarted={onInstanceStarted}
+        onInstanceStartError={onInstanceStartError}
         resolveStartSuccessMessage={resolveStartSuccessMessage}
         isAccountAllowedForLaunchMode={isAccountAllowedForLaunchMode}
         toolbarExtraActions={toolbarExtraActions}

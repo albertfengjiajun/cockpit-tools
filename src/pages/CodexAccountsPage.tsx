@@ -108,6 +108,10 @@ import {
 import { filterCodexLocalAccessAccountIds } from "../utils/codexLocalAccessAccounts";
 import { isBlockingCodexQuotaError } from "../utils/codexQuotaError";
 import { buildCodexAccountPresentation } from "../presentation/platformAccountPresentation";
+import {
+  readCodexImportSyncApiService,
+  writeCodexImportSyncApiService,
+} from "../utils/codexImportPreferences";
 
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
@@ -987,6 +991,14 @@ export function CodexAccountsPage() {
   >("panel");
   const [localAccessSaving, setLocalAccessSaving] = useState(false);
   const [localAccessStarting, setLocalAccessStarting] = useState(false);
+  const [syncImportedToApiService, setSyncImportedToApiService] = useState(
+    readCodexImportSyncApiService,
+  );
+  const [importApiServiceGuideCount, setImportApiServiceGuideCount] =
+    useState<number | null>(null);
+  const [externalImportSyncError, setExternalImportSyncError] = useState<
+    string | null
+  >(null);
   const [localAccessRefreshing, setLocalAccessRefreshing] = useState(false);
   const [localAccessPortKilling, setLocalAccessPortKilling] = useState(false);
   const [showLocalAccessHideConfirm, setShowLocalAccessHideConfirm] =
@@ -1034,6 +1046,33 @@ export function CodexAccountsPage() {
         return false;
       }
     });
+  const ensureLocalAccessEntryVisible = useCallback(async () => {
+    if (localAccessEntryVisible) return;
+    await invoke("set_codex_local_access_entry_visible", { enabled: true });
+    setLocalAccessEntryVisible(true);
+    window.dispatchEvent(new Event("codex-local-access-state-updated"));
+    window.dispatchEvent(new Event("config-updated"));
+  }, [localAccessEntryVisible]);
+  const handleExternalImportedAccounts = useCallback(
+    async (accountIds: string[]) => {
+      setExternalImportSyncError(null);
+      if (!readCodexImportSyncApiService()) return;
+      try {
+        const result =
+          await codexLocalAccessService.appendCodexLocalAccessAccounts(
+            accountIds,
+          );
+        setLocalAccessState(result.state);
+        if (result.syncedAccountIds.length > 0) {
+          await ensureLocalAccessEntryVisible();
+          setImportApiServiceGuideCount(result.syncedAccountIds.length);
+        }
+      } catch (error) {
+        setExternalImportSyncError(String(error).replace(/^Error:\s*/, ""));
+      }
+    },
+    [ensureLocalAccessEntryVisible],
+  );
 
   const reloadCodexGroups = useCallback(async () => {
     setCodexGroups(await getCodexAccountGroups());
@@ -1218,6 +1257,7 @@ export function CodexAccountsPage() {
         )
       : "",
     defaultSortBy: readCodexCustomSortActive() ? "custom" : undefined,
+    onExternalImportCompleted: handleExternalImportedAccounts,
   });
 
   const {
@@ -1295,6 +1335,31 @@ export function CodexAccountsPage() {
     saveJsonFile,
   } = page;
   const [isAllFilteredSelected, setIsAllFilteredSelected] = useState(false);
+
+  const handleSyncImportedToApiServiceChange = useCallback(
+    (enabled: boolean) => {
+      setSyncImportedToApiService(enabled);
+      writeCodexImportSyncApiService(enabled);
+    },
+    [],
+  );
+
+  const syncImportedAccountsToApiService = useCallback(
+    async (accountIds: string[]) => {
+      if (!syncImportedToApiService || accountIds.length === 0) return null;
+      const result =
+        await codexLocalAccessService.appendCodexLocalAccessAccounts(
+          accountIds,
+        );
+      setLocalAccessState(result.state);
+      if (result.syncedAccountIds.length > 0) {
+        await ensureLocalAccessEntryVisible();
+        setImportApiServiceGuideCount(result.syncedAccountIds.length);
+      }
+      return result;
+    },
+    [ensureLocalAccessEntryVisible, syncImportedToApiService],
+  );
 
   const reauthTargetAccountId = reauthTargetAccount?.id?.trim() ?? "";
   const reauthTargetEmail = reauthTargetAccount?.email?.trim() ?? "";
@@ -5525,6 +5590,18 @@ export function CodexAccountsPage() {
           platformId: "codex",
           reason: "import",
         });
+        try {
+          await syncImportedAccountsToApiService(
+            result.imported.map((account) => account.id),
+          );
+        } catch (error) {
+          setBatchImportError(
+            t(
+              "codex.importApiService.syncFailed",
+              "账号已导入，但加入 API 服务失败：{{error}}",
+            ).replace("{{error}}", String(error).replace(/^Error:\s*/, "")),
+          );
+        }
       }
       cleanupBatchImportListeners();
       try {
@@ -6094,9 +6171,26 @@ export function CodexAccountsPage() {
           "成功导入 {{count}} 个账号",
         ).replace("{{count}}", String(imported.length)),
       );
-      setTimeout(() => {
-        closeAddModal();
-      }, 1200);
+      try {
+        const syncResult = await syncImportedAccountsToApiService(
+          imported.map((account) => account.id),
+        );
+        if (syncResult && syncResult.syncedAccountIds.length > 0) {
+          closeAddModal();
+        } else {
+          setTimeout(() => {
+            closeAddModal();
+          }, 1200);
+        }
+      } catch (error) {
+        page.setAddStatus("error");
+        page.setAddMessage(
+          t(
+            "codex.importApiService.syncFailed",
+            "账号已导入，但加入 API 服务失败：{{error}}",
+          ).replace("{{error}}", String(error).replace(/^Error:\s*/, "")),
+        );
+      }
     } catch (e) {
       page.setAddStatus("error");
       page.setAddMessage(
@@ -10326,7 +10420,15 @@ export function CodexAccountsPage() {
                 preferredPlacement="top"
                 ariaLabel={t("codex.speed.title", "速度")}
               />
-              <div className="card-footer codex-local-access-footer">
+              <div
+                className={`card-footer codex-local-access-footer ${
+                  importApiServiceGuideCount !== null &&
+                  !batchImportOpen &&
+                  !externalImportProgress.visible
+                    ? "has-import-guide"
+                    : ""
+                }`}
+              >
                 <div className="card-actions">
                   <button
                     className="card-action-btn"
@@ -10379,21 +10481,74 @@ export function CodexAccountsPage() {
                       className={localAccessRefreshing ? "loading-spinner" : ""}
                     />
                   </button>
-                  <button
-                    className="card-action-btn success"
-                    onClick={() => void handleQuickActivateLocalAccess()}
-                    title={t(
-                      "codex.localAccess.activateAction",
-                      "启动 API 服务",
-                    )}
-                    disabled={localAccessBusy || !localAccessCollection}
-                  >
-                    {localAccessStarting ? (
-                      <RefreshCw size={14} className="loading-spinner" />
-                    ) : (
-                      <Play size={14} />
-                    )}
-                  </button>
+                  <div className="codex-import-api-service-guide-anchor">
+                    {importApiServiceGuideCount !== null &&
+                      !batchImportOpen &&
+                      !externalImportProgress.visible && (
+                        <div
+                          className="codex-local-access-gateway-guide codex-import-api-service-anchor-guide"
+                          role="dialog"
+                          aria-label={t(
+                            "codex.importApiService.guideTitle",
+                            "账号已加入 API 服务",
+                          )}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className="codex-local-access-gateway-guide-close"
+                            onClick={() =>
+                              setImportApiServiceGuideCount(null)
+                            }
+                            aria-label={t("common.close", "关闭")}
+                          >
+                            <X size={12} />
+                          </button>
+                          <div className="codex-local-access-gateway-guide-title">
+                            {t(
+                              "codex.importApiService.guideTitle",
+                              "账号已加入 API 服务",
+                            )}
+                          </div>
+                          <p>
+                            {t(
+                              "codex.importApiService.guideDescription",
+                              "已将 {{count}} 个账号加入 API 服务。点击“启动 API 服务”即可切换并使用。",
+                            ).replace(
+                              "{{count}}",
+                              String(importApiServiceGuideCount),
+                            )}
+                          </p>
+                          <button
+                            type="button"
+                            className="codex-local-access-gateway-guide-action"
+                            onClick={() =>
+                              setImportApiServiceGuideCount(null)
+                            }
+                          >
+                            {t("codex.importApiService.later", "稍后")}
+                          </button>
+                        </div>
+                      )}
+                    <button
+                      className="card-action-btn success"
+                      onClick={() => {
+                        setImportApiServiceGuideCount(null);
+                        void handleQuickActivateLocalAccess();
+                      }}
+                      title={t(
+                        "codex.localAccess.activateAction",
+                        "启动 API 服务",
+                      )}
+                      disabled={localAccessBusy || !localAccessCollection}
+                    >
+                      {localAccessStarting ? (
+                        <RefreshCw size={14} className="loading-spinner" />
+                      ) : (
+                        <Play size={14} />
+                      )}
+                    </button>
+                  </div>
                   <button
                     className={`card-action-btn ${localAccessCollection?.enabled ? "" : "success"}`}
                     onClick={() => void handleQuickToggleLocalAccessEnabled()}
@@ -11229,6 +11384,18 @@ export function CodexAccountsPage() {
     closeExternalImportProgressModal();
   };
 
+  useEffect(() => {
+    if (externalImportRunning) {
+      setExternalImportSyncError(null);
+    }
+  }, [externalImportRunning]);
+
+  useEffect(() => {
+    if (importApiServiceGuideCount === null) return;
+    setActiveTab("overview");
+    setLocalAccessDetailsExpanded(true);
+  }, [importApiServiceGuideCount]);
+
   const renderApiKeyUsageDetailModal = () => {
     const account = apiKeyUsageDetailAccount;
     if (!account) return null;
@@ -12004,6 +12171,25 @@ export function CodexAccountsPage() {
                           {t("codex.batchImport.checkQuotaToggle", "检测账号")}
                         </span>
                       </label>
+                      <label className="codex-batch-import-check-toggle">
+                        <input
+                          type="checkbox"
+                          checked={syncImportedToApiService}
+                          disabled={batchImportBusy}
+                          onChange={(event) =>
+                            handleSyncImportedToApiServiceChange(
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        <span className="codex-batch-import-check-switch" />
+                        <span>
+                          {t(
+                            "codex.importApiService.toggle",
+                            "同步加入 API 服务",
+                          )}
+                        </span>
+                      </label>
                     </div>
                     <div className="codex-batch-import-actions">
                       <button
@@ -12318,6 +12504,17 @@ export function CodexAccountsPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+              {externalImportSyncError && (
+                <div className="codex-import-api-service-error" role="alert">
+                  <CircleAlert size={16} />
+                  <span>
+                    {t(
+                      "codex.importApiService.syncFailed",
+                      "账号已导入，但加入 API 服务失败：{{error}}",
+                    ).replace("{{error}}", externalImportSyncError)}
+                  </span>
                 </div>
               )}
             </div>
@@ -13828,6 +14025,33 @@ export function CodexAccountsPage() {
                           '示例：直接粘贴 session JSON、accessToken、Sub2API 导出 JSON，或 {"accessToken":"eyJ..."}',
                         )}
                       />
+                      <label className="codex-import-api-service-toggle">
+                        <span className="codex-import-api-service-toggle-copy">
+                          <strong>
+                            {t(
+                              "codex.importApiService.toggle",
+                              "同步加入 API 服务",
+                            )}
+                          </strong>
+                          <small>
+                            {t(
+                              "codex.importApiService.description",
+                              "导入成功后，将符合条件的账号加入 API 服务账号池。",
+                            )}
+                          </small>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={syncImportedToApiService}
+                          disabled={importing}
+                          onChange={(event) =>
+                            handleSyncImportedToApiServiceChange(
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        <span className="codex-import-api-service-switch" />
+                      </label>
                       <button
                         className="btn btn-primary btn-full"
                         onClick={handleTokenImport}
@@ -13866,6 +14090,33 @@ export function CodexAccountsPage() {
                       <p className="section-desc">
                         {t("modals.import.fromFilesDesc")}
                       </p>
+                      <label className="codex-import-api-service-toggle">
+                        <span className="codex-import-api-service-toggle-copy">
+                          <strong>
+                            {t(
+                              "codex.importApiService.toggle",
+                              "同步加入 API 服务",
+                            )}
+                          </strong>
+                          <small>
+                            {t(
+                              "codex.importApiService.description",
+                              "导入成功后，将符合条件的账号加入 API 服务账号池。",
+                            )}
+                          </small>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={syncImportedToApiService}
+                          disabled={importing}
+                          onChange={(event) =>
+                            handleSyncImportedToApiServiceChange(
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        <span className="codex-import-api-service-switch" />
+                      </label>
                       <button
                         className="btn btn-secondary btn-full"
                         onClick={handleImportFromFiles}

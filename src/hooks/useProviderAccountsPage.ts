@@ -165,6 +165,8 @@ export interface ProviderPageConfig<TAccount extends ProviderAccountBase> {
   }) => void | Promise<void>;
   /** OAuth 成功后的提示文案（可选） */
   resolveOauthSuccessMessage?: () => string;
+  /** 外部浏览器导入完成后的扩展处理（可选） */
+  onExternalImportCompleted?: (accountIds: string[]) => void | Promise<void>;
   /** 首次渲染时使用的搜索内容 */
   initialSearchQuery?: string;
   defaultSortBy?: string;
@@ -693,6 +695,7 @@ export interface UseProviderAccountsPageReturn {
   setAddStatus: (s: AddModalStatus) => void;
   addMessage: string | null;
   setAddMessage: (msg: string | null) => void;
+  addErrorScrollKey: number;
   tokenInput: string;
   setTokenInput: (v: string) => void;
   importing: boolean;
@@ -772,6 +775,7 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
     dataService,
     initialSearchQuery: initialSearchQueryConfig,
     defaultSortBy: defaultSortByConfig,
+    onExternalImportCompleted,
   } = config;
   const defaultSortBy = defaultSortByConfig?.trim() || DEFAULT_SORT_BY;
 
@@ -1344,8 +1348,9 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
   // ─── Add Modal ────────────────────────────────────────────────────────
   const [showAddModal, setShowAddModal] = useState(false);
   const [addTab, setAddTab] = useState<string>('oauth');
-  const [addStatus, setAddStatus] = useState<AddModalStatus>('idle');
+  const [addStatus, setAddStatusState] = useState<AddModalStatus>('idle');
   const [addMessage, setAddMessage] = useState<string | null>(null);
+  const [addErrorScrollKey, setAddErrorScrollKey] = useState(0);
   const [tokenInput, setTokenInput] = useState('');
   const [importing, setImporting] = useState(false);
   const [externalAutoImportNonce, setExternalAutoImportNonce] = useState(0);
@@ -1359,12 +1364,40 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
   const importFileInputRef = useRef<HTMLInputElement | null>(null);
   const oauthServiceRef = useRef(oauthService);
 
+  const setAddStatus = useCallback((nextStatus: AddModalStatus) => {
+    setAddStatusState(nextStatus);
+    if (nextStatus === 'error') {
+      setAddErrorScrollKey((current) => current + 1);
+    }
+  }, []);
+
   useEffect(() => {
     showAddModalRef.current = showAddModal;
     addTabRef.current = addTab;
     addStatusRef.current = addStatus;
     oauthServiceRef.current = oauthService;
   }, [showAddModal, addTab, addStatus, oauthService]);
+
+  const cancelPendingOauthLogin = useCallback(
+    (force = false) => {
+      const loginId = oauthLoginIdRef.current ?? undefined;
+      if (
+        !force
+        && !loginId
+        && !oauthActiveRef.current
+        && !oauthCompletingRef.current
+      ) {
+        return;
+      }
+      oauthServiceRef.current?.cancelLogin(loginId).catch((error) => {
+        console.error(`[${oauthLogPrefix}] 取消 OAuth 授权失败`, {
+          loginId,
+          error: String(error),
+        });
+      });
+    },
+    [oauthLogPrefix],
+  );
 
   const resetAddModalState = useCallback(() => {
     oauthAttemptSeqRef.current += 1;
@@ -1391,17 +1424,19 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
 
   const openAddModal = useCallback(
     (tab: string) => {
+      cancelPendingOauthLogin();
       setAddTab(tab);
       setShowAddModal(true);
       resetAddModalState();
     },
-    [resetAddModalState],
+    [cancelPendingOauthLogin, resetAddModalState],
   );
 
   const closeAddModal = useCallback(() => {
+    cancelPendingOauthLogin(true);
     setShowAddModal(false);
     resetAddModalState();
-  }, [resetAddModalState]);
+  }, [cancelPendingOauthLogin, resetAddModalState]);
 
   useEscClose(showAddModal, closeAddModal);
 
@@ -1613,6 +1648,9 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
               reason: 'import',
             });
           }
+          if (importedAccountIds.length > 0 && onExternalImportCompleted) {
+            await onExternalImportCompleted([...new Set(importedAccountIds)]);
+          }
 
           const status: ExternalImportProgressStatus =
             failures.length === 0 ? 'success' : success > 0 ? 'partial' : 'error';
@@ -1639,7 +1677,15 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
         }
       })();
     },
-    [dataService, fetchAccounts, platformId, refreshToken, switchAccount, t],
+    [
+      dataService,
+      fetchAccounts,
+      onExternalImportCompleted,
+      platformId,
+      refreshToken,
+      switchAccount,
+      t,
+    ],
   );
 
   const consumeExternalProviderImport = useCallback(() => {
@@ -2131,6 +2177,8 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
 
   const handleCopyOauthUrl = useCallback(async () => {
     if (!oauthUrl) return;
+    setAddStatus('idle');
+    setAddMessage(null);
     try {
       await navigator.clipboard.writeText(oauthUrl);
       oauthLog('已复制授权链接', {
@@ -2141,11 +2189,17 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
       window.setTimeout(() => setOauthUrlCopied(false), 1200);
     } catch (e) {
       console.error('复制失败:', e);
+      setAddStatus('error');
+      setAddMessage(
+        t('common.shared.export.copyFailed', '复制失败，请手动复制'),
+      );
     }
-  }, [oauthUrl, oauthLog]);
+  }, [oauthUrl, oauthLog, setAddStatus, t]);
 
   const handleCopyOauthUserCode = useCallback(async () => {
     if (!oauthUserCode) return;
+    setAddStatus('idle');
+    setAddMessage(null);
     try {
       await navigator.clipboard.writeText(oauthUserCode);
       oauthLog('已复制 user_code', { loginId: oauthLoginIdRef.current });
@@ -2153,8 +2207,12 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
       window.setTimeout(() => setOauthUserCodeCopied(false), 1200);
     } catch (e) {
       console.error('复制失败:', e);
+      setAddStatus('error');
+      setAddMessage(
+        t('common.shared.export.copyFailed', '复制失败，请手动复制'),
+      );
     }
-  }, [oauthUserCode, oauthLog]);
+  }, [oauthUserCode, oauthLog, setAddStatus, t]);
 
   const handleRetryOauth = useCallback(() => {
     const previousLoginId = oauthLoginIdRef.current ?? undefined;
@@ -2477,6 +2535,7 @@ export function useProviderAccountsPage<TAccount extends ProviderAccountBase>(
     setAddStatus,
     addMessage,
     setAddMessage,
+    addErrorScrollKey,
     tokenInput,
     setTokenInput,
     importing,
