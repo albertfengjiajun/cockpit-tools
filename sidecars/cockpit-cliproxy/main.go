@@ -50,11 +50,11 @@ import (
 type contextKey string
 
 const (
-	clientAPIKeyContextKey      contextKey = "cockpitClientAPIKey"
-	requestKindContextKey       contextKey = "cockpitRequestKind"
-	requestModelContextKey      contextKey = "cockpitRequestModel"
-	clientInstanceIDContextKey  contextKey = "cockpitClientInstanceId"
-	clientInstanceIDHeaderName  = "X-Cockpit-Instance-Id"
+	clientAPIKeyContextKey     contextKey = "cockpitClientAPIKey"
+	requestKindContextKey      contextKey = "cockpitRequestKind"
+	requestModelContextKey     contextKey = "cockpitRequestModel"
+	clientInstanceIDContextKey contextKey = "cockpitClientInstanceId"
+	clientInstanceIDHeaderName            = "X-Cockpit-Instance-Id"
 )
 
 const ginUserAPIKeyKey = "userApiKey"
@@ -92,15 +92,15 @@ var (
 )
 
 type manifest struct {
-	APIKeys            []apiKeySpec        `json:"apiKeys"`
-	Accounts           []accountSpec       `json:"accounts"`
-	ModelIDs           []string            `json:"modelIds"`
-	ModelAliases       []modelAliasSpec    `json:"modelAliases"`
-	ExcludedModels     []string            `json:"excludedModels"`
-	RoutingStrategy    string              `json:"routingStrategy"`
-	CustomRoutingRules []customRoutingRule `json:"customRoutingRules"`
-	ImmediateSSEResponse       bool              `json:"immediateSseResponse"`
-	MaxConcurrentImageRequests int               `json:"maxConcurrentImageRequests"`
+	APIKeys                    []apiKeySpec        `json:"apiKeys"`
+	Accounts                   []accountSpec       `json:"accounts"`
+	ModelIDs                   []string            `json:"modelIds"`
+	ModelAliases               []modelAliasSpec    `json:"modelAliases"`
+	ExcludedModels             []string            `json:"excludedModels"`
+	RoutingStrategy            string              `json:"routingStrategy"`
+	CustomRoutingRules         []customRoutingRule `json:"customRoutingRules"`
+	ImmediateSSEResponse       bool                `json:"immediateSseResponse"`
+	MaxConcurrentImageRequests int                 `json:"maxConcurrentImageRequests"`
 	DebugLogs                  *bool               `json:"debugLogs,omitempty"`
 
 	apiKeyByValue     map[string]*apiKeySpec
@@ -3317,9 +3317,9 @@ func readManifestCodexTokenAuth(account *accountSpec, authDir, path string) (*co
 		Status:   status,
 		Disabled: disabled,
 		Attributes: map[string]string{
-			"path":        path,
-			"auth_kind":   manifestAccountAuthKind(account),
-			"websockets":  "true",
+			"path":       path,
+			"auth_kind":  manifestAccountAuthKind(account),
+			"websockets": "true",
 		},
 		Metadata:        metadata,
 		CreatedAt:       info.ModTime(),
@@ -3737,7 +3737,17 @@ func (s *relayServer) handleResponses(c *gin.Context) {
 }
 
 func (s *relayServer) handleResponsesWebsocket(c *gin.Context) {
-	if _, ok := s.requireAPIKey(c); !ok {
+	spec, ok := s.requireAPIKey(c)
+	if !ok {
+		return
+	}
+	if spec.ProviderGateway != nil {
+		writeAPIError(
+			c,
+			http.StatusBadRequest,
+			"provider gateway does not support responses websocket",
+			"websocket_not_supported",
+		)
 		return
 	}
 	if s.responsesWebsocket == nil {

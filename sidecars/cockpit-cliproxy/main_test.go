@@ -2945,7 +2945,6 @@ func captureStdout(t *testing.T, fn func()) string {
 	return string(data)
 }
 
-
 func TestRelayAcceptsResponsesPathAppendedToChatCompletionsBase(t *testing.T) {
 	t.Parallel()
 	// Route registration only: ensure compatibility paths are not NoRoute 404.
@@ -3178,6 +3177,51 @@ func TestResponsesWebsocketRouteUnavailableWithoutHandler(t *testing.T) {
 		t.Fatalf("status = %d, want 503 body=%s", w.Code, w.Body.String())
 	}
 	if !strings.Contains(w.Body.String(), "responses websocket unavailable") {
+		t.Fatalf("body = %s", w.Body.String())
+	}
+}
+
+func TestResponsesWebsocketRejectsProviderGatewayBeforeCodexAuth(t *testing.T) {
+	t.Parallel()
+	called := false
+	m := &manifest{
+		APIKeys: []apiKeySpec{{
+			ID:      "provider_gateway_deepseek",
+			Key:     "client-key",
+			Enabled: true,
+			ProviderGateway: &providerGatewaySpec{
+				BaseURL:       "https://api.deepseek.com/v1",
+				APIKey:        "sk-deepseek",
+				UpstreamModel: "deepseek-v4-pro",
+				WireAPI:       "chat_completions",
+			},
+		}},
+	}
+	m.apiKeyByValue = map[string]*apiKeySpec{"client-key": &m.APIKeys[0]}
+	router := (&relayServer{
+		runtime:  &fakeRuntime{},
+		manifest: m,
+		policy:   &requestPolicy{manifest: m},
+		responsesWebsocket: func(c *gin.Context) {
+			called = true
+			c.Status(http.StatusSwitchingProtocols)
+		},
+	}).router()
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/responses", nil)
+	req.Header.Set("Authorization", "Bearer client-key")
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Upgrade", "websocket")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400 body=%s", w.Code, w.Body.String())
+	}
+	if called {
+		t.Fatal("provider gateway must not enter the Codex websocket auth handler")
+	}
+	if !strings.Contains(w.Body.String(), "websocket_not_supported") {
 		t.Fatalf("body = %s", w.Body.String())
 	}
 }

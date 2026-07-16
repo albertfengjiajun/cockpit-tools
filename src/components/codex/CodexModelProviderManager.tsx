@@ -4604,45 +4604,43 @@ export function CodexModelProviderManager({
                   </button>
                 </div>
               </div>
-              <div className="form-group">
-                <label>
-                  {t(
-                    "codex.modelProviders.fields.supportsWebsockets",
-                    "WebSocket 传输",
-                  )}
-                </label>
-                <label className="provider-vision-toggle">
-                  <span className="provider-vision-toggle-copy">
-                    <span className="provider-vision-toggle-title">
-                      {t(
-                        "codex.modelProviders.websockets.title",
-                        "允许 Codex 使用 Responses WebSocket",
-                      )}
+              {form.wireApi === "responses" && (
+                <div className="form-group">
+                  <label>
+                    {t(
+                      "codex.modelProviders.fields.supportsWebsockets",
+                      "WebSocket 传输",
+                    )}
+                  </label>
+                  <label className="provider-vision-toggle">
+                    <span className="provider-vision-toggle-copy">
+                      <span className="provider-vision-toggle-title">
+                        {t(
+                          "codex.modelProviders.websockets.title",
+                          "允许 Codex 使用 Responses WebSocket",
+                        )}
+                      </span>
+                      <span className="provider-vision-toggle-desc">
+                        {t(
+                          "codex.modelProviders.websockets.help",
+                          "仅在供应商明确支持 Responses WebSocket 时开启；连接方式可通过 Codex 或代理服务日志确认。",
+                        )}
+                      </span>
                     </span>
-                    <span className="provider-vision-toggle-desc">
-                      {t(
-                        "codex.modelProviders.websockets.help",
-                        "仅在供应商明确支持 Responses WebSocket 时开启；连接方式可通过 Codex 或代理服务日志确认。",
-                      )}
+                    <span className="provider-vision-switch">
+                      <input
+                        type="checkbox"
+                        checked={form.supportsWebsockets}
+                        onChange={(event) =>
+                          mutateForm({ supportsWebsockets: event.target.checked })
+                        }
+                        disabled={saving || selectedPresetId === "openai_official"}
+                      />
+                      <span className="provider-vision-switch-track" />
                     </span>
-                  </span>
-                  <span className="provider-vision-switch">
-                    <input
-                      type="checkbox"
-                      checked={form.supportsWebsockets}
-                      onChange={(event) =>
-                        mutateForm({ supportsWebsockets: event.target.checked })
-                      }
-                      disabled={
-                        saving ||
-                        form.wireApi !== "responses" ||
-                        selectedPresetId === "openai_official"
-                      }
-                    />
-                    <span className="provider-vision-switch-track" />
-                  </span>
-                </label>
-              </div>
+                  </label>
+                </div>
+              )}
               {form.wireApi === "chat_completions" && (
                 <>
                   <div className="form-group">

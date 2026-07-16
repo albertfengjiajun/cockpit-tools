@@ -22,6 +22,7 @@
 
 ### 修复
 
+- **修复 Chat Completions 供应商新建 Codex 对话时先报 `auth_unavailable` 再恢复的问题**：Chat Completions 的 WebSocket 能力现在固定为 `false`，读取、创建或更新供应商配置时均不会被旧值重新开启，编辑界面也不再显示 WebSocket 开关；provider gateway 接管 profile 时会强制写入 `supports_websockets = false`，不受原 profile 配置覆盖影响；Sidecar 还会在服务端阻止 provider gateway 请求进入 Codex WebSocket auth 路由。
 - **修复 Windows 普通权限或跨盘路径下 Codex 多开实例无法创建共享目录的问题**：共享目录联接改为通过进程内原生 NTFS junction API 创建，不再调用 PowerShell 或 `mklink`；联接不可用时会安全降级复制目录，并拒绝覆盖非空目标路径。
 - **修复恢复主窗口位置后窗口可能闪现并移出屏幕的问题**：不再保存最小化状态下的异常坐标；恢复前会校验窗口与当前显示器范围，失效位置会改为居中并清理。
 - **修复 Windows Store 版 Codex 多开可能错误打开默认账号的问题**：受管实例无法可靠传递 `CODEX_HOME` 和实例数据目录时，不再回退到 Store AppUserModelID 或任意默认 Codex 进程，而是阻止启动并提示将该实例切换为 CLI 启动方式。

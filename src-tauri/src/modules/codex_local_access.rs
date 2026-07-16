@@ -11330,6 +11330,7 @@ fn build_runtime_account(
     base_url: String,
     api_key: String,
     bound_oauth_account_id: Option<String>,
+    supports_websockets: bool,
 ) -> CodexAccount {
     let mut runtime_account = CodexAccount::new_api_key(
         CODEX_LOCAL_ACCESS_RUNTIME_ACCOUNT_ID.to_string(),
@@ -11345,10 +11346,20 @@ fn build_runtime_account(
     runtime_account.bound_oauth_account_id = bound_oauth_account_id;
     runtime_account.api_model_catalog = supported_codex_model_ids();
     runtime_account.api_wire_api = Some("responses".to_string());
-    // Local relay now exposes GET /v1/responses WebSocket upgrade. Advertise
-    // the capability so Codex profiles use WS instead of always falling back.
-    runtime_account.api_supports_websockets = true;
+    runtime_account.api_supports_websockets = supports_websockets;
     runtime_account
+}
+
+fn profile_api_key_supports_websockets(
+    collection: &CodexLocalAccessCollection,
+    api_key: &str,
+) -> bool {
+    collection
+        .api_keys
+        .iter()
+        .find(|item| item.enabled && item.key.trim() == api_key.trim())
+        .map(|item| item.provider_gateway.is_none())
+        .unwrap_or(true)
 }
 
 fn write_local_access_profile_model_catalog(profile_dir: &Path) -> Result<(), String> {
@@ -11393,14 +11404,16 @@ async fn write_local_access_profile_takeover(
         let _ = validate_local_access_bound_oauth_account(bound_id)?;
         let _ = codex_account::ensure_managed_account_fresh(bound_id).await?;
     }
+    let runtime_api_key = api_key
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| collection.api_key.clone());
     let runtime_account = build_runtime_account(
         build_collection_base_url(collection),
-        api_key
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .map(str::to_string)
-            .unwrap_or_else(|| collection.api_key.clone()),
+        runtime_api_key.clone(),
         bound_oauth_account_id,
+        profile_api_key_supports_websockets(collection, &runtime_api_key),
     );
     codex_account::write_account_bundle_to_dir(profile_dir, &runtime_account)?;
     write_local_access_profile_model_catalog(profile_dir)
@@ -17844,8 +17857,8 @@ pub async fn update_local_access_routing_options(
         max_retry_interval_ms.clamp(MAX_RETRY_INTERVAL_MIN_MS, MAX_RETRY_INTERVAL_MAX_MS);
     collection.disable_cooling = disable_cooling;
     collection.immediate_sse_response = immediate_sse_response;
-    collection.max_concurrent_image_requests = max_concurrent_image_requests
-        .clamp(1, MAX_CONCURRENT_IMAGE_REQUESTS_PER_ACCOUNT);
+    collection.max_concurrent_image_requests =
+        max_concurrent_image_requests.clamp(1, MAX_CONCURRENT_IMAGE_REQUESTS_PER_ACCOUNT);
     collection.updated_at = now_ms();
     save_collection_to_disk(&collection)?;
 
@@ -23521,8 +23534,7 @@ mod tests {
         build_local_access_api_key, build_local_models_response,
         build_model_provider_gateway_test_collection, build_ordered_account_ids,
         build_request_routing_hint, build_runtime_account, build_upstream_websocket_url,
-        calculate_usage_cost_usd,
-        calendar_stats_window_starts, canonical_model_for_client_model,
+        calculate_usage_cost_usd, calendar_stats_window_starts, canonical_model_for_client_model,
         classify_upstream_error_category, cleanup_profile_takeover_without_backup,
         cleanup_provider_gateway_profile_model_overrides, codex_price,
         collect_local_access_profile_takeover_dirs_from_store, compare_routing_candidates,
@@ -23534,20 +23546,20 @@ mod tests {
         is_codex_oauth_auth_text, is_image_generation_capability_error,
         is_local_access_eligible_account, is_local_access_gateway_base_url,
         is_provider_gateway_eligible_account, is_responses_completion_event,
-        local_access_ineligible_reason,
         is_stream_incomplete_error_message, is_upstream_response_failed_error_message,
         legacy_stream_error_category, local_access_chat_completions_url,
-        lookup_codex_model_provider_base_url_in_dir, macos_proxy_url_from_scutil_map,
-        max_credential_attempts_for_strategy, merge_collection_and_account_excluded_models,
-        model_pricing, model_provider_direct_test_client_model,
-        model_provider_test_uses_provider_gateway, normalize_account_id_list,
-        normalize_account_model_rules, normalize_collection_api_keys,
+        local_access_ineligible_reason, lookup_codex_model_provider_base_url_in_dir,
+        macos_proxy_url_from_scutil_map, max_credential_attempts_for_strategy,
+        merge_collection_and_account_excluded_models, model_pricing,
+        model_provider_direct_test_client_model, model_provider_test_uses_provider_gateway,
+        normalize_account_id_list, normalize_account_model_rules, normalize_collection_api_keys,
         normalize_custom_routing_rules, normalized_sidecar_error_category,
         open_local_access_logs_db_once, parse_codex_retry_after,
         parse_responses_payload_from_upstream, parse_websocket_upstream_error,
         pin_account_to_front_for_strategy, prepare_gateway_request,
         prepare_gateway_request_with_default_service_tier, prepare_sidecar_launch_config_in_dir,
-        prepare_websocket_initial_request, profile_base_url_matches, provider_gateway_api_key_id,
+        prepare_websocket_initial_request, profile_api_key_supports_websockets,
+        profile_base_url_matches, provider_gateway_api_key_id,
         provider_gateway_bound_oauth_account_id_for_account,
         provider_gateway_default_model_for_account,
         provider_gateway_image_generation_mode_for_account, provider_gateway_model_slots,
@@ -23594,11 +23606,12 @@ mod tests {
         CodexTokens,
     };
     use crate::models::codex_local_access::{
-        CodexLocalAccessAccountModelRule, CodexLocalAccessClientBaseUrlHost,
-        CodexLocalAccessCustomRoutingRule, CodexLocalAccessImageGenerationMode,
-        CodexLocalAccessProviderGateway, CodexLocalAccessQuotaReserve, CodexLocalAccessRequestKind,
-        CodexLocalAccessRoutingStrategy, CodexLocalAccessStats, CodexLocalAccessStatsWindow,
-        CodexLocalAccessTimeouts, CodexLocalAccessUsageEvent,
+        CodexLocalAccessAccountModelRule, CodexLocalAccessApiKey,
+        CodexLocalAccessClientBaseUrlHost, CodexLocalAccessCustomRoutingRule,
+        CodexLocalAccessImageGenerationMode, CodexLocalAccessProviderGateway,
+        CodexLocalAccessQuotaReserve, CodexLocalAccessRequestKind, CodexLocalAccessRoutingStrategy,
+        CodexLocalAccessStats, CodexLocalAccessStatsWindow, CodexLocalAccessTimeouts,
+        CodexLocalAccessUsageEvent,
     };
     use crate::models::{
         DefaultInstanceSettings, InstanceLaunchMode, InstanceProfile, InstanceStore,
@@ -25173,7 +25186,10 @@ wire_api = "responses"
             auth_json.get("expired").and_then(Value::as_i64),
             Some(4_102_444_800i64)
         );
-        assert_eq!(auth_json.get("websockets").and_then(Value::as_bool), Some(true));
+        assert_eq!(
+            auth_json.get("websockets").and_then(Value::as_bool),
+            Some(true)
+        );
     }
 
     #[test]
@@ -25182,9 +25198,50 @@ wire_api = "responses"
             "http://127.0.0.1:1455/v1".to_string(),
             "agt_codex_test".to_string(),
             None,
+            true,
         );
         assert!(account.api_supports_websockets);
         assert_eq!(account.api_wire_api.as_deref(), Some("responses"));
+    }
+
+    #[test]
+    fn provider_gateway_api_key_disables_profile_websockets() {
+        let mut collection = test_local_access_collection(Vec::new());
+        collection.api_keys.push(CodexLocalAccessApiKey {
+            id: "provider_gateway_deepseek".to_string(),
+            label: "Provider Gateway: DeepSeek".to_string(),
+            key: "deepseek-local-key".to_string(),
+            provider_gateway: Some(CodexLocalAccessProviderGateway {
+                base_url: "https://api.deepseek.com/v1".to_string(),
+                api_key: "sk-deepseek".to_string(),
+                upstream_model: "deepseek-v4-pro".to_string(),
+                upstream_models: vec!["deepseek-v4-pro".to_string()],
+                wire_api: Some("chat_completions".to_string()),
+                supports_vision: false,
+                model_capabilities: HashMap::new(),
+                vision_routing_model: None,
+            }),
+            inherit_account_pool: Some(false),
+            account_ids: vec!["deepseek-account".to_string()],
+            priority_account_ids: Vec::new(),
+            preferred_account_id: None,
+            model_prefix: None,
+            allowed_models: Vec::new(),
+            excluded_models: Vec::new(),
+            enabled: true,
+            created_at: 0,
+            updated_at: 0,
+            last_used_at: None,
+        });
+
+        assert!(!profile_api_key_supports_websockets(
+            &collection,
+            "deepseek-local-key"
+        ));
+        assert!(profile_api_key_supports_websockets(
+            &collection,
+            &collection.api_key
+        ));
     }
 
     #[test]
@@ -27958,15 +28015,12 @@ data: {"type":"response.completed","response":{"id":"resp_123","usage":{"input_t
         .expect("Responses Lite body should build");
         let parsed: Value = serde_json::from_slice(mapped.as_ref()).expect("body should be json");
         assert_eq!(
-            parsed
-                .get("tools")
-                .and_then(Value::as_array)
-                .map(|tools| {
-                    tools
-                        .iter()
-                        .filter_map(|tool| tool.get("type").and_then(Value::as_str))
-                        .collect::<Vec<_>>()
-                }),
+            parsed.get("tools").and_then(Value::as_array).map(|tools| {
+                tools
+                    .iter()
+                    .filter_map(|tool| tool.get("type").and_then(Value::as_str))
+                    .collect::<Vec<_>>()
+            }),
             Some(vec!["function", "function", "custom", "tool_search"])
         );
         assert!(parsed
@@ -29242,6 +29296,48 @@ data: {"error":{"code":"server_error","type":"upstream","message":"stream aborte
         );
         assert!(!profile_dir.join(CODEX_PROVIDER_MODEL_CATALOG_FILE).exists());
 
+        fs::remove_dir_all(&profile_dir).expect("cleanup temp dir");
+    }
+
+    #[tokio::test]
+    async fn provider_gateway_takeover_disables_websockets_in_profile() {
+        let profile_dir = make_temp_dir("codex-provider-gateway-websocket-test");
+        let mut collection = test_local_access_collection(Vec::new());
+        let key = "deepseek-local-key".to_string();
+        collection.api_keys.push(CodexLocalAccessApiKey {
+            id: "provider_gateway_deepseek".to_string(),
+            label: "Provider Gateway: DeepSeek".to_string(),
+            key: key.clone(),
+            provider_gateway: Some(CodexLocalAccessProviderGateway {
+                base_url: "https://api.deepseek.com/v1".to_string(),
+                api_key: "sk-deepseek".to_string(),
+                upstream_model: "deepseek-v4-pro".to_string(),
+                upstream_models: vec!["deepseek-v4-pro".to_string()],
+                wire_api: Some("chat_completions".to_string()),
+                supports_vision: false,
+                model_capabilities: HashMap::new(),
+                vision_routing_model: None,
+            }),
+            inherit_account_pool: Some(false),
+            account_ids: vec!["deepseek-account".to_string()],
+            priority_account_ids: Vec::new(),
+            preferred_account_id: None,
+            model_prefix: None,
+            allowed_models: Vec::new(),
+            excluded_models: Vec::new(),
+            enabled: true,
+            created_at: 0,
+            updated_at: 0,
+            last_used_at: None,
+        });
+
+        write_local_access_profile_takeover(&profile_dir, &collection, Some(&key))
+            .await
+            .expect("write provider gateway takeover");
+
+        let config =
+            fs::read_to_string(profile_dir.join(CODEX_PROFILE_CONFIG_FILE)).expect("read config");
+        assert!(config.contains("supports_websockets = false"));
         fs::remove_dir_all(&profile_dir).expect("cleanup temp dir");
     }
 
