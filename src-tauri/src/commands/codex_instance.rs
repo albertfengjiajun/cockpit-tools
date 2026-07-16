@@ -371,6 +371,26 @@ async fn apply_bound_account_to_initialized_profile(
     Ok(())
 }
 
+async fn created_instance_view_after_binding<F, Fut>(
+    instance: InstanceProfile,
+    apply_binding: F,
+) -> Result<CodexInstanceProfileView, String>
+where
+    F: FnOnce(PathBuf, String) -> Fut,
+    Fut: std::future::Future<Output = Result<(), String>>,
+{
+    let initialized = is_profile_initialized(&instance.user_data_dir);
+    if let (true, Some(bind_account_id)) = (initialized, instance.bind_account_id.clone()) {
+        apply_binding(PathBuf::from(&instance.user_data_dir), bind_account_id).await?;
+    }
+
+    Ok(CodexInstanceProfileView::from_profile(
+        instance,
+        false,
+        initialized,
+    ))
+}
+
 fn sanitize_codex_config_before_launch(data_dir: &Path) -> Result<(), String> {
     modules::logger::log_info(&format!(
         "[Codex Config] sanitize before launch: data_dir={}",
@@ -492,6 +512,57 @@ mod tests {
             launch_credential_kind_for_bind_account_id("codex_local_access_runtime").as_deref(),
             Some("api")
         );
+    }
+
+    #[tokio::test]
+    async fn created_instance_binding_replaces_copied_source_credentials_before_return() {
+        let test_root = std::env::temp_dir().join(format!(
+            "cockpit-codex-create-bind-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let source_dir = test_root.join("source");
+        let target_dir = test_root.join("target");
+        std::fs::create_dir_all(&source_dir).expect("create source dir");
+        std::fs::write(source_dir.join("auth.json"), "source-account")
+            .expect("write source credentials");
+        modules::instance_store::copy_dir_recursive(&source_dir, &target_dir)
+            .expect("copy source profile");
+
+        let instance = InstanceProfile {
+            id: "created-instance".to_string(),
+            name: "Created instance".to_string(),
+            user_data_dir: target_dir.to_string_lossy().to_string(),
+            working_dir: None,
+            extra_args: String::new(),
+            bind_account_id: Some("target-account".to_string()),
+            launch_mode: InstanceLaunchMode::App,
+            app_speed: CodexAppSpeed::Standard,
+            created_at: 0,
+            last_launched_at: None,
+            last_pid: None,
+        };
+
+        let view = created_instance_view_after_binding(
+            instance,
+            |profile_dir, bind_account_id| async move {
+                let copied = std::fs::read_to_string(profile_dir.join("auth.json"))
+                    .map_err(|error| error.to_string())?;
+                assert_eq!(copied, "source-account");
+                std::fs::write(profile_dir.join("auth.json"), bind_account_id)
+                    .map_err(|error| error.to_string())?;
+                Ok(())
+            },
+        )
+        .await
+        .expect("apply created instance binding");
+
+        assert_eq!(view.bind_account_id.as_deref(), Some("target-account"));
+        assert_eq!(
+            std::fs::read_to_string(target_dir.join("auth.json")).expect("read target credentials"),
+            "target-account"
+        );
+
+        let _ = std::fs::remove_dir_all(test_root);
     }
 }
 
@@ -965,12 +1036,15 @@ pub async fn codex_create_instance(
             app_speed,
         })?;
 
-    let initialized = is_profile_initialized(&instance.user_data_dir);
-    Ok(CodexInstanceProfileView::from_profile(
-        instance,
-        false,
-        initialized,
-    ))
+    created_instance_view_after_binding(instance, |profile_dir, bind_account_id| async move {
+        apply_bound_account_to_initialized_profile(
+            &profile_dir,
+            Some(&bind_account_id),
+            "create-instance-bind-account",
+        )
+        .await
+    })
+    .await
 }
 
 #[tauri::command]
