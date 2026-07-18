@@ -603,7 +603,7 @@ type CodexBatchImportFilter = "all" | "ready";
 
 function shouldAutoHideBatchDeleteJob(
   job: CodexBatchDeleteJobStatus | null,
-): job is CodexBatchDeleteJobStatus {
+): job is CodexBatchDeleteJobStatus & { status: "completed" } {
   return job?.status === "completed" && job.failed === 0;
 }
 
@@ -1488,6 +1488,7 @@ export function CodexAccountsPage() {
   const batchImportUnlistenersRef = useRef<UnlistenFn[]>([]);
   const batchImportSessionIdRef = useRef<string | null>(null);
   const batchDeleteRemoveIdsRef = useRef<Set<string>>(new Set());
+  const batchDeleteRefreshedCompletedRef = useRef(0);
   const codexAccountsRef = useRef<CodexAccount[]>(store.accounts);
   const codexCurrentAccountRef = useRef<CodexAccount | null>(
     store.currentAccount,
@@ -1526,6 +1527,17 @@ export function CodexAccountsPage() {
     reloadCodexGroups,
   ]);
 
+  const refreshAccountsDuringBatchDelete = useCallback(async () => {
+    const { allowEmptyAccounts, allowEmptyCurrent } =
+      getBatchDeleteRefreshOptions();
+    await fetchCodexAccounts({ allowEmpty: allowEmptyAccounts });
+    await fetchCodexCurrentAccount({ allowEmpty: allowEmptyCurrent });
+  }, [
+    fetchCodexAccounts,
+    fetchCodexCurrentAccount,
+    getBatchDeleteRefreshOptions,
+  ]);
+
   useEffect(() => {
     const jobId = batchDeleteJob?.jobId;
     if (!jobId || batchDeleteJob.status !== "running") return;
@@ -1540,21 +1552,31 @@ export function CodexAccountsPage() {
         setBatchDeleteJob((current) =>
           current?.jobId === jobId ? nextJob : current,
         );
+        if (
+          nextJob.completed > batchDeleteRefreshedCompletedRef.current
+        ) {
+          await refreshAccountsDuringBatchDelete();
+          batchDeleteRefreshedCompletedRef.current = nextJob.completed;
+        }
         shouldContinue = nextJob.status === "running";
       } catch (error) {
         console.warn("[Codex Batch Delete] 查询任务进度失败:", error);
       }
       if (!disposed && shouldContinue) {
-        timer = window.setTimeout(pollJob, 500);
+        timer = window.setTimeout(pollJob, 250);
       }
     };
 
-    timer = window.setTimeout(pollJob, 200);
+    timer = window.setTimeout(pollJob, 100);
     return () => {
       disposed = true;
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, [batchDeleteJob?.jobId, batchDeleteJob?.status]);
+  }, [
+    batchDeleteJob?.jobId,
+    batchDeleteJob?.status,
+    refreshAccountsDuringBatchDelete,
+  ]);
 
   useEffect(() => {
     if (!shouldAutoHideBatchDeleteJob(batchDeleteJob)) return;
@@ -1569,6 +1591,7 @@ export function CodexAccountsPage() {
       }
       if (disposed) return;
       batchDeleteRemoveIdsRef.current = new Set();
+      batchDeleteRefreshedCompletedRef.current = 0;
       setBatchDeleteJob(null);
       await refreshAccountsAfterBatchDelete();
     };
@@ -9516,6 +9539,7 @@ export function CodexAccountsPage() {
     batchDeleteRemoveIdsRef.current = new Set(deleteConfirm.ids);
     try {
       const job = await codexService.startCodexBatchDelete(deleteConfirm.ids);
+      batchDeleteRefreshedCompletedRef.current = 0;
       if (shouldAutoHideBatchDeleteJob(job)) {
         await refreshAccountsAfterBatchDelete();
         try {
@@ -9606,9 +9630,11 @@ export function CodexAccountsPage() {
     if (!batchDeleteJob?.jobId || batchDeleteBusy) return;
     setBatchDeleteBusy(true);
     try {
-      setBatchDeleteJob(
-        await codexService.retryFailedCodexBatchDelete(batchDeleteJob.jobId),
+      const job = await codexService.retryFailedCodexBatchDelete(
+        batchDeleteJob.jobId,
       );
+      batchDeleteRefreshedCompletedRef.current = job.completed;
+      setBatchDeleteJob(job);
     } catch (error) {
       setMessage({
         text: t("codex.batchDelete.actionFailed", {
@@ -9626,6 +9652,7 @@ export function CodexAccountsPage() {
     setBatchDeleteBusy(true);
     try {
       await codexService.clearCodexBatchDelete(batchDeleteJob.jobId);
+      batchDeleteRefreshedCompletedRef.current = 0;
       setBatchDeleteJob(null);
       await store.fetchAccounts();
       await reloadCodexGroups();

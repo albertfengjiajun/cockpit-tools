@@ -7,6 +7,17 @@ All notable changes to Cockpit Tools will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## [Unreleased]
+
+### Added
+
+- **Codex API Service shows its account pool and aggregate quotas below the official client composer by default**: the option is enabled for new installations and upgrades that have not saved it before, while users who explicitly disabled it remain opted out; restarting the corresponding Codex instance shows the account-pool size together with 5-hour and weekly quota. The independent overlay follows window and composer layout changes without modifying or expanding the official UI, and applies only to the Cockpit Tools API Service—not ordinary API Key accounts or custom Provider Gateways.
+
+### Changed
+
+- **Codex account deletion now provides fast, immediate feedback**: an account disappears from the UI as soon as it is removed from local persistent storage, while API Service pool cleanup and gateway synchronization continue in the background instead of blocking the delete action.
+
+---
 ## [1.3.9] - 2026-07-17
 
 ### Changed
